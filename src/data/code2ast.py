@@ -6,7 +6,7 @@ Created on Sat Jan 29 16:08:24 2022
 @author: Jose Antonio
 """
 
-from src.preprocessing import remove_comments_and_docstrings_python
+from src.data.preprocessing import remove_comments_and_docstrings_python
 import networkx as nx
 
 #aux function, get a new id in the graph

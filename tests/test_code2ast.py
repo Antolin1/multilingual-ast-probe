@@ -8,8 +8,8 @@ Created on Sun Jan 30 08:34:53 2022
 
 import unittest
 from tree_sitter import Language, Parser
-from src.code2ast import code2ast
-from src.preprocessing import remove_comments_and_docstrings_python
+from src.data.code2ast import code2ast
+from src.data.preprocessing import remove_comments_and_docstrings_python
 import networkx as nx
 import matplotlib.pyplot as plt
 

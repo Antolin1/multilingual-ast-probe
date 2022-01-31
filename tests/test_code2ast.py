@@ -8,8 +8,9 @@ Created on Sun Jan 30 08:34:53 2022
 
 import unittest
 from tree_sitter import Language, Parser
-from src.data.code2ast import code2ast
-from src.data.preprocessing import remove_comments_and_docstrings_python
+from src.code2ast import (code2ast, enrichAstWithDeps, 
+                          getDependencyTree, getMatrixAndTokens)
+from src.preprocessing import remove_comments_and_docstrings_python
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -38,7 +39,24 @@ class Code2ast(unittest.TestCase):
         self.assertEqual(code_pre_expected, code_pre)
     
     def test_code2ast(self):
-        G = code2ast(code, parser)
+        G,_ = code2ast(code, parser)
         nx.draw(G, labels=nx.get_node_attributes(G,'type'), with_labels = True)
         plt.show()
-        
+    
+    def test_dependency(self):
+        G,_ = code2ast(code, parser)
+        enrichAstWithDeps(G)
+        T = getDependencyTree(G)
+        nx.draw(T, labels=nx.get_node_attributes(T,'type'), with_labels = True)
+        plt.show()
+    
+    def test_distanceToks(self):
+        G, pre_code = code2ast(code, parser)
+        enrichAstWithDeps(G)
+        T = getDependencyTree(G)
+        matrix, code_toks = getMatrixAndTokens(T,pre_code)
+        print(matrix)
+        print(code_toks)
+        self.assertEqual(len(code_toks), matrix.shape[0])
+        first_row = [0,1,1,2,2,2,2,1,1,2,3,3,2,2,3,2,3]
+        self.assertEqual(first_row, list(matrix[0]))

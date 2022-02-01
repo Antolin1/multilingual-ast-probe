@@ -20,7 +20,7 @@ class ProgramArguments:
     )
 
     lang: Optional[str] = field(
-        default='javascript',
+        default='python',
         metadata={'help': 'Programming language used in the experiments.'}
     )
 

@@ -9,8 +9,9 @@ Created on Sun Jan 30 08:34:53 2022
 import unittest
 from tree_sitter import Language, Parser
 from src.data.code2ast import (code2ast, enrichAstWithDeps, 
-                          getDependencyTree, getMatrixAndTokens)
-from src.data.preprocessing import remove_comments_and_docstrings_python
+                          getDependencyTree, getMatrixAndTokens,
+                          getTreeFromDistances, getUAS, getSpear)
+from src.data.utils import remove_comments_and_docstrings_python
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -60,3 +61,27 @@ class Code2ast(unittest.TestCase):
         self.assertEqual(len(code_toks), matrix.shape[0])
         first_row = [0,1,1,2,2,2,2,1,1,2,3,3,2,2,3,2,3]
         self.assertEqual(first_row, list(matrix[0]))
+        
+    def test_inverse(self):
+        G, pre_code = code2ast(code, parser)
+        enrichAstWithDeps(G)
+        T = getDependencyTree(G)
+        matrix, code_toks = getMatrixAndTokens(T,pre_code)
+        T2 = getTreeFromDistances(matrix, code_toks)
+        nx.draw(T2, labels=nx.get_node_attributes(T2,'type'), with_labels = True)
+        plt.show()
+    
+    def test_Eval(self):
+        G, pre_code = code2ast(code, parser)
+        enrichAstWithDeps(G)
+        T = getDependencyTree(G)
+        matrix, code_toks = getMatrixAndTokens(T,pre_code)
+        T2 = getTreeFromDistances(matrix, code_toks)
+        
+        T_pred = nx.Graph(T2)
+        T_pred.remove_edge(8,15)
+        T_pred.add_edge(15,14)
+        self.assertAlmostEqual(getUAS(T2,T_pred), 
+                               float(len(T_pred.edges)-1)/float(len(T_pred.edges)))
+        print(getSpear(matrix,matrix))
+        

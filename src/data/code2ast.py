@@ -6,8 +6,9 @@ Created on Sat Jan 29 16:08:24 2022
 @author: Jose Antonio
 """
 
-from utils import remove_comments_and_docstrings_python
+from src.data.utils import remove_comments_and_docstrings_python
 import networkx as nx
+from scipy.stats import spearmanr
 
 #aux function, get a new id in the graph
 def getId(G):
@@ -71,6 +72,7 @@ def getTokens(T, code):
 
 #preprocess code, obtain the ast and returns a network graph.
 #it returns the graph of the ast and the preprocessed code
+#directed graph
 def code2ast(code, parser, lang='python'):
     if lang == 'python':
         #preprocess
@@ -87,6 +89,7 @@ def code2ast(code, parser, lang='python'):
         return G, code
 
 #it adds dependency labels between non-terminals to the previous obtained ast graph
+#directed graph
 def enrichAstWithDeps(G):
     root = getRoot(G)
     nodes = [n for n in list(G.nodes) if root!=n and G.nodes[n]['is_terminal']]
@@ -94,7 +97,8 @@ def enrichAstWithDeps(G):
         h = selectHead(G, n)
         G.add_edge(h, n, label = 'dependency')
         
-#obtains the dependecency subgraph from the enriched one
+#obtains the dependecency subgraph from the enriched one,
+#returns directed graph
 def getDependencyTree(G):
     view = nx.subgraph_view(G, filter_node=lambda n: G.nodes[n]['is_terminal'],
                             filter_edge=lambda n1, n2: G[n1][n2].get("label", 'dependency'))
@@ -106,3 +110,33 @@ def getMatrixAndTokens(T, code):
                                                  key = lambda n: T.nodes[n]['start']))
     tokens = getTokens(T, code)
     return distance, tokens
+
+#build tree from distance matrix,
+#undirected graph, run this also for the ground truth
+def getTreeFromDistances(distances, tokens):
+    G = nx.Graph()
+    for j,t in enumerate(tokens):
+        G.add_node(j, type=t)
+    for i,_ in enumerate(tokens):
+        for j,_ in enumerate(tokens):
+            G.add_edge(i,j, weight=distances[i][j])
+    T = nx.minimum_spanning_tree(G)
+    return T
+
+#compare two (undirected) trees, they have to be aligned
+def getUAS(T_true, T_pred):
+    assert len(T_true) == len(T_pred)
+    assert len(T_true.edges) == len(T_pred.edges)
+    count = 0
+    i = 0
+    for s,t in T_pred.edges:
+        if T_true.has_edge(s,t):
+            count += 1
+        i += 1
+    return float(count)/float(i)
+
+#spearman coef, it receives two distance matrices that are aligned
+def getSpear(d_true, d_pred):
+    spearmanrs = [spearmanr(pred, gold) for pred, gold in zip(d_true, d_pred)]
+    return [x.correlation for x in spearmanrs]
+    

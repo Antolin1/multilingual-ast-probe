@@ -6,7 +6,7 @@ Created on Sat Jan 29 16:08:24 2022
 @author: Jose Antonio
 """
 
-from src.data.preprocessing import remove_comments_and_docstrings_python
+from utils import remove_comments_and_docstrings_python
 import networkx as nx
 
 #aux function, get a new id in the graph
@@ -46,7 +46,7 @@ def getCandidate(G, level, start):
     #sort by start
     nodes.sort(key=lambda n: G.nodes[n]['start'])
     return nodes[0]
-    
+
 #get the head of a given non-terminal that is not the root
 def selectHead(G, n):
     father = list(G.in_edges(n))[0][0]

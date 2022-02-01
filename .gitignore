@@ -133,3 +133,5 @@ dmypy.json
 
 # custom folders
 .idea
+src/dataset
+src/dataset.zip

@@ -9,10 +9,15 @@ from transformers import HfArgumentParser
 from prettytable import PrettyTable
 
 from args import ProgramArguments
+from data import load_dataset, download_codesearchnet_dataset
 
 
 def main(args):
-    pass
+    if args.download_csn:
+        dataset_dir = download_codesearchnet_dataset()
+        dataset_path = os.path.join(dataset_dir, args.lang, 'dataset.jsonl')
+        print(dataset_path)
+    load_dataset(args.dataset_path_or_name)
 
 
 if __name__ == '__main__':

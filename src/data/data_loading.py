@@ -7,7 +7,7 @@ import random
 import logging
 
 from tqdm import tqdm
-from tree_sitter import Language, Parser
+from tree_sitter import Language
 
 from .utils import download_url, unzip_file
 from .code2ast import code2ast, enrichAstWithDeps, getDependencyTree, getMatrixAndTokens

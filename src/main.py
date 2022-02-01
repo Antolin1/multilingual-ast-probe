@@ -5,13 +5,15 @@ import logging
 
 import torch
 import numpy as np
+from torch.utils.data import DataLoader
 from transformers import HfArgumentParser, AutoModelForMaskedLM, AutoTokenizer
+from tqdm import tqdm
 from datasets import load_dataset
 from prettytable import PrettyTable
 from tree_sitter import Parser
 
 from args import ProgramArguments
-from data import download_codesearchnet_dataset, create_splits, convert_sample_to_features, PY_LANGUAGE
+from data import download_codesearchnet_dataset, create_splits, convert_sample_to_features, PY_LANGUAGE, collator_fn
 
 
 def main(args):
@@ -41,6 +43,13 @@ def main(args):
     parser.set_language(PY_LANGUAGE)
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     test_set = test_set.remove_columns('original_string')
+    test_dataloader = DataLoader(dataset=test_set,
+                                 batch_size=64,
+                                 shuffle=True,
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer))
+
+    for item in tqdm(test_dataloader):
+        pass
 
 
 if __name__ == '__main__':

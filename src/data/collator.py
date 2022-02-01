@@ -7,11 +7,14 @@ Created on Tue Feb  1 14:16:08 2022
 """
 import numpy as np
 import torch
-from src.data.utils import match_tokenized_to_untokenized_roberta
 
-def collator(batch, tokenizer):
-    tokens = [b[0] for b in batch]
-    matrices = [b[1] for b in batch]
+
+from .utils import match_tokenized_to_untokenized_roberta
+
+
+def collator_fn(batch, tokenizer):
+    tokens = [b['tokens'] for b in batch]
+    matrices = [np.array(b['matrix']) for b in batch]
     
     #token lens
     len_tokens = [len(t) for t in tokens]
@@ -19,17 +22,17 @@ def collator(batch, tokenizer):
     len_tokens = torch.tensor(len_tokens)
     
     #pad matrices
-    paded_matices = []
+    padded_matices = []
     for m in matrices:
         if m.shape[0] < max_len_tokens:
-            ones = -np.ones((m.shape[0] ,max_len_tokens - m.shape[0]))
-            padded_dis = np.concatenate((m, ones), 1)
-            ones = -np.ones(max_len_tokens - m.shape[0], max_len_tokens)
+            ones = -np.ones((m.shape[0], max_len_tokens - m.shape[0]))
+            padded_dis = np.concatenate((m, ones), axis=1)
+            ones = -np.ones((max_len_tokens - m.shape[0], max_len_tokens))
             padded_dis = np.concatenate((padded_dis, ones), 0)
-            paded_matices.append(padded_dis)
+            padded_matices.append(padded_dis)
         else:
-            paded_matices.append(m)
-    paded_matices = torch.tensor(paded_matices)
+            padded_matices.append(m)
+    padded_matices = torch.tensor(np.array(padded_matices))
     
     #generate inputs and attention masks
     all_inputs = []
@@ -46,9 +49,9 @@ def collator(batch, tokenizer):
         all_mappings.append({x:[l + 1 for l in y] for x,y in mapping.items()})
     #padding
     max_len_subtokens = np.max([len(m) for m in all_attentions])
-    all_inputs = torch.tensor([inputs +([tokenizer.pad_token]*(max_len_subtokens - len(inputs)))
+    all_inputs = torch.tensor([inputs +tokenizer.convert_tokens_to_ids([tokenizer.pad_token]*(max_len_subtokens - len(inputs)))
                   for inputs in all_inputs])
-    all_attentions = torch.tensor([mask +([0]*(max_len_subtokens - len(inputs)))
+    all_attentions = torch.tensor([mask +([0]*(max_len_subtokens - len(mask)))
                   for mask in all_attentions])
     
     #generate alig
@@ -60,8 +63,8 @@ def collator(batch, tokenizer):
         for i in range(len(mapping)):
             indices += [j]*len(mapping[i])
             j += 1
-        indices += [j]*(max_len_tokens-len(mapping))
+        indices += [j]*(max_len_subtokens-len(indices))
         alig.append(indices)
     alig = torch.tensor(alig)
     
-    return (all_inputs, all_attentions, paded_matices, len_tokens, alig)
+    return (all_inputs, all_attentions, padded_matices, len_tokens, alig)

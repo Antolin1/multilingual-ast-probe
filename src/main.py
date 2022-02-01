@@ -6,7 +6,7 @@ import logging
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
-from transformers import HfArgumentParser, AutoModelForMaskedLM, AutoTokenizer
+from transformers import HfArgumentParser, AutoModel, AutoTokenizer
 from tqdm import tqdm
 from datasets import load_dataset
 from prettytable import PrettyTable
@@ -14,6 +14,9 @@ from tree_sitter import Parser
 
 from args import ProgramArguments
 from data import download_codesearchnet_dataset, create_splits, convert_sample_to_features, PY_LANGUAGE, collator_fn
+from probe.probe import TwoWordPSDProbe
+from probe.loss import L1DistanceLoss
+from probe.run_probe import train_probe
 
 
 def main(args):
@@ -36,7 +39,7 @@ def main(args):
     # @todo: case when the model is loaded locally
     logger.info('Loading model and tokenizer.')
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path_or_name)
-    # model = AutoModelForMaskedLM.from_pretrained(args.tokenizer_path_or_name)
+    model = AutoModel.from_pretrained(args.tokenizer_path_or_name, output_hidden_states=True)
 
     # @todo: create a function to encapsulate everything
     parser = Parser()
@@ -44,12 +47,13 @@ def main(args):
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     test_set = test_set.remove_columns('original_string')
     test_dataloader = DataLoader(dataset=test_set,
-                                 batch_size=64,
-                                 shuffle=True,
+                                 batch_size=2,
+                                 shuffle=False,
                                  collate_fn=lambda batch: collator_fn(batch, tokenizer))
 
-    for item in tqdm(test_dataloader):
-        pass
+    probe = TwoWordPSDProbe(128, 768, 'cpu')
+    criterion = L1DistanceLoss('cpu')
+    train_probe(test_dataloader, test_dataloader, probe, model, criterion)
 
 
 if __name__ == '__main__':

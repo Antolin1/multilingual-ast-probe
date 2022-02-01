@@ -16,11 +16,13 @@ def collator_fn(batch, tokenizer):
     tokens = [b['tokens'] for b in batch]
     matrices = [np.array(b['matrix']) for b in batch]
     
+
+    
     #token lens
     len_tokens = [len(t) for t in tokens]
     max_len_tokens = np.max(len_tokens)
     len_tokens = torch.tensor(len_tokens)
-    
+
     #pad matrices
     padded_matices = []
     for m in matrices:
@@ -33,6 +35,7 @@ def collator_fn(batch, tokenizer):
         else:
             padded_matices.append(m)
     padded_matices = torch.tensor(np.array(padded_matices))
+
     
     #generate inputs and attention masks
     all_inputs = []
@@ -43,6 +46,7 @@ def collator_fn(batch, tokenizer):
         inputs = tokenizer.convert_tokens_to_ids([tokenizer.cls_token] + 
                                                                to_convert + 
                                                                [tokenizer.sep_token])
+       
         mask = [1]*len(inputs)
         all_inputs.append(inputs)
         all_attentions.append(mask)
@@ -53,7 +57,7 @@ def collator_fn(batch, tokenizer):
                   for inputs in all_inputs])
     all_attentions = torch.tensor([mask +([0]*(max_len_subtokens - len(mask)))
                   for mask in all_attentions])
-    
+
     #generate alig
     #after generate embeddings, remove first token
     alig = []
@@ -63,8 +67,9 @@ def collator_fn(batch, tokenizer):
         for i in range(len(mapping)):
             indices += [j]*len(mapping[i])
             j += 1
-        indices += [j]*(max_len_subtokens-len(indices))
+        indices += [j]*(max_len_subtokens - 1 - len(indices))
         alig.append(indices)
     alig = torch.tensor(alig)
+
     
     return (all_inputs, all_attentions, padded_matices, len_tokens, alig)

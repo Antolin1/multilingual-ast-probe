@@ -3,6 +3,7 @@ import re
 import shutil
 import pathlib
 import json
+import random
 import logging
 
 from tqdm import tqdm
@@ -90,6 +91,30 @@ def download_codesearchnet_dataset():
     return dataset_dir
 
 
-def load_dataset(dataset_path_or_name: str):
-    if dataset_path_or_name is None:
-        raise ValueError('A path or a name must be provided to load the dataset.')
+def create_splits(dataset_path: str, split: list[float] = (.8, .1)):
+    dataset_dir = os.path.dirname(dataset_path)
+    with open(dataset_path, 'r') as f:
+        data = list(f)
+        # we already seeded random package in the main
+        random.shuffle(data)
+        total_count = len(data)
+        train_count = int(split[0] * total_count)
+        valid_count = int(split[1] * total_count)
+        train_data = data[:train_count]
+        valid_data = data[train_count:train_count + valid_count]
+        test_data = data[train_count + valid_count:]
+    with open(os.path.join(dataset_dir, 'train.jsonl'), 'w') as f1, \
+            open(os.path.join(dataset_dir, 'valid.jsonl'), 'w') as f2, \
+            open(os.path.join(dataset_dir, 'test.jsonl'), 'w') as f3:
+        logger.info('Creating training split.')
+        for line in tqdm(train_data):
+            js = json.loads(line)
+            f1.write(json.dumps(js) + '\n')
+        logger.info('Creating validation split.')
+        for line in tqdm(valid_data):
+            js = json.loads(line)
+            f2.write(json.dumps(js) + '\n')
+        logger.info('Creating test split.')
+        for line in tqdm(test_data):
+            js = json.loads(line)
+            f3.write(json.dumps(js) + '\n')

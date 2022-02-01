@@ -6,18 +6,27 @@ import logging
 import torch
 import numpy as np
 from transformers import HfArgumentParser
+from datasets import load_dataset
 from prettytable import PrettyTable
 
 from args import ProgramArguments
-from data import load_dataset, download_codesearchnet_dataset
+from data import download_codesearchnet_dataset, create_splits
 
 
 def main(args):
     if args.download_csn:
         dataset_dir = download_codesearchnet_dataset()
-        dataset_path = os.path.join(dataset_dir, args.lang, 'dataset.jsonl')
-        print(dataset_path)
-    load_dataset(args.dataset_path_or_name)
+        args.dataset_path_or_name = os.path.join(dataset_dir, args.lang, 'dataset.jsonl')
+        create_splits(args.dataset_path_or_name)
+
+    if args.dataset_path_or_name is not None:
+        logger.info('Loading dataset from local file.')
+        data_files = {'train': os.path.join(args.dataset_path_or_name, 'train.jsonl'),
+                      'valid': os.path.join(args.dataset_path_or_name, 'valid.jsonl'),
+                      'test': os.path.join(args.dataset_path_or_name, 'test.jsonl')}
+        train_set = load_dataset('json', data_files=data_files, split='train')
+        valid_set = load_dataset('json', data_files=data_files, split='valid')
+        test_set = load_dataset('json', data_files=data_files, split='test')
 
 
 if __name__ == '__main__':

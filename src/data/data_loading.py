@@ -7,8 +7,10 @@ import random
 import logging
 
 from tqdm import tqdm
+from tree_sitter import Language, Parser
 
 from .utils import download_url, unzip_file
+from .code2ast import code2ast, enrichAstWithDeps, getDependencyTree, getMatrixAndTokens
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,7 @@ LANGUAGES = (
     'go',
     'php'
 )
+PY_LANGUAGE = Language('grammars/languages.so', 'python')
 
 
 def download_codesearchnet_dataset():
@@ -118,3 +121,12 @@ def create_splits(dataset_path: str, split: list[float] = (.8, .1)):
         for line in tqdm(test_data):
             js = json.loads(line)
             f3.write(json.dumps(js) + '\n')
+
+
+def convert_sample_to_features(code, parser):
+    G, pre_code = code2ast(code, parser)
+    enrichAstWithDeps(G)
+    T = getDependencyTree(G)
+    matrix, code_tokens = getMatrixAndTokens(T, pre_code)
+
+    return {'tokens': code_tokens, 'matrix': matrix}

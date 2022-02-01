@@ -5,19 +5,42 @@ import logging
 
 import torch
 import numpy as np
-from transformers import HfArgumentParser
+from transformers import HfArgumentParser, AutoModelForMaskedLM, AutoTokenizer
+from datasets import load_dataset
 from prettytable import PrettyTable
+from tree_sitter import Parser
 
 from args import ProgramArguments
-from data import load_dataset, download_codesearchnet_dataset
+from data import download_codesearchnet_dataset, create_splits, convert_sample_to_features, PY_LANGUAGE
 
 
 def main(args):
     if args.download_csn:
         dataset_dir = download_codesearchnet_dataset()
-        dataset_path = os.path.join(dataset_dir, args.lang, 'dataset.jsonl')
-        print(dataset_path)
-    load_dataset(args.dataset_path_or_name)
+        args.dataset_path_or_name = os.path.join(dataset_dir, args.lang, 'dataset.jsonl')
+        create_splits(args.dataset_path_or_name)
+
+    if args.dataset_path_or_name is None:
+        raise ValueError('A dataset path or name must be provided.')
+
+    logger.info('Loading dataset from local file.')
+    data_files = {'train': os.path.join(args.dataset_path_or_name, 'train.jsonl'),
+                  'valid': os.path.join(args.dataset_path_or_name, 'valid.jsonl'),
+                  'test': os.path.join(args.dataset_path_or_name, 'test.jsonl')}
+    train_set = load_dataset('json', data_files=data_files, split='train')
+    valid_set = load_dataset('json', data_files=data_files, split='valid')
+    test_set = load_dataset('json', data_files=data_files, split='test')
+
+    # @todo: case when the model is loaded locally
+    logger.info('Loading model and tokenizer.')
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path_or_name)
+    # model = AutoModelForMaskedLM.from_pretrained(args.tokenizer_path_or_name)
+
+    # @todo: create a function to encapsulate everything
+    parser = Parser()
+    parser.set_language(PY_LANGUAGE)
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    test_set = test_set.remove_columns('original_string')
 
 
 if __name__ == '__main__':

@@ -14,9 +14,19 @@ class ProgramArguments:
         metadata={'help': 'Name to identify the run and logging directory.'}
     )
 
-    dataset_path_or_name: Optional[str] = field(
+    dataset_name_or_path: Optional[str] = field(
         default=None,
         metadata={'help': 'Local path to the dataset or its name on Huggingface datasets hub.'}
+    )
+
+    pretrained_model_name_or_path: Optional[str] = field(
+        default='huggingface/CodeBERTa-small-v1',
+        metadata={'help': 'Path to the pretrained language model or its name on Huggingface hub.'}
+    )
+
+    tokenizer_name_or_path: Optional[str] = field(
+        default='huggingface/CodeBERTa-small-v1',
+        metadata={'help': 'Path to the tokenizer or its name on the Huggingface hub.'}
     )
 
     lang: Optional[str] = field(
@@ -24,14 +34,19 @@ class ProgramArguments:
         metadata={'help': 'Programming language used in the experiments.'}
     )
 
-    pretrained_model_path_or_name: Optional[str] = field(
-        default='huggingface/CodeBERTa-small-v1',
-        metadata={'help': 'Path to the pretrained language model or its name on Huggingface hub.'}
+    lr: float = field(
+        default=1e-3,
+        metadata={'help': 'The initial learning rate for AdamW.'}
     )
 
-    tokenizer_path_or_name: Optional[str] = field(
-        default='huggingface/CodeBERTa-small-v1',
-        metadata={'help': 'Path to the tokenizer or its name on the Huggingface hub.'}
+    epochs: Optional[int] = field(
+        default=20,
+        metadata={'help': 'Number of training epochs.'}
+    )
+
+    layer: Optional[int] = field(
+        default=3,
+        metadata={'help': 'Layer used to get the embeddings.'}
     )
 
     seed: Optional[int] = field(
@@ -40,4 +55,7 @@ class ProgramArguments:
     )
 
     download_csn: bool = field(default=False, metadata={'help': 'Download CodeSearchNet dataset.'})
+
+    do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})
+    do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})
 

@@ -55,6 +55,8 @@ if __name__ == '__main__':
     if args.run_base_path is not None and args.run_name is not None:
         args.output_path = os.path.join(args.run_base_path, args.run_name)
         os.mkdir(args.output_path)
+        args.model_chkpt_path = os.path.join(args.output_path, 'saved_models')
+        os.mkdir(args.model_chkpt_path)
 
         file = logging.FileHandler(os.path.join(args.output_path, 'info.log'))
         file.setLevel(level=logging.INFO)

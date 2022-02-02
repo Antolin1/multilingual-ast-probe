@@ -69,6 +69,8 @@ def run_probing_train(args: argparse.Namespace):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
 
     probe_model.train()
+    best_eval_loss = 0.0
+    patience_count = 0
     for epoch in tqdm(range(args.epochs), desc='[training epoch loop]'):
         training_loss = 0.0
         for batch in tqdm(test_dataloader,
@@ -89,9 +91,21 @@ def run_probing_train(args: argparse.Namespace):
         training_loss = training_loss / len(test_dataloader)
         eval_loss = run_probing_eval(test_dataloader, probe_model, criterion, lmodel, args.layer)
         scheduler.step(eval_loss)
-        tqdm.write('[epoch {}] Train loss: {}, Dev loss: {}'.format(epoch,
+        tqdm.write('[epoch {}] train loss: {}, validation loss: {}'.format(epoch,
                                                                     training_loss,
                                                                     eval_loss))
+
+        logger.info('-' * 100)
+        logger.info('Saving model checkpoint')
+        logger.info('-' * 100)
+        if eval_loss > best_eval_loss:
+            output_path = os.path.join(args.model_chkpt_path, f'pytorch_model.bin')
+            torch.save(probe_model.state_dict(), output_path)
+            logger.info(f'Probe model saved: {output_path}')
+            patience = 0
+            best_eval_loss = eval_loss
+        else:
+            patience_count += 1
 
 
 def run_probing_eval(

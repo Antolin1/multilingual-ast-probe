@@ -44,7 +44,7 @@ def collator_fn(batch, tokenizer):
         inputs = tokenizer.convert_tokens_to_ids([tokenizer.cls_token] + 
                                                                to_convert + 
                                                                [tokenizer.sep_token])
-       
+
         mask = [1]*len(inputs)
         all_inputs.append(inputs)
         all_attentions.append(mask)

@@ -11,7 +11,7 @@ git clone https://github.com/tree-sitter/tree-sitter-python.git
 Build grammars:
 
 ```sh
-python src/buildGrammars.py
+python src/data/buildGrammars.py
 ```
 
 Execute tests:

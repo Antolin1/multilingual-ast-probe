@@ -15,9 +15,7 @@ from .utils import match_tokenized_to_untokenized_roberta
 def collator_fn(batch, tokenizer):
     tokens = [b['tokens'] for b in batch]
     matrices = [np.array(b['matrix']) for b in batch]
-    
 
-    
     #token lens
     len_tokens = [len(t) for t in tokens]
     max_len_tokens = np.max(len_tokens)

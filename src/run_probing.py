@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 def get_embeddings(all_inputs, all_attentions, model, layer):
-    model.eval()
     with torch.no_grad():
         embs = model(input_ids=all_inputs, attention_mask=all_attentions)[2][layer][:, 1:, :]
     return embs
@@ -43,24 +42,32 @@ def run_probing_train(args: argparse.Namespace):
     data_files = {'train': os.path.join(args.dataset_name_or_path, 'train.jsonl'),
                   'valid': os.path.join(args.dataset_name_or_path, 'valid.jsonl'),
                   'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
-    train_set = load_dataset('json', data_files=data_files, split='train')
-    valid_set = load_dataset('json', data_files=data_files, split='valid')
-    test_set = load_dataset('json', data_files=data_files, split='test')
+    train_set = load_dataset('json', data_files=data_files, split='train[:20000]')
+    valid_set = load_dataset('json', data_files=data_files, split='valid[:2000]')
 
     # @todo: load from checkpoint
     logger.info('Loading model and tokenizer.')
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path)
     lmodel = AutoModel.from_pretrained(args.tokenizer_name_or_path, output_hidden_states=True)
 
-    # @todo: create a function to encapsulate everything
     parser = Parser()
     parser.set_language(PY_LANGUAGE)
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    test_set = test_set.remove_columns('original_string')
-    test_dataloader = DataLoader(dataset=test_set,
-                                 batch_size=64,
-                                 shuffle=False,
-                                 collate_fn=lambda batch: collator_fn(batch, tokenizer))
+    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    train_set = train_set.filter(lambda e: len(tokenizer.convert_tokens_to_ids(e['tokens'])) + 2 < 512)
+    train_set = train_set.remove_columns('original_string')
+
+    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    valid_set = valid_set.filter(lambda e: len(tokenizer.convert_tokens_to_ids(e['tokens'])) + 2 < 512)
+    valid_set = valid_set.remove_columns('original_string')
+
+    train_dataloader = DataLoader(dataset=train_set,
+                                  batch_size=32,
+                                  shuffle=True,
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer))
+    valid_dataloader = DataLoader(dataset=valid_set,
+                                  batch_size=32,
+                                  shuffle=False,
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer))
 
     probe_model = TwoWordPSDProbe(128, 768, args.device)
     criterion = L1DistanceLoss(args.device)
@@ -69,31 +76,31 @@ def run_probing_train(args: argparse.Namespace):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
 
     probe_model.train()
+    lmodel.eval()
     best_eval_loss = 0.0
     patience_count = 0
     for epoch in tqdm(range(args.epochs), desc='[training epoch loop]'):
         training_loss = 0.0
-        for batch in tqdm(test_dataloader,
+        for batch in tqdm(train_dataloader,
                           desc='[training batch]',
                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}'):
             all_inputs, all_attentions, dis, lens, alig = batch
+
             emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer)
             emb = align_function(emb, alig)
 
-            outputs = probe_model(emb)
+            outputs = probe_model(emb.to(args.device))
 
-            loss, count = criterion(outputs, dis, lens)
+            loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))
             loss.backward()
             optimizer.zero_grad()
             optimizer.step()
             training_loss += loss.item()
 
-        training_loss = training_loss / len(test_dataloader)
-        eval_loss = run_probing_eval(test_dataloader, probe_model, criterion, lmodel, args.layer)
+        training_loss = training_loss / len(train_dataloader)
+        eval_loss = run_probing_eval(valid_dataloader, probe_model, criterion, lmodel, args.layer, args)
         scheduler.step(eval_loss)
-        tqdm.write('[epoch {}] train loss: {}, validation loss: {}'.format(epoch,
-                                                                    training_loss,
-                                                                    eval_loss))
+        tqdm.write(f'[epoch {epoch}] train loss: {training_loss}, validation loss: {eval_loss}')
 
         logger.info('-' * 100)
         logger.info('Saving model checkpoint')
@@ -120,11 +127,11 @@ def run_probing_eval(
     probe_model.eval()
     eval_loss = 0.0
     with torch.no_grad():
-        for batch in tqdm(test_dataloader, desc='[dev batch]'):
+        for batch in tqdm(test_dataloader, desc='[valid batch]'):
             all_inputs, all_attentions, dis, lens, alig = batch
             emb = get_embeddings(all_inputs, all_attentions, lmodel, layer)
             emb = align_function(emb, alig)
-            outputs = probe_model(emb)
-            loss, count = criterion(outputs, dis, lens)
+            outputs = probe_model(emb.to(args.device))
+            loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))
             eval_loss += loss.item()
     return eval_loss / len(test_dataloader)

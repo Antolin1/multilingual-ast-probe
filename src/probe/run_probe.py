@@ -14,15 +14,15 @@ from torch_scatter import scatter_mean
 def getEmgeddings(all_inputs, all_attentions, lmodel, layer):
     lmodel.eval()
     with torch.no_grad():
-        print(lmodel(input_ids=all_inputs, attention_mask=all_attentions)[2][layer][:][1:][:].shape)
-        embs = lmodel(input_ids=all_inputs, attention_mask=all_attentions)[2][layer][:][1:][:]
+        embs = lmodel(input_ids=all_inputs, attention_mask=all_attentions)[2][layer][:,1:,:]
     return embs
 
 def align_function(embs, align):
     seq = []
     for j,emb in enumerate(embs):
         seq.append(scatter_mean(emb, align[j], dim = 0))
-    return pad_sequence(seq, batch_first=True)
+    #remove the last token since it corresponds to <\s> or padding to much the lens
+    return pad_sequence(seq, batch_first=True)[:,:-1,:]
 
 #TODO EARLY STOPPING
 def train_probe(train_loader, val_loader, probe, lmodel, criterion, 
@@ -36,10 +36,7 @@ def train_probe(train_loader, val_loader, probe, lmodel, criterion,
         for batch in tqdm(train_loader, desc='[training batch]'):
             #maybe align on the fly
             all_inputs, all_attentions, dis, lens, alig = batch
-            print(all_inputs.shape)
             emb = getEmgeddings(all_inputs, all_attentions, lmodel, layer)
-            print(alig.shape, emb.shape)
-            print()
             emb = align_function(emb, alig)
             # zero the parameter gradients
             optimizer.zero_grad()

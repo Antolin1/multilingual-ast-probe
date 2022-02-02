@@ -47,9 +47,12 @@ def main(args):
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     test_set = test_set.remove_columns('original_string')
     test_dataloader = DataLoader(dataset=test_set,
-                                 batch_size=2,
+                                 batch_size=64,
                                  shuffle=False,
                                  collate_fn=lambda batch: collator_fn(batch, tokenizer))
+    
+    #for b in tqdm(test_dataloader):
+    #    pass
 
     probe = TwoWordPSDProbe(128, 768, 'cpu')
     criterion = L1DistanceLoss('cpu')

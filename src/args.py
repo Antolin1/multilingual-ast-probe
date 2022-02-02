@@ -44,6 +44,11 @@ class ProgramArguments:
         metadata={'help': 'Number of training epochs.'}
     )
 
+    patience: Optional[int] = field(
+        default=5,
+        metadata={'help': 'Patience for early stopping.'}
+    )
+
     layer: Optional[int] = field(
         default=3,
         metadata={'help': 'Layer used to get the embeddings.'}

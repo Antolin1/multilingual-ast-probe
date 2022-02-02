@@ -102,10 +102,12 @@ def run_probing_train(args: argparse.Namespace):
             output_path = os.path.join(args.model_chkpt_path, f'pytorch_model.bin')
             torch.save(probe_model.state_dict(), output_path)
             logger.info(f'Probe model saved: {output_path}')
-            patience = 0
+            patience_count = 0
             best_eval_loss = eval_loss
         else:
             patience_count += 1
+        if patience_count == args.patience:
+            break
 
 
 def run_probing_eval(

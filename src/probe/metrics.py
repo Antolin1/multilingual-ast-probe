@@ -1,11 +1,13 @@
-
-from ..run_probing import get_embeddings, align_function
-from ..data.code2ast import getTreeFromDistances, getUAS, getSpear
-import numpy as np
 from collections import defaultdict
-import tqdm
 
-def report_UAS(test_loader, probe_model, lmodel, args):
+import numpy as np
+from tqdm import tqdm
+
+from .utils import get_embeddings, align_function
+from src.data.code2ast import getTreeFromDistances, getUAS, getSpear
+
+
+def report_uas(test_loader, probe_model, lmodel, args):
     lmodel.eval()
     probe_model.eval()
     uas_scores = []
@@ -18,14 +20,15 @@ def report_UAS(test_loader, probe_model, lmodel, args):
             l = lens[j].item()
             dis_real = dis[j].detach().numpy()[0:l, 0:l]
             dis_pred = dis_pred[0:l, 0:l].detach().numpy()
-            #the distances are already aligned
-            #getTreeFromDistances needs the tokens to label the nodes
+            # the distances are already aligned
+            # getTreeFromDistances needs the tokens to label the nodes
             code_tokens_invented = ['a']*l
-            #get trees
+            # get trees
             T_real = getTreeFromDistances(dis_real, code_tokens_invented)
             T_pred = getTreeFromDistances(dis_pred, code_tokens_invented)
             uas_scores.append(getUAS(T_real, T_pred))
     return np.mean(uas_scores)
+
 
 def report_spear(test_loader, probe_model, lmodel, args):
     lmodel.eval()

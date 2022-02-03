@@ -19,3 +19,9 @@ Execute tests:
 ```sh
 python -m unittest discover
 ```
+
+Add project directory to Python path:
+
+```sh
+export PYTHONPATH="${PYTHONPATH}:~/AstProbing/"
+```

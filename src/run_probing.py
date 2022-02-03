@@ -5,33 +5,16 @@ from typing import Union
 
 import torch
 from torch.utils.data import DataLoader
-from torch.nn.utils.rnn import pad_sequence
-from torch_scatter import scatter_mean
 from transformers import AutoModel, AutoTokenizer
 from datasets import load_dataset
 from tree_sitter import Parser
 from tqdm import tqdm
 
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn
-from probe import TwoWordPSDProbe, L1DistanceLoss
-from probe import report_UAS
+from probe import TwoWordPSDProbe, L1DistanceLoss, get_embeddings, align_function, report_uas
 
 
 logger = logging.getLogger(__name__)
-
-
-def get_embeddings(all_inputs, all_attentions, model, layer):
-    with torch.no_grad():
-        embs = model(input_ids=all_inputs, attention_mask=all_attentions)[2][layer][:, 1:, :]
-    return embs
-
-
-def align_function(embs, align):
-    seq = []
-    for j, emb in enumerate(embs):
-        seq.append(scatter_mean(emb, align[j], dim=0))
-    # remove the last token since it corresponds to <\s> or padding to much the lens
-    return pad_sequence(seq, batch_first=True)[:, :-1, :]
 
 
 def run_probing_train(args: argparse.Namespace):
@@ -111,7 +94,7 @@ def run_probing_train(args: argparse.Namespace):
         training_loss = training_loss / len(train_dataloader)
         eval_loss = run_probing_eval(valid_dataloader, probe_model, criterion, lmodel, args.layer, args)
         #compute the UAS in the eval set
-        eval_uas = report_UAS(valid_dataloader, probe_model, lmodel, args)
+        eval_uas = report_uas(valid_dataloader, probe_model, lmodel, args)
         scheduler.step(eval_loss)
         tqdm.write(f'[epoch {epoch}] train loss: {training_loss}, validation loss: {eval_loss}, validation UAS: {eval_uas}')
 

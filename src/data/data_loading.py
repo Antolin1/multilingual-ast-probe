@@ -94,7 +94,7 @@ def download_codesearchnet_dataset():
     return dataset_dir
 
 
-def create_splits(dataset_path: str, split: list[float] = (.8, .1)):
+def create_splits(dataset_path, split):
     dataset_dir = os.path.dirname(dataset_path)
     with open(dataset_path, 'r') as f:
         data = list(f)

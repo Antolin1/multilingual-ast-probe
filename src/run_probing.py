@@ -38,13 +38,10 @@ def run_probing_train(args: argparse.Namespace):
     # @todo: load from checkpoint
     logger.info('Loading model and tokenizer.')
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
-    #check baseline
-    if (args.pretrained_model_name_or_path.endswith('-baseline')):
-        model_name = '-'.join(args.pretrained_model_name_or_path.split('-')[:-1])
-        lmodel = AutoModel.from_pretrained(model_name, output_hidden_states=True)
+
+    lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+    if args.run_name.endswith('-baseline'):
         lmodel = generate_baseline(lmodel)
-    else:
-        lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
 
     parser = Parser()
     parser.set_language(PY_LANGUAGE)

@@ -30,9 +30,8 @@ def report_UAS(test_loader, probe_model, lmodel, args):
 def report_spear(test_loader, probe_model, lmodel, args):
     lmodel.eval()
     probe_model.eval()
-    uas_scores = []
     lengths_to_spearmanrs = defaultdict(list)
-    for batch in test_loader:
+    for batch in tqdm(test_loader, desc='[valid SPEAR]'):
         all_inputs, all_attentions, dis, lens, alig = batch
         emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer)
         emb = align_function(emb, alig)

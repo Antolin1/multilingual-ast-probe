@@ -113,6 +113,7 @@ def getMatrixAndTokens(T, code):
 
 #build tree from distance matrix,
 #undirected graph, run this also for the ground truth
+# TODO, remove tokens
 def getTreeFromDistances(distances, tokens):
     G = nx.Graph()
     for j,t in enumerate(tokens):

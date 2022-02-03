@@ -15,11 +15,11 @@ def report_uas(test_loader, probe_model, lmodel, args):
         all_inputs, all_attentions, dis, lens, alig = batch
         emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer)
         emb = align_function(emb, alig)
-        outputs = probe_model(emb)
+        outputs = probe_model(emb.to(args.device))
         for j, dis_pred in enumerate(outputs):
             l = lens[j].item()
-            dis_real = dis[j].detach().numpy()[0:l, 0:l]
-            dis_pred = dis_pred[0:l, 0:l].detach().numpy()
+            dis_real = dis[j].cpu().detach().numpy()[0:l, 0:l]
+            dis_pred = dis_pred[0:l, 0:l].cpu().detach().numpy()
             # the distances are already aligned
             # getTreeFromDistances needs the tokens to label the nodes
             code_tokens_invented = ['a']*l

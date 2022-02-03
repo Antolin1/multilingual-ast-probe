@@ -20,7 +20,7 @@ class ProgramArguments:
     )
 
     pretrained_model_name_or_path: Optional[str] = field(
-        default='huggingface/CodeBERTa-small-v1',
+        default='microsoft/codebert-base',
         metadata={'help': 'Path to the pretrained language model or its name on Huggingface hub.'}
     )
 

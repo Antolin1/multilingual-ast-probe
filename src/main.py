@@ -20,6 +20,7 @@ def main(args):
         args.dataset_name_or_path = os.path.join(dataset_dir, args.lang, 'dataset.jsonl')
         create_splits(args.dataset_name_or_path, (.8, .1))
 
+
     if args.dataset_name_or_path is None:
         raise ValueError('A dataset path or name must be provided.')
 

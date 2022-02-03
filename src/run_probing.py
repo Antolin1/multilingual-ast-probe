@@ -79,7 +79,7 @@ def run_probing_train(args: argparse.Namespace):
 
     probe_model.train()
     lmodel.eval()
-    best_eval_loss = 0.0
+    best_eval_loss = float('inf')
     patience_count = 0
     for epoch in tqdm(range(args.epochs), desc='[training epoch loop]'):
         training_loss = 0.0

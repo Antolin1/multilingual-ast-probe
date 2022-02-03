@@ -3,12 +3,13 @@ from ..run_probing import get_embeddings, align_function
 from ..data.code2ast import getTreeFromDistances, getUAS, getSpear
 import numpy as np
 from collections import defaultdict
+import tqdm
 
 def report_UAS(test_loader, probe_model, lmodel, args):
     lmodel.eval()
     probe_model.eval()
     uas_scores = []
-    for batch in test_loader:
+    for batch in tqdm(test_loader, desc='[valid UAS]'):
         all_inputs, all_attentions, dis, lens, alig = batch
         emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer)
         emb = align_function(emb, alig)

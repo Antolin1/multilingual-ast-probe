@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn
 from probe import TwoWordPSDProbe, L1DistanceLoss
+from probe import report_UAS
 
 
 logger = logging.getLogger(__name__)
@@ -109,8 +110,10 @@ def run_probing_train(args: argparse.Namespace):
 
         training_loss = training_loss / len(train_dataloader)
         eval_loss = run_probing_eval(valid_dataloader, probe_model, criterion, lmodel, args.layer, args)
+        #compute the UAS in the eval set
+        eval_uas = report_UAS(valid_dataloader, probe_model, lmodel, args)
         scheduler.step(eval_loss)
-        tqdm.write(f'[epoch {epoch}] train loss: {training_loss}, validation loss: {eval_loss}')
+        tqdm.write(f'[epoch {epoch}] train loss: {training_loss}, validation loss: {eval_loss}, validation UAS: {eval_uas}')
 
         if eval_loss < best_eval_loss:
             logger.info('-' * 100)

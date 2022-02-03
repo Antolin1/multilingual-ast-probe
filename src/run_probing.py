@@ -98,8 +98,8 @@ def run_probing_train(args: argparse.Namespace):
         for step, batch in enumerate(tqdm(train_dataloader,
                                           desc='[training batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
+            probe_model.train()
             all_inputs, all_attentions, dis, lens, alig = batch
-
             emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer)
             emb = align_function(emb, alig)
 

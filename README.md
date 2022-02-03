@@ -6,6 +6,7 @@ Install tree-sitter grammars:
 mkdir grammars
 cd grammars
 git clone https://github.com/tree-sitter/tree-sitter-python.git
+git clone https://github.com/tree-sitter/tree-sitter-javascript.git
 ```
 
 Build grammars:

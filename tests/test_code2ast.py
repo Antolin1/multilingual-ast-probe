@@ -11,7 +11,8 @@ from tree_sitter import Language, Parser
 from src.data.code2ast import (code2ast, enrichAstWithDeps, 
                           getDependencyTree, getMatrixAndTokens,
                           getTreeFromDistances, getUAS, getSpear)
-from src.data.utils import remove_comments_and_docstrings_python
+from src.data.utils import (remove_comments_and_docstrings_python,
+                            remove_comments_and_docstrings_java_js)
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -29,7 +30,19 @@ code_pre_expected = """def max(a,b):
         return a
     return b"""
 
+code_js = """function myFunction(p1, p2) {
+/* multi-line
+comments */
+return p1 * p2;// The function returns the product of p1 and p2
+}"""
+
+code_js_pre_expected = """function myFunction(p1, p2) {
+
+return p1 * p2;
+}"""
+
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
+JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
@@ -38,6 +51,9 @@ class Code2ast(unittest.TestCase):
     def test_preprocessing(self):
         code_pre = remove_comments_and_docstrings_python(code)
         self.assertEqual(code_pre_expected, code_pre)
+        code_pre = remove_comments_and_docstrings_java_js(code_js)
+        self.assertEqual(code_js_pre_expected, code_pre)
+
     
     def test_code2ast(self):
         G,_ = code2ast(code, parser)
@@ -84,4 +100,15 @@ class Code2ast(unittest.TestCase):
         self.assertAlmostEqual(getUAS(T2,T_pred), 
                                float(len(T_pred.edges)-1)/float(len(T_pred.edges)))
         print(getSpear(matrix,matrix))
+
+    def test_js(self):
+        parser = Parser()
+        parser.set_language(JS_LANGUAGE)
+        G,_ = code2ast(code_js, parser, 'javascript')
+        nx.draw(G, labels=nx.get_node_attributes(G, 'type'), with_labels=True)
+        plt.show()
+        enrichAstWithDeps(G)
+        T = getDependencyTree(G)
+        nx.draw(T, labels=nx.get_node_attributes(T,'type'), with_labels = True)
+        plt.show()
         

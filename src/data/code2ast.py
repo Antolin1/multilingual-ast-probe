@@ -6,7 +6,7 @@ Created on Sat Jan 29 16:08:24 2022
 @author: Jose Antonio
 """
 
-from .utils import remove_comments_and_docstrings_python
+from .utils import remove_comments_and_docstrings_python, remove_comments_and_docstrings_java_js
 import networkx as nx
 from scipy.stats import spearmanr
 
@@ -85,6 +85,18 @@ def code2ast(code, parser, lang='python'):
                       is_terminal = False,
                       start = tree.root_node.start_byte,
                       end = tree.root_node.end_byte)
+        getGraphFromTree(tree.root_node, G, 0)
+        return G, code
+    elif lang == 'javascript':
+        code = remove_comments_and_docstrings_java_js(code)
+        tree = parser.parse(bytes(code, "utf8"))
+
+        G = nx.DiGraph()
+        # add root
+        G.add_node(0, type=tree.root_node.type,
+                   is_terminal=False,
+                   start=tree.root_node.start_byte,
+                   end=tree.root_node.end_byte)
         getGraphFromTree(tree.root_node, G, 0)
         return G, code
 

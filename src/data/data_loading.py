@@ -81,8 +81,9 @@ def download_codesearchnet_dataset():
                 # we only keep code snippets that are clean (based on GraphCodeBERT cleaning)
                 #   by matching the url with a key in `data`.
                 if line in data:
-                    # we only extract the original code
-                    js = {'original_string': data[line]['original_string']}
+                    # we only extract the original code and the code tokens to filter
+                    js = {'original_string': data[line]['original_string'],
+                          'code_tokens': data[line]['code_tokens'] }
                     f1.write(json.dumps(js) + '\n')
         os.remove(os.path.join(lang, 'train.txt'))
         shutil.rmtree(os.path.join(lang, 'final'))

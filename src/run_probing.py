@@ -32,8 +32,21 @@ def run_probing_train(args: argparse.Namespace):
     data_files = {'train': os.path.join(args.dataset_name_or_path, 'train.jsonl'),
                   'valid': os.path.join(args.dataset_name_or_path, 'valid.jsonl'),
                   'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
-    train_set = load_dataset('json', data_files=data_files, split='train[:20000]')
-    valid_set = load_dataset('json', data_files=data_files, split='valid[:2000]')
+
+    #load, filter, shuffle, get
+    train_set = load_dataset('json', data_files=data_files, split='train')
+    train_set = train_set.filter(lambda e: len(e['code_tokens']) <= 100)
+    train_set = train_set.shuffle(args.seed)
+    train_set = train_set[0:20000]
+    valid_set = load_dataset('json', data_files=data_files, split='valid')
+    valid_set = valid_set.filter(lambda e: len(e['code_tokens']) <= 100)
+    valid_set = valid_set.shuffle(args.seed)
+    valid_set = valid_set[0:2000]
+    test_set = load_dataset('json', data_files=data_files, split='test')
+    test_set = test_set.filter(lambda e: len(e['code_tokens']) <= 100)
+    test_set = test_set.shuffle(args.seed)
+    test_set = test_set[0:4000]
+
 
     # @todo: load from checkpoint
     logger.info('Loading model and tokenizer.')
@@ -43,15 +56,15 @@ def run_probing_train(args: argparse.Namespace):
     if args.run_name.endswith('-baseline'):
         lmodel = generate_baseline(lmodel)
 
+    #parse to distance matrices
     parser = Parser()
     parser.set_language(PY_LANGUAGE)
     train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    train_set = train_set.filter(lambda e: len(tokenizer.convert_tokens_to_ids(e['tokens'])) + 2 < 100)
     train_set = train_set.remove_columns('original_string')
-
     valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    valid_set = valid_set.filter(lambda e: len(tokenizer.convert_tokens_to_ids(e['tokens'])) + 2 < 100)
     valid_set = valid_set.remove_columns('original_string')
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    test_set = test_set.remove_columns('original_string')
 
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=32,
@@ -59,6 +72,11 @@ def run_probing_train(args: argparse.Namespace):
                                   collate_fn=lambda batch: collator_fn(batch, tokenizer),
                                   num_workers=10)
     valid_dataloader = DataLoader(dataset=valid_set,
+                                  batch_size=32,
+                                  shuffle=False,
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  num_workers=10)
+    test_dataloader = DataLoader(dataset=test_set,
                                   batch_size=32,
                                   shuffle=False,
                                   collate_fn=lambda batch: collator_fn(batch, tokenizer),
@@ -105,7 +123,7 @@ def run_probing_train(args: argparse.Namespace):
         #compute the UAS in the eval set
         eval_uas = report_uas(valid_dataloader, probe_model, lmodel, args)
         scheduler.step(eval_loss)
-        tqdm.write(f'[epoch {epoch}] train loss: {training_loss}, validation loss: {eval_loss}, validation UAS: {eval_uas}')
+        logger.info(f'[epoch {epoch}] train loss: {training_loss}, validation loss: {eval_loss}, validation UAS: {eval_uas}')
 
         if eval_loss < best_eval_loss:
             logger.info('-' * 100)
@@ -120,6 +138,14 @@ def run_probing_train(args: argparse.Namespace):
             patience_count += 1
         if patience_count == args.patience:
             break
+
+    #Load final model and test it over the test set (i.e., UAS)
+    logger.info('-' * 100)
+    logger.info(f'Loading best probe')
+    final_probe_model = TwoWordPSDProbe(128, 768, args.device)
+    final_probe_model.load_state_dict(torch.load(os.path.join(args.model_chkpt_path, f'pytorch_model.bin')))
+    uas_test = report_uas(test_dataloader, final_probe_model, lmodel, args)
+    logger.info(f'Test UAS: {eval_uas}')
 
 
 def run_probing_eval(

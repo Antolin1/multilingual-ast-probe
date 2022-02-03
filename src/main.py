@@ -18,7 +18,7 @@ def main(args):
     if args.download_csn:
         dataset_dir = download_codesearchnet_dataset()
         args.dataset_name_or_path = os.path.join(dataset_dir, args.lang, 'dataset.jsonl')
-        create_splits(args.dataset_path_or_name)
+        create_splits(args.dataset_name_or_path, (.8, .1))
 
     if args.dataset_name_or_path is None:
         raise ValueError('A dataset path or name must be provided.')

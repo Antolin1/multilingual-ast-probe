@@ -24,11 +24,6 @@ class ProgramArguments:
         metadata={'help': 'Path to the pretrained language model or its name on Huggingface hub.'}
     )
 
-    tokenizer_name_or_path: Optional[str] = field(
-        default='huggingface/CodeBERTa-small-v1',
-        metadata={'help': 'Path to the tokenizer or its name on the Huggingface hub.'}
-    )
-
     lang: Optional[str] = field(
         default='python',
         metadata={'help': 'Programming language used in the experiments.'}

@@ -5,7 +5,7 @@ from typing import Union
 
 import torch
 from torch.utils.data import DataLoader
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, RobertaModel
 from datasets import load_dataset
 from tree_sitter import Parser
 from tqdm import tqdm
@@ -16,6 +16,12 @@ from probe import TwoWordPSDProbe, L1DistanceLoss, get_embeddings, align_functio
 
 logger = logging.getLogger(__name__)
 
+#I assume that it is a roberta model
+def generate_baseline(model):
+    config = model.config
+    baseline = RobertaModel(config)
+    baseline.embeddings = model.embeddings
+    return baseline
 
 def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
@@ -31,8 +37,14 @@ def run_probing_train(args: argparse.Namespace):
 
     # @todo: load from checkpoint
     logger.info('Loading model and tokenizer.')
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path)
-    lmodel = AutoModel.from_pretrained(args.tokenizer_name_or_path, output_hidden_states=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+    #check baseline
+    if (args.pretrained_model_name_or_path.endswith('-baseline')):
+        model_name = '-'.join(args.pretrained_model_name_or_path.split('-')[:-1])
+        lmodel = AutoModel.from_pretrained(model_name, output_hidden_states=True)
+        lmodel = generate_baseline(lmodel)
+    else:
+        lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
 
     parser = Parser()
     parser.set_language(PY_LANGUAGE)

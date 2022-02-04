@@ -39,6 +39,11 @@ class ProgramArguments:
         metadata={'help': 'Number of training epochs.'}
     )
 
+    batch_size: Optional[int] = field(
+        default=32,
+        metadata={'help': 'Train and validation batch size.'}
+    )
+
     patience: Optional[int] = field(
         default=5,
         metadata={'help': 'Patience for early stopping.'}

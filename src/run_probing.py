@@ -1,4 +1,5 @@
 import os
+import pickle
 import argparse
 import logging
 from typing import Union
@@ -16,12 +17,13 @@ from probe import TwoWordPSDProbe, L1DistanceLoss, get_embeddings, align_functio
 
 logger = logging.getLogger(__name__)
 
-#I assume that it is a roberta model
+
 def generate_baseline(model):
     config = model.config
     baseline = RobertaModel(config)
     baseline.embeddings = model.embeddings
     return baseline
+
 
 def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
@@ -33,57 +35,56 @@ def run_probing_train(args: argparse.Namespace):
                   'valid': os.path.join(args.dataset_name_or_path, 'valid.jsonl'),
                   'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
 
-    #load, filter, shuffle, get
     train_set = load_dataset('json', data_files=data_files, split='train')
     train_set = train_set.filter(lambda e: len(e['code_tokens']) <= 100)
     train_set = train_set.shuffle(args.seed)
     train_set = train_set[0:20000]
+
     valid_set = load_dataset('json', data_files=data_files, split='valid')
     valid_set = valid_set.filter(lambda e: len(e['code_tokens']) <= 100)
     valid_set = valid_set.shuffle(args.seed)
     valid_set = valid_set[0:2000]
+
     test_set = load_dataset('json', data_files=data_files, split='test')
     test_set = test_set.filter(lambda e: len(e['code_tokens']) <= 100)
     test_set = test_set.shuffle(args.seed)
     test_set = test_set[0:4000]
 
 
-    # @todo: load from checkpoint
+    # @todo: load lmodel and tokenizer from checkpoint
+    # @todo: model_type in ProgramArguments
     logger.info('Loading model and tokenizer.')
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
 
     lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
-    if args.run_name.endswith('-baseline'):
+    if '-baseline' in args.run_name:
         lmodel = generate_baseline(lmodel)
+    lmodel = lmodel.to(args.device)
 
-    #parse to distance matrices
     parser = Parser()
     parser.set_language(PY_LANGUAGE)
     train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    train_set = train_set.remove_columns('original_string')
-    train_set = train_set.remove_columns('code_tokens')
+    train_set = train_set.remove_columns(['original_string', 'code_tokens'])
     valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    valid_set = valid_set.remove_columns('original_string')
-    valid_set = valid_set.remove_columns('code_tokens')
+    valid_set = valid_set.remove_columns(['original_string', 'code_tokens'])
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    test_set = test_set.remove_columns('original_string')
-    test_set = test_set.remove_columns('code_tokens')
+    test_set = test_set.remove_columns(['original_string', 'code_tokens'])
 
     train_dataloader = DataLoader(dataset=train_set,
-                                  batch_size=32,
+                                  batch_size=args.batch_size,
                                   shuffle=True,
                                   collate_fn=lambda batch: collator_fn(batch, tokenizer),
                                   num_workers=10)
     valid_dataloader = DataLoader(dataset=valid_set,
-                                  batch_size=32,
+                                  batch_size=args.batch_size,
                                   shuffle=False,
                                   collate_fn=lambda batch: collator_fn(batch, tokenizer),
                                   num_workers=10)
     test_dataloader = DataLoader(dataset=test_set,
-                                  batch_size=32,
-                                  shuffle=False,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
-                                  num_workers=10)
+                                 batch_size=args.batch_size,
+                                 shuffle=False,
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 num_workers=10)
 
     probe_model = TwoWordPSDProbe(128, 768, args.device)
     criterion = L1DistanceLoss(args.device)
@@ -94,6 +95,7 @@ def run_probing_train(args: argparse.Namespace):
     probe_model.train()
     lmodel.eval()
     best_eval_loss = float('inf')
+    metrics = {'training_loss': [], 'validation_loss': [], 'validation_uas': [], 'test_uas': []}
     patience_count = 0
     for epoch in tqdm(range(args.epochs), desc='[training epoch loop]'):
         training_loss = 0.0
@@ -103,11 +105,13 @@ def run_probing_train(args: argparse.Namespace):
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
             probe_model.train()
             all_inputs, all_attentions, dis, lens, alig = batch
-            emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer)
+            all_inputs.to(args.device), all_attentions.to(args.device), dis.to(args.device), lens.to(args.device)
+
+            emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer).to(args.device)
             emb = align_function(emb, alig)
 
-            outputs = probe_model(emb.to(args.device))
-            loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))
+            outputs = probe_model(emb)
+            loss, count = criterion(outputs, dis, lens)
 
             step_loss += loss.item()
             step_num += 1
@@ -123,10 +127,13 @@ def run_probing_train(args: argparse.Namespace):
 
         training_loss = training_loss / len(train_dataloader)
         eval_loss = run_probing_eval(valid_dataloader, probe_model, criterion, lmodel, args.layer, args)
-        #compute the UAS in the eval set
         eval_uas = report_uas(valid_dataloader, probe_model, lmodel, args)
         scheduler.step(eval_loss)
-        logger.info(f'[epoch {epoch}] train loss: {training_loss}, validation loss: {eval_loss}, validation UAS: {eval_uas}')
+        logger.info(f'[epoch {epoch}] train loss: {round(training_loss, 4)}, '
+                    f'validation loss: {round(eval_loss, 4)}, validation UAS: {round(eval_uas, 4)}')
+        metrics['training_loss'].append(round(training_loss, 4))
+        metrics['validation_loss'].append(round(eval_loss, 4))
+        metrics['validation_uas'].append(round(eval_uas, 4))
 
         if eval_loss < best_eval_loss:
             logger.info('-' * 100)
@@ -140,15 +147,21 @@ def run_probing_train(args: argparse.Namespace):
         else:
             patience_count += 1
         if patience_count == args.patience:
+            logger.info('Stopping training loop (out of patience).')
             break
 
-    #Load final model and test it over the test set (i.e., UAS)
     logger.info('-' * 100)
-    logger.info(f'Loading best probe')
+    logger.info('Loading best probe model.')
     final_probe_model = TwoWordPSDProbe(128, 768, args.device)
-    final_probe_model.load_state_dict(torch.load(os.path.join(args.model_chkpt_path, f'pytorch_model.bin')))
-    uas_test = report_uas(test_dataloader, final_probe_model, lmodel, args)
-    logger.info(f'Test UAS: {eval_uas}')
+    final_probe_model.load_state_dict(torch.load(os.path.join(args.output_path, f'pytorch_model.bin')))
+    test_uas = report_uas(test_dataloader, final_probe_model, lmodel, args)
+    logger.info(f'Test UAS: {test_uas}')
+    metrics['test_uas'].append(round(test_uas, 4))
+
+    logger.info('-' * 100)
+    logger.info('Saving metrics.')
+    with open(os.path.join(args.output_path, 'metrics.log'), 'wb') as f:
+        pickle.dump(metrics, f)
 
 
 def run_probing_eval(
@@ -163,9 +176,11 @@ def run_probing_eval(
     with torch.no_grad():
         for batch in tqdm(test_dataloader, desc='[valid batch]'):
             all_inputs, all_attentions, dis, lens, alig = batch
-            emb = get_embeddings(all_inputs, all_attentions, lmodel, layer)
+            all_inputs.to(args.device), all_attentions.to(args.device), dis.to(args.device), lens.to(args.device)
+
+            emb = get_embeddings(all_inputs, all_attentions, lmodel, layer).to(args.device)
             emb = align_function(emb, alig)
-            outputs = probe_model(emb.to(args.device))
-            loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))
+            outputs = probe_model(emb)
+            loss, count = criterion(outputs, dis, lens)
             eval_loss += loss.item()
     return eval_loss / len(test_dataloader)

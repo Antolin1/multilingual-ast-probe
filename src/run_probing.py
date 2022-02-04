@@ -37,18 +37,15 @@ def run_probing_train(args: argparse.Namespace):
 
     train_set = load_dataset('json', data_files=data_files, split='train')
     train_set = train_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    train_set = train_set.shuffle(args.seed)
-    train_set = train_set[0:20000]
+    train_set = train_set.shuffle(args.seed).select(range(20000))
 
     valid_set = load_dataset('json', data_files=data_files, split='valid')
     valid_set = valid_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    valid_set = valid_set.shuffle(args.seed)
-    valid_set = valid_set[0:2000]
+    valid_set = valid_set.shuffle(args.seed).select(range(2000))
 
     test_set = load_dataset('json', data_files=data_files, split='test')
     test_set = test_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    test_set = test_set.shuffle(args.seed)
-    test_set = test_set[0:4000]
+    test_set = test_set.shuffle(args.seed).select(range(4000))
 
 
     # @todo: load lmodel and tokenizer from checkpoint

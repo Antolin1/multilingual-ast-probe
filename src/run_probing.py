@@ -6,12 +6,12 @@ from typing import Union
 
 import torch
 from torch.utils.data import DataLoader
-from transformers import AutoModel, AutoTokenizer, RobertaModel
+from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
 from datasets import load_dataset
 from tree_sitter import Parser
 from tqdm import tqdm
 
-from data import convert_sample_to_features, PY_LANGUAGE, collator_fn
+from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE
 from probe import TwoWordPSDProbe, L1DistanceLoss, get_embeddings, align_function, report_uas
 
 
@@ -53,13 +53,23 @@ def run_probing_train(args: argparse.Namespace):
     logger.info('Loading model and tokenizer.')
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
 
-    lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
-    if '-baseline' in args.run_name:
-        lmodel = generate_baseline(lmodel)
-    lmodel = lmodel.to(args.device)
+    if args.model_type == 't5':
+        lmodel = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+        lmodel = lmodel.to(args.device)
+    else:
+        lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+        if '-baseline' in args.run_name:
+            lmodel = generate_baseline(lmodel)
+        lmodel = lmodel.to(args.device)
 
+    #select the parser
     parser = Parser()
-    parser.set_language(PY_LANGUAGE)
+    if args.lang == 'python':
+        parser.set_language(PY_LANGUAGE)
+    elif args.lang == 'javascript':
+        parser.set_language(JS_LANGUAGE)
+
+
     train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     train_set = train_set.remove_columns(['original_string', 'code_tokens'])
     valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
@@ -83,7 +93,7 @@ def run_probing_train(args: argparse.Namespace):
                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
                                  num_workers=10)
 
-    probe_model = TwoWordPSDProbe(128, 768, args.device)
+    probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
     criterion = L1DistanceLoss(args.device)
 
     optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
@@ -102,7 +112,7 @@ def run_probing_train(args: argparse.Namespace):
             probe_model.train()
             all_inputs, all_attentions, dis, lens, alig = batch
 
-            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer)
+            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer, args.model_type)
             emb = align_function(emb.to(args.device), alig.to(args.device))
 
             outputs = probe_model(emb.to(args.device))
@@ -140,7 +150,7 @@ def run_probing_train(args: argparse.Namespace):
 
     logger.info('-' * 100)
     logger.info('Loading best probe model.')
-    final_probe_model = TwoWordPSDProbe(128, 768, args.device)
+    final_probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
     final_probe_model.load_state_dict(torch.load(os.path.join(args.output_path, f'pytorch_model.bin')))
     test_uas = report_uas(test_dataloader, final_probe_model, lmodel, args)
     logger.info(f'Test UAS: {test_uas}')
@@ -164,7 +174,7 @@ def run_probing_eval(
     with torch.no_grad():
         for batch in tqdm(test_dataloader, desc='[valid batch]'):
             all_inputs, all_attentions, dis, lens, alig = batch
-            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, layer)
+            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, layer, args.model_type)
             emb = align_function(emb.to(args.device), alig.to(args.device))
             outputs = probe_model(emb.to(args.device))
             loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))

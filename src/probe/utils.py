@@ -3,9 +3,13 @@ from torch.nn.utils.rnn import pad_sequence
 from torch_scatter import scatter_mean
 
 
-def get_embeddings(all_inputs, all_attentions, model, layer):
-    with torch.no_grad():
-        embs = model(input_ids=all_inputs, attention_mask=all_attentions)[2][layer][:, 1:, :]
+def get_embeddings(all_inputs, all_attentions, model, layer, model_type):
+    if model_type == 't5':
+        with torch.no_grad():
+            embs = model(input_ids=all_inputs, attention_mask=all_attentions)[1][layer][:, 1:, :]
+    else:
+        with torch.no_grad():
+            embs = model(input_ids=all_inputs, attention_mask=all_attentions)[2][layer][:, 1:, :]
     return embs
 
 

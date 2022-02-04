@@ -24,6 +24,11 @@ class ProgramArguments:
         metadata={'help': 'Path to the pretrained language model or its name on Huggingface hub.'}
     )
 
+    model_type: Optional[str] = field(
+        default='roberta',
+        metadata={'help': 'Architecture of the transformer model. Currently just supported t5 and roberta.'}
+    )
+
     lang: Optional[str] = field(
         default='python',
         metadata={'help': 'Programming language used in the experiments.'}
@@ -54,13 +59,29 @@ class ProgramArguments:
         metadata={'help': 'Layer used to get the embeddings.'}
     )
 
+    rank: Optional[int] = field(
+        default=128,
+        metadata={'help': 'Maximum rank of the probe.'}
+    )
+
+    hidden: Optional[int] = field(
+        default=768,
+        metadata={'help': 'Dimension of the feature word vectors.'}
+    )
+
     seed: Optional[int] = field(
         default=42,
         metadata={'help': 'Seed for experiments replication.'}
+    )
+
+    samples: Optional[int] = field(
+        default=5,
+        metadata={'help': 'Samples to visualize.'}
     )
 
     download_csn: bool = field(default=False, metadata={'help': 'Download CodeSearchNet dataset.'})
 
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})
+    do_visualization: bool = field(default=False, metadata={'help': 'Run visualizations.'})
 

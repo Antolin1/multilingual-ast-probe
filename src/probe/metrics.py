@@ -15,7 +15,7 @@ def report_uas(test_loader, probe_model, lmodel, args):
     with torch.no_grad():
         for batch in tqdm(test_loader, desc='[valid UAS]'):
             all_inputs, all_attentions, dis, lens, alig = batch
-            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer)
+            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer, args.model_type)
             emb = align_function(emb.to(args.device), alig.to(args.device))
             outputs = probe_model(emb.to(args.device))
             for j, dis_pred in enumerate(outputs):
@@ -38,13 +38,13 @@ def report_spear(test_loader, probe_model, lmodel, args):
     lengths_to_spearmanrs = defaultdict(list)
     for batch in tqdm(test_loader, desc='[valid SPEAR]'):
         all_inputs, all_attentions, dis, lens, alig = batch
-        emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer)
-        emb = align_function(emb, alig)
-        outputs = probe_model(emb)
+        emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer, args.model_type)
+        emb = align_function(emb.to(args.device), alig.to(args.device))
+        outputs = probe_model(emb.to(args.device))
         for j, dis_pred in enumerate(outputs):
             l = lens[j].item()
-            dis_real = dis[j].detach().numpy()[0:l, 0:l]
-            dis_pred = dis_pred[0:l, 0:l].detach().numpy()
+            dis_real = dis[j].cpu().detach().numpy()[0:l, 0:l]
+            dis_pred = dis_pred[0:l, 0:l].cpu().detach().numpy()
             spear = getSpear(dis_real, dis_pred)
             lengths_to_spearmanrs[l].extend(spear)
     mean_spearman_for_each_length = {length: np.mean(lengths_to_spearmanrs[length])

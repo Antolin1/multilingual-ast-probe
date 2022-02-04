@@ -27,6 +27,7 @@ LANGUAGES = (
     'php'
 )
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
+JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
 
 
 def download_codesearchnet_dataset():

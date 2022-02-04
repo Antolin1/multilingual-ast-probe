@@ -1,4 +1,4 @@
-from .data_loading import download_codesearchnet_dataset, create_splits, convert_sample_to_features, PY_LANGUAGE
+from .data_loading import download_codesearchnet_dataset, create_splits, convert_sample_to_features, PY_LANGUAGE, JS_LANGUAGE
 from .collator import collator_fn
 from .utils import \
     download_url, \

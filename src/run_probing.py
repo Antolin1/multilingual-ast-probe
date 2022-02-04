@@ -37,18 +37,15 @@ def run_probing_train(args: argparse.Namespace):
 
     train_set = load_dataset('json', data_files=data_files, split='train')
     train_set = train_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    train_set = train_set.shuffle(args.seed)
-    train_set = train_set[0:20000]
+    train_set = train_set.shuffle(args.seed).select(range(20000))
 
     valid_set = load_dataset('json', data_files=data_files, split='valid')
     valid_set = valid_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    valid_set = valid_set.shuffle(args.seed)
-    valid_set = valid_set[0:2000]
+    valid_set = valid_set.shuffle(args.seed).select(range(2000))
 
     test_set = load_dataset('json', data_files=data_files, split='test')
     test_set = test_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    test_set = test_set.shuffle(args.seed)
-    test_set = test_set[0:4000]
+    test_set = test_set.shuffle(args.seed).select(range(4000))
 
 
     # @todo: load lmodel and tokenizer from checkpoint
@@ -99,26 +96,17 @@ def run_probing_train(args: argparse.Namespace):
     patience_count = 0
     for epoch in tqdm(range(args.epochs), desc='[training epoch loop]'):
         training_loss = 0.0
-        step_loss, step_num = 0.0, 0
         for step, batch in enumerate(tqdm(train_dataloader,
                                           desc='[training batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
             probe_model.train()
             all_inputs, all_attentions, dis, lens, alig = batch
-            all_inputs.to(args.device), all_attentions.to(args.device), dis.to(args.device), lens.to(args.device)
 
-            emb = get_embeddings(all_inputs, all_attentions, lmodel, args.layer).to(args.device)
-            emb = align_function(emb, alig)
+            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer)
+            emb = align_function(emb.to(args.device), alig.to(args.device))
 
-            outputs = probe_model(emb)
-            loss, count = criterion(outputs, dis, lens)
-
-            step_loss += loss.item()
-            step_num += 1
-            if step % 10 == 0 and step > 0:
-                avg_loss = round(step_loss / step_num, 4)
-                logger.info(f'\nepoch {epoch} step {step} loss {avg_loss}')
-                step_loss, step_num = 0, 0
+            outputs = probe_model(emb.to(args.device))
+            loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))
 
             loss.backward()
             optimizer.step()
@@ -139,7 +127,7 @@ def run_probing_train(args: argparse.Namespace):
             logger.info('-' * 100)
             logger.info('Saving model checkpoint')
             logger.info('-' * 100)
-            output_path = os.path.join(args.model_chkpt_path, f'pytorch_model.bin')
+            output_path = os.path.join(args.output_path, f'pytorch_model.bin')
             torch.save(probe_model.state_dict(), output_path)
             logger.info(f'Probe model saved: {output_path}')
             patience_count = 0
@@ -176,11 +164,9 @@ def run_probing_eval(
     with torch.no_grad():
         for batch in tqdm(test_dataloader, desc='[valid batch]'):
             all_inputs, all_attentions, dis, lens, alig = batch
-            all_inputs.to(args.device), all_attentions.to(args.device), dis.to(args.device), lens.to(args.device)
-
-            emb = get_embeddings(all_inputs, all_attentions, lmodel, layer).to(args.device)
-            emb = align_function(emb, alig)
-            outputs = probe_model(emb)
-            loss, count = criterion(outputs, dis, lens)
+            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, layer)
+            emb = align_function(emb.to(args.device), alig.to(args.device))
+            outputs = probe_model(emb.to(args.device))
+            loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))
             eval_loss += loss.item()
     return eval_loss / len(test_dataloader)

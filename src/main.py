@@ -30,7 +30,7 @@ def main(args):
         run_probing_eval(args=args)
     else:
         raise ValueError('--do_train or --do_test should be provided.')
-
+dir
 
 if __name__ == '__main__':
     parser = HfArgumentParser(ProgramArguments)

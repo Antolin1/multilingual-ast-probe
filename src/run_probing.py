@@ -61,10 +61,13 @@ def run_probing_train(args: argparse.Namespace):
     parser.set_language(PY_LANGUAGE)
     train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     train_set = train_set.remove_columns('original_string')
+    train_set = train_set.remove_columns('code_tokens')
     valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     valid_set = valid_set.remove_columns('original_string')
+    valid_set = valid_set.remove_columns('code_tokens')
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     test_set = test_set.remove_columns('original_string')
+    test_set = test_set.remove_columns('code_tokens')
 
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=32,

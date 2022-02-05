@@ -98,6 +98,11 @@ def download_codesearchnet_dataset():
 
 def create_splits(dataset_path, split):
     dataset_dir = os.path.dirname(dataset_path)
+    if (os.path.isfile(os.path.join(dataset_dir, 'train.jsonl'))
+        and os.path.isfile(os.path.join(dataset_dir, 'test.jsonl'))
+        and os.path.isfile(os.path.join(dataset_dir, 'valid.jsonl'))):
+        logger.info('Splits already created.')
+        return
     with open(dataset_path, 'r') as f:
         data = list(f)
         # we already seeded random package in the main
@@ -125,8 +130,8 @@ def create_splits(dataset_path, split):
             f3.write(json.dumps(js) + '\n')
 
 
-def convert_sample_to_features(code, parser):
-    G, pre_code = code2ast(code, parser)
+def convert_sample_to_features(code, parser, lang='python'):
+    G, pre_code = code2ast(code, parser, lang)
     enrichAstWithDeps(G)
     T = getDependencyTree(G)
     matrix, code_tokens = getMatrixAndTokens(T, pre_code)

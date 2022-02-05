@@ -37,15 +37,15 @@ def run_probing_train(args: argparse.Namespace):
 
     train_set = load_dataset('json', data_files=data_files, split='train')
     train_set = train_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    train_set = train_set.shuffle(args.seed).select(range(20000))
+    train_set = train_set.shuffle(args.seed).select(range(min(20000, len(train_set))))
 
     valid_set = load_dataset('json', data_files=data_files, split='valid')
     valid_set = valid_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    valid_set = valid_set.shuffle(args.seed).select(range(2000))
+    valid_set = valid_set.shuffle(args.seed).select(range(min(2000, len(valid_set))))
 
     test_set = load_dataset('json', data_files=data_files, split='test')
     test_set = test_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    test_set = test_set.shuffle(args.seed).select(range(4000))
+    test_set = test_set.shuffle(args.seed).select(range(min(4000, len(test_set))))
 
 
     # @todo: load lmodel and tokenizer from checkpoint
@@ -70,11 +70,11 @@ def run_probing_train(args: argparse.Namespace):
         parser.set_language(JS_LANGUAGE)
 
 
-    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
     train_set = train_set.remove_columns(['original_string', 'code_tokens'])
-    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
     valid_set = valid_set.remove_columns(['original_string', 'code_tokens'])
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
     test_set = test_set.remove_columns(['original_string', 'code_tokens'])
 
     train_dataloader = DataLoader(dataset=train_set,

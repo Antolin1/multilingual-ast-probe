@@ -79,6 +79,11 @@ class ProgramArguments:
         metadata={'help': 'Samples to visualize.'}
     )
 
+    max_tokens: Optional[int] = field(
+        default=100,
+        metadata={'help': 'Max tokens considered.'}
+    )
+
     download_csn: bool = field(default=False, metadata={'help': 'Download CodeSearchNet dataset.'})
 
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})

@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE
 from probe import TwoWordPSDProbe, L1DistanceLoss, get_embeddings, align_function, report_uas
-
+from data.utils import match_tokenized_to_untokenized_roberta
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,9 @@ def generate_baseline(model):
     baseline.embeddings = model.embeddings
     return baseline
 
+def filter_strategy(code_tokens, tokenizer, max_tokens):
+    to_convert, _ = match_tokenized_to_untokenized_roberta(code_tokens, tokenizer)
+    return len(code_tokens) <= max_tokens and (len(to_convert) + 2 <= 512)
 
 def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
@@ -35,23 +38,34 @@ def run_probing_train(args: argparse.Namespace):
                   'valid': os.path.join(args.dataset_name_or_path, 'valid.jsonl'),
                   'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
 
+    logger.info('Loading tokenizer')
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+
     train_set = load_dataset('json', data_files=data_files, split='train')
-    train_set = train_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    train_set = train_set.shuffle(args.seed).select(range(min(20000, len(train_set))))
-
     valid_set = load_dataset('json', data_files=data_files, split='valid')
-    valid_set = valid_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    valid_set = valid_set.shuffle(args.seed).select(range(min(2000, len(valid_set))))
-
     test_set = load_dataset('json', data_files=data_files, split='test')
-    test_set = test_set.filter(lambda e: len(e['code_tokens']) <= 100)
-    test_set = test_set.shuffle(args.seed).select(range(min(4000, len(test_set))))
 
+
+    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    train_set = train_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
+    train_set = train_set.shuffle(args.seed).select(range(min(20000, len(train_set))))
+    train_set = train_set.remove_columns(['original_string', 'code_tokens'])
+
+    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    valid_set = valid_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
+    valid_set = valid_set.shuffle(args.seed).select(range(min(2000, len(valid_set))))
+    valid_set = valid_set.remove_columns(['original_string', 'code_tokens'])
+
+
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    test_set = test_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
+    test_set = test_set.shuffle(args.seed).select(range(min(4000, len(test_set))))
+    test_set = test_set.remove_columns(['original_string', 'code_tokens'])
 
     # @todo: load lmodel and tokenizer from checkpoint
     # @todo: model_type in ProgramArguments
-    logger.info('Loading model and tokenizer.')
-    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+    logger.info('Loading model')
 
     if args.model_type == 't5':
         lmodel = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
@@ -70,12 +84,7 @@ def run_probing_train(args: argparse.Namespace):
         parser.set_language(JS_LANGUAGE)
 
 
-    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
-    train_set = train_set.remove_columns(['original_string', 'code_tokens'])
-    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
-    valid_set = valid_set.remove_columns(['original_string', 'code_tokens'])
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
-    test_set = test_set.remove_columns(['original_string', 'code_tokens'])
+
 
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,

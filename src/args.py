@@ -14,11 +14,6 @@ class ProgramArguments:
         metadata={'help': 'Name to identify the run and logging directory.'}
     )
 
-    dataset_name_or_path: Optional[str] = field(
-        default=None,
-        metadata={'help': 'Local path to the dataset or its name on Huggingface datasets hub.'}
-    )
-
     pretrained_model_name_or_path: Optional[str] = field(
         default='microsoft/codebert-base',
         metadata={'help': 'Path to the pretrained language model or its name on Huggingface hub.'}

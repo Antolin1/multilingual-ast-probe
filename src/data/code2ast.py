@@ -123,6 +123,130 @@ def getMatrixAndTokens(T, code):
     tokens = getTokens(T, code)
     return distance, tokens
 
+#G directed ast without dependency labels
+#T directed dependency tree
+#both must be aligned
+#add label to edges in T with the nonterminals
+#when recover ast, left of [] and [] dont create. right create
+def labelDepTree(G, T):
+    root = getRoot(G)
+    nodes = [n for n in list(G.nodes) if root != n and G.nodes[n]['is_terminal']]
+    types = nx.get_node_attributes(G, 'type')
+    for n in nodes:
+        h = getHeadDepTree(T, n)
+        if h == root:
+            nodes = nx.shortest_path(nx.Graph(G), source=h, target=n)[1:-1]
+            node_types = [types[m] for m in nodes]
+            node_depths = [getDepth(G, m, root) for m in nodes]
+            special_index = 0
+            edge_data = ComplexEdgeLabels(node_types, node_depths, special_index)
+            #node_types[0] = ('[' + node_types[0][0] + ']', node_types[0][1])
+            #node_types = '|'.join(node_types)
+            T[h][n]['complex_edge'] = edge_data
+            T[h][n]['complex_edge_str'] = str(edge_data)
+        else:
+            h_head = getHeadDepTree(T, h)
+            spine_head = nx.shortest_path(nx.Graph(G), source=h, target=h_head)[1:-1]
+            spine_n = nx.shortest_path(nx.Graph(G), source=h, target=n)[1:-1]
+            index = None
+            for j,m in enumerate(spine_n):
+                if m in spine_head:
+                    index = spine_head.index(m)
+            if index == None:
+                index = len(spine_n) - 1
+            spine_n_types = [types[m] for m in spine_n]
+            node_depths = [getDepth(G, m, root) for m in spine_n]
+            edge_data = ComplexEdgeLabels(spine_n_types, node_depths, index)
+            T[h][n]['complex_edge'] = edge_data
+            T[h][n]['complex_edge_str'] = str(edge_data)
+            #spine_n[index] = '[' + spine_n[index] + ']'
+            #spine_n = '|'.join(spine_n)
+            #T[h][n]['seq_nonterminal'] = spine_n
+
+#given the labeled directed dep tree, it generates the tuples (s,t,label)
+def get_tuples_from_labeled_dep_tree(T, code):
+    pairs = []
+    sorted_nodes = sorted(list(T.nodes),
+           key=lambda n: T.nodes[n]['start'])
+    for s, t, label in ((*edge, d['complex_edge_str']) for *edge, d in T.edges(data=True)):
+        pairs.append((sorted_nodes.index(s), sorted_nodes.index(t), label))
+    tokens = getTokens(T, code)
+    return pairs, tokens
+
+#aux function
+def getHeadDepTree(T,n):
+    return list(T.in_edges(n))[0][0]
+    dataset_name_or_path: Optional[str] = field(
+        default=None,
+        metadata={'help': 'Local path to the dataset or its name on Huggingface datasets hub.'}
+    )
+#aux function
+def getDepth(G, n, root):
+    return len(nx.shortest_path(nx.Graph(G), source=n, target=root)[1:-1])
+
+#aux class
+class ComplexEdgeLabels:
+    def __init__(self, non_terminals, depths, special_index):
+        self.non_terminals = non_terminals
+        self.depths = depths
+        self.special_index = special_index
+    def __str__(self):
+        return str(self.special_index) + '-' + '|'.join(self.non_terminals[self.special_index+1:])
+
+
+    def get_node_to_append(self, path):
+        #print('Non-terminals',self.non_terminals)
+        #print('Index', self.special_index)
+        node_append = path[self.special_index]
+        to_append = self.non_terminals[self.special_index+1:]
+        return node_append, to_append
+
+#function used to test if it is possible to obtain the ast from the labeled dep tree
+def from_label_dep_tree_to_ast(T, lang='python'):
+    T_ast = nx.Graph()
+    root = getRoot(T)
+    types = nx.get_node_attributes(T, 'type')
+    if lang == 'python':
+        T_ast.add_node(0, type='module', is_terminal=False)
+        T_ast.add_node(1, type='function_definition', is_terminal=False)
+        T_ast.add_node(2, **T.nodes[root])
+        T_ast.add_edge(0, 1)
+        T_ast.add_edge(1, 2)
+        nodes = [n for n in T.nodes if n!=root]
+        nodes.sort(key=lambda n: T.nodes[n]['start'])
+        for n in nodes:
+            h = getHeadDepTree(T, n)
+            if h == root:
+                path = nx.shortest_path(T_ast, source=2, target=0)[1:-1]
+            else:
+                h_head = getHeadDepTree(T, h)
+                h_correspondence = get_correspondence(T_ast, T, h)
+                h_head_correspondence = get_correspondence(T_ast, T, h_head)
+                path = nx.shortest_path(T_ast, source=h_correspondence,
+                                        target=h_head_correspondence)[1:-1]
+            edge_data = T[h][n]['complex_edge']
+            node_append, to_append = edge_data.get_node_to_append(path)
+            #print('To append',to_append)
+            #print('To append terminal', T.nodes[n])
+            #print('-'*100)
+            #add non terminals
+            for nt in to_append:
+                m = getId(T_ast)
+                T_ast.add_node(m, type=nt, is_terminal=False)
+                T_ast.add_edge(m, node_append)
+                node_append = m
+            #add terminal
+            m = getId(T_ast)
+            T_ast.add_node(m, **T.nodes[n])
+            T_ast.add_edge(m, node_append)
+    return T_ast
+
+#aux funtion
+def get_correspondence(T_ast, T, n):
+    for m in T_ast:
+        if T_ast.nodes[m] == T.nodes[n]:
+            return m
+
 #build tree from distance matrix,
 #undirected graph, run this also for the ground truth
 # TODO, remove tokens

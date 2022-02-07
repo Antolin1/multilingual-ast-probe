@@ -10,12 +10,16 @@ import unittest
 from tree_sitter import Language, Parser
 from src.data.code2ast import (code2ast, enrichAstWithDeps, 
                           getDependencyTree, getMatrixAndTokens,
-                          getTreeFromDistances, getUAS, getSpear)
+                          getTreeFromDistances, getUAS, getSpear,
+                               labelDepTree, from_label_dep_tree_to_ast,
+                               getTokens, get_tuples_from_labeled_dep_tree)
 from src.data.utils import (remove_comments_and_docstrings_python,
                             remove_comments_and_docstrings_java_js)
 import networkx as nx
 import matplotlib.pyplot as plt
 
+def node_match_type_atts(n1,n2):
+    return n1['type'] == n2['type']
 
 code = """'''Compute the maximum'''
 def max(a,b):
@@ -47,7 +51,7 @@ parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
 class Code2ast(unittest.TestCase):
-    
+
     def test_preprocessing(self):
         code_pre = remove_comments_and_docstrings_python(code)
         self.assertEqual(code_pre_expected, code_pre)
@@ -111,4 +115,26 @@ class Code2ast(unittest.TestCase):
         T = getDependencyTree(G)
         nx.draw(T, labels=nx.get_node_attributes(T,'type'), with_labels = True)
         plt.show()
-        
+
+    def test_labelEdges(self):
+        G, pre_code = code2ast(code, parser)
+        G_not_enr = nx.DiGraph(G)
+        enrichAstWithDeps(G)
+        T = getDependencyTree(G)
+        labelDepTree(G_not_enr, T)
+        T_ast = from_label_dep_tree_to_ast(T)
+        #print(list(T.edges(data=True)))
+        print(list((*edge, d['complex_edge_str']) for *edge, d in T.edges(data=True)))
+        print('-'*100)
+        self.assertEqual(len(T_ast), len(G))
+        self.assertEqual(len(T_ast.edges), len(G_not_enr.edges))
+
+        print([T_ast.nodes[n]['type'] for n in T_ast if not T_ast.nodes[n]['is_terminal']])
+        print([G.nodes[n]['type'] for n in G if not G.nodes[n]['is_terminal']])
+        print([T_ast.nodes[n]['type'] for n in T_ast if T_ast.nodes[n]['is_terminal']])
+        print([G.nodes[n]['type'] for n in G if G.nodes[n]['is_terminal']])
+        self.assertTrue(nx.is_isomorphic(T_ast, nx.Graph(G_not_enr), node_match_type_atts))
+        print(get_tuples_from_labeled_dep_tree(T, pre_code))
+        nx.draw(T_ast, labels=nx.get_node_attributes(T_ast, 'type'), with_labels=True)
+        plt.show()
+

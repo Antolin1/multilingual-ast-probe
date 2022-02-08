@@ -79,6 +79,12 @@ class ProgramArguments:
         metadata={'help': 'Max tokens considered.'}
     )
 
+    type_probe: Optional[str] = field(
+        default='ast_probe',
+        metadata={'help': 'ast_probe, depth_probe, dep_probe'}
+    )
+
+
     download_csn: bool = field(default=False, metadata={'help': 'Download CodeSearchNet dataset.'})
 
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})

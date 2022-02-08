@@ -12,7 +12,7 @@ from tree_sitter import Parser
 from tqdm import tqdm
 
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE
-from probe import TwoWordPSDProbe, L1DistanceLoss, get_embeddings, align_function, report_uas
+from probe import TwoWordPSDProbe, L1DistanceLoss, get_embeddings, align_function, report_uas, report_spear
 from data.utils import match_tokenized_to_untokenized_roberta
 
 logger = logging.getLogger(__name__)
@@ -47,18 +47,18 @@ def run_probing_train(args: argparse.Namespace):
     test_set = load_dataset('json', data_files=data_files, split='test')
 
 
-    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
     train_set = train_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
     train_set = train_set.shuffle(args.seed).select(range(min(20000, len(train_set))))
     train_set = train_set.remove_columns(['original_string', 'code_tokens'])
 
-    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
     valid_set = valid_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
     valid_set = valid_set.shuffle(args.seed).select(range(min(2000, len(valid_set))))
     valid_set = valid_set.remove_columns(['original_string', 'code_tokens'])
 
 
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
     test_set = test_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
     test_set = test_set.shuffle(args.seed).select(range(min(4000, len(test_set))))
     test_set = test_set.remove_columns(['original_string', 'code_tokens'])
@@ -111,7 +111,7 @@ def run_probing_train(args: argparse.Namespace):
     probe_model.train()
     lmodel.eval()
     best_eval_loss = float('inf')
-    metrics = {'training_loss': [], 'validation_loss': [], 'validation_uas': [], 'test_uas': []}
+    metrics = {'training_loss': [], 'validation_loss': [], 'validation_spear': [], 'test_spear': []}
     patience_count = 0
     for epoch in tqdm(range(args.epochs), desc='[training epoch loop]'):
         training_loss = 0.0
@@ -134,13 +134,14 @@ def run_probing_train(args: argparse.Namespace):
 
         training_loss = training_loss / len(train_dataloader)
         eval_loss = run_probing_eval(valid_dataloader, probe_model, criterion, lmodel, args.layer, args)
-        eval_uas = report_uas(valid_dataloader, probe_model, lmodel, args)
+
+        _, eval_spear = report_spear(valid_dataloader, probe_model, lmodel, args)
         scheduler.step(eval_loss)
         logger.info(f'[epoch {epoch}] train loss: {round(training_loss, 4)}, '
-                    f'validation loss: {round(eval_loss, 4)}, validation UAS: {round(eval_uas, 4)}')
+                    f'validation loss: {round(eval_loss, 4)}, validation SPEAR: {round(eval_spear, 4)}')
         metrics['training_loss'].append(round(training_loss, 4))
         metrics['validation_loss'].append(round(eval_loss, 4))
-        metrics['validation_uas'].append(round(eval_uas, 4))
+        metrics['validation_spear'].append(round(eval_spear, 4))
 
         if eval_loss < best_eval_loss:
             logger.info('-' * 100)
@@ -161,9 +162,9 @@ def run_probing_train(args: argparse.Namespace):
     logger.info('Loading best probe model.')
     final_probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
     final_probe_model.load_state_dict(torch.load(os.path.join(args.output_path, f'pytorch_model.bin')))
-    test_uas = report_uas(test_dataloader, final_probe_model, lmodel, args)
-    logger.info(f'Test UAS: {test_uas}')
-    metrics['test_uas'].append(round(test_uas, 4))
+    _, test_spear = report_spear(test_dataloader, probe_model, lmodel, args)
+    logger.info(f'Test SPEAR: {test_spear}')
+    metrics['test_spear'].append(round(test_spear, 4))
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')

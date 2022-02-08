@@ -123,6 +123,17 @@ def getMatrixAndTokens(T, code):
     tokens = getTokens(T, code)
     return distance, tokens
 
+def get_tokens_ast(T, code):
+    return [getToken(code, T.nodes[t]['start'], T.nodes[t]['end']) for t in sorted([n for n in T if T.nodes[n]['is_terminal']],
+                                                                                   key=lambda n: T.nodes[n]['start'])]
+
+def get_matrix_tokens_ast(T, code):
+    num_non_terminals = len([n for n in T if T.nodes[n]['is_terminal']])
+    distance = nx.floyd_warshall_numpy(nx.Graph(T), sorted([n for n in T if T.nodes[n]['is_terminal']],
+                                                           key=lambda n: T.nodes[n]['start']) + [n for n in T if not T.nodes[n]['is_terminal']])
+    tokens = get_tokens_ast(T, code)
+    return distance[0:num_non_terminals, 0:num_non_terminals], tokens
+
 #G directed ast without dependency labels
 #T directed dependency tree
 #both must be aligned

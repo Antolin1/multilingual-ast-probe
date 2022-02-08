@@ -7,11 +7,12 @@ import random
 import logging
 
 from tqdm import tqdm
-from tree_sitter import Language
+from tree_sitter import Language, Parser
+import networkx as nx
 
 from .utils import download_url, unzip_file
-from .code2ast import code2ast, enrichAstWithDeps, getDependencyTree, getMatrixAndTokens
-
+from .code2ast import code2ast, enrichAstWithDeps, getDependencyTree, getMatrixAndTokens, labelDepTree, \
+    get_tuples_from_labeled_dep_tree, get_matrix_tokens_ast
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,11 @@ LANGUAGES = (
 )
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
+
+PY_PARSER = Parser()
+PY_PARSER.set_language(PY_LANGUAGE)
+JS_PARSER = Parser()
+JS_PARSER.set_language(JS_LANGUAGE)
 
 
 def download_codesearchnet_dataset():
@@ -84,7 +90,7 @@ def download_codesearchnet_dataset():
                 if line in data:
                     # we only extract the original code and the code tokens to filter
                     js = {'original_string': data[line]['original_string'],
-                          'code_tokens': data[line]['code_tokens'] }
+                          'code_tokens': data[line]['code_tokens']}
                     f1.write(json.dumps(js) + '\n')
         os.remove(os.path.join(lang, 'train.txt'))
         shutil.rmtree(os.path.join(lang, 'final'))
@@ -99,8 +105,8 @@ def download_codesearchnet_dataset():
 def create_splits(dataset_path, split):
     dataset_dir = os.path.dirname(dataset_path)
     if (os.path.isfile(os.path.join(dataset_dir, 'train.jsonl'))
-        and os.path.isfile(os.path.join(dataset_dir, 'test.jsonl'))
-        and os.path.isfile(os.path.join(dataset_dir, 'valid.jsonl'))):
+            and os.path.isfile(os.path.join(dataset_dir, 'test.jsonl'))
+            and os.path.isfile(os.path.join(dataset_dir, 'valid.jsonl'))):
         logger.info('Splits already created.')
         return
     with open(dataset_path, 'r') as f:
@@ -130,10 +136,45 @@ def create_splits(dataset_path, split):
             f3.write(json.dumps(js) + '\n')
 
 
-def convert_sample_to_features(code, parser, lang='python'):
+def convert_sample_to_features(code, parser, type_probe, lang='python'):
     G, pre_code = code2ast(code, parser, lang)
-    enrichAstWithDeps(G)
-    T = getDependencyTree(G)
-    matrix, code_tokens = getMatrixAndTokens(T, pre_code)
+    if type_probe == 'ast_probe':
+        matrix, code_tokens = get_matrix_tokens_ast(G, pre_code)
+        return {'tokens': code_tokens, 'matrix': matrix}
+    elif type_probe == 'dep_probe':
+        enrichAstWithDeps(G)
+        T = getDependencyTree(G)
+        matrix, code_tokens = getMatrixAndTokens(T, pre_code)
+        return {'tokens': code_tokens, 'matrix': matrix}
 
-    return {'tokens': code_tokens, 'matrix': matrix}
+
+def compute_distinct_labels(dataset_path, args):
+    lang = args.lang
+    if lang == 'python':
+        parser = PY_PARSER
+    elif lang == 'javascript':
+        parser = JS_PARSER
+    else:
+        parser = None
+    if os.path.isfile(f'{dataset_path}/{lang}/categories.json'):
+        logger.info('Categories already computed')
+        return
+    categories = {}
+    idd = 0
+    with open(f'{dataset_path}/{lang}/dataset.jsonl', 'r') as json_file:
+        json_list = list(json_file)
+        for data_point in tqdm(json_list,desc='Category extraction'):
+            data = json.loads(data_point)
+            G, pre_code = code2ast(data['original_string'], parser)
+            G_not_enr = nx.DiGraph(G)
+            enrichAstWithDeps(G)
+            T = getDependencyTree(G)
+            labelDepTree(G_not_enr, T)
+            for _, _, cat in get_tuples_from_labeled_dep_tree(T, pre_code)[0]:
+                if not cat in categories:
+                    categories[cat] = idd
+                    idd += 1
+                    print(categories)
+    logger.info('Saving categories')
+    with open(f'{dataset_path}/{lang}/categories.json', 'r') as f:
+        json.dump(categories, f)

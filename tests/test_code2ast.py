@@ -13,7 +13,7 @@ from src.data.code2ast import (code2ast, enrichAstWithDeps,
                           getTreeFromDistances, getUAS, getSpear,
                                labelDepTree, from_label_dep_tree_to_ast,
                                getTokens, get_tuples_from_labeled_dep_tree,
-                               get_matrix_tokens_ast)
+                               get_matrix_tokens_ast, get_depths_tokens_ast)
 from src.data.utils import (remove_comments_and_docstrings_python,
                             remove_comments_and_docstrings_java_js)
 import networkx as nx
@@ -142,4 +142,5 @@ class Code2ast(unittest.TestCase):
     def test_distane_ast(self):
         G, pre_code = code2ast(code, parser)
         print(get_matrix_tokens_ast(G, pre_code))
+        print(get_depths_tokens_ast(G, pre_code))
 

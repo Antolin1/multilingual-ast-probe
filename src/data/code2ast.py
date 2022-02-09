@@ -128,11 +128,29 @@ def get_tokens_ast(T, code):
                                                                                    key=lambda n: T.nodes[n]['start'])]
 
 def get_matrix_tokens_ast(T, code):
-    num_non_terminals = len([n for n in T if T.nodes[n]['is_terminal']])
+    num_terminals = len([n for n in T if T.nodes[n]['is_terminal']])
     distance = nx.floyd_warshall_numpy(nx.Graph(T), sorted([n for n in T if T.nodes[n]['is_terminal']],
                                                            key=lambda n: T.nodes[n]['start']) + [n for n in T if not T.nodes[n]['is_terminal']])
     tokens = get_tokens_ast(T, code)
-    return distance[0:num_non_terminals, 0:num_non_terminals], tokens
+    return distance[0:num_terminals, 0:num_terminals], tokens
+
+def get_root_ast(G):
+    for n in G:
+        if G.in_degree(n) == 0:
+            return n
+
+def get_depth_ast(G, n):
+    root = get_root_ast(G)
+    return len(nx.shortest_path(G, source=root, target=n)) - 1
+
+def get_depths_tokens_ast(T, code):
+    terminals = sorted([n for n in T if T.nodes[n]['is_terminal']],
+                       key=lambda n: T.nodes[n]['start'])
+    depths = []
+    for t in terminals:
+        depths.append(get_depth_ast(T, t))
+    return depths, get_tokens_ast(T, code)
+
 
 #G directed ast without dependency labels
 #T directed dependency tree

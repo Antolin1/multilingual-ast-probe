@@ -305,4 +305,69 @@ def getUAS(T_true, T_pred):
 def getSpear(d_true, d_pred):
     spearmanrs = [spearmanr(pred, gold) for pred, gold in zip(d_true, d_pred)]
     return [x.correlation for x in spearmanrs]
-    
+
+
+#####new version of dependency tree
+def has_terminals(G, n):
+    l = [v for _, v in G.out_edges(n) if G.nodes[v]['is_terminal']]
+    if len(l)==0:
+        return False
+    return True
+
+def has_non_terminals_graph(G):
+    for n in G:
+        if not G.nodes[n]['is_terminal']:
+            return True
+    return False
+
+def remove_useless_non_terminals(G):
+    g = G.copy()
+    #remove non terminals without terminals
+    for n in G:
+        if G.nodes[n]['is_terminal']:
+            continue
+        if not has_terminals(G, n):
+            edges_in = list(G.in_edges(n))
+            edges_out = list(G.out_edges(n))
+            if len(edges_in) != 0:
+                u,_ = edges_in[0]
+                for _, v in edges_out:
+                    g.add_edge(u, v)
+            g.remove_node(n)
+    return g
+
+def has_just_terminals(G,n):
+    l1 = [v for _, v in G.out_edges(n) if G.nodes[v]['is_terminal']]
+    l2 = [v for _, v in G.out_edges(n) if not G.nodes[v]['is_terminal']]
+    return len(l1) > 0 and len(l2) == 0
+
+def get_left_most_node(G, n):
+    nodes = [m for _,m in G.out_edges(n)]
+    nodes.sort(key=lambda t: G.nodes[t]['start'])
+    return nodes[0]
+
+def remplace_non_terminals(G, conf = None):
+    g = G.copy()
+    while (len([n for n in g if not g.nodes[n]['is_terminal']]) != 0):
+        g0 = g.copy()
+        for n in g:
+            if g.nodes[n]['is_terminal']:
+                continue
+            if not has_just_terminals(g, n):
+                continue
+            type_nt = g.nodes[n]['type']
+            if conf != None and type_nt in conf:
+                m = conf[type_nt](g, n)
+            else:
+                m = get_left_most_node(g, n)
+            edges_in = list(g.in_edges(n))
+            edges_out = list(g.out_edges(n))
+            if len(edges_in) != 0:
+                u, _ = edges_in[0]
+                g0.add_edge(u, m)
+            for _, v in edges_out:
+                if v != m:
+                    g0.add_edge(m, v)
+            g0.remove_node(n)
+        g = g0
+    return g

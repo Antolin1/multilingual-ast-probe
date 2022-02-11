@@ -16,12 +16,15 @@ parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
 def comparison_operator_head(G, n):
-    l = ['<','>','==','!=', '<=', '>=']
+    l = ['<', '>', '==', '<>',
+         '!=', '<=', '>=', 'in', 'is']
     nodes = [m for _, m in G.out_edges(n) if G.nodes[m]['type'] in l]
     return nodes[0]
 
 def binary_operator_head(G, n):
-    l = ['+','-','/','*', '**']
+    l = ['+','-','/','*',
+         '**', '@', '%', '//',
+         '<<', '>>', '^', '&', '|']
     nodes = [m for _, m in G.out_edges(n) if G.nodes[m]['type'] in l]
     return nodes[0]
 
@@ -46,4 +49,6 @@ class Code2ast(unittest.TestCase):
         nx.draw(nx.Graph(g), labels=nx.get_node_attributes(g, 'type'), with_labels=True)
         plt.show()
         plt.savefig("figure.png")
+
+        self.assertTrue(nx.algorithms.tree.recognition.is_tree(g))
 

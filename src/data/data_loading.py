@@ -11,7 +11,7 @@ from tree_sitter import Language, Parser
 import networkx as nx
 
 from .utils import download_url, unzip_file
-from .code2ast import code2ast, enrichAstWithDeps, getDependencyTree, getMatrixAndTokens, labelDepTree, \
+from .code2ast import code2ast, enrich_ast_with_deps, get_dependency_tree, get_matrix_and_tokens_dep, label_dep_tree, \
     get_tuples_from_labeled_dep_tree, get_matrix_tokens_ast
 
 logger = logging.getLogger(__name__)
@@ -142,9 +142,9 @@ def convert_sample_to_features(code, parser, type_probe, lang='python'):
         matrix, code_tokens = get_matrix_tokens_ast(G, pre_code)
         return {'tokens': code_tokens, 'matrix': matrix}
     elif type_probe == 'dep_probe':
-        enrichAstWithDeps(G)
-        T = getDependencyTree(G)
-        matrix, code_tokens = getMatrixAndTokens(T, pre_code)
+        enrich_ast_with_deps(G)
+        T = get_dependency_tree(G)
+        matrix, code_tokens = get_matrix_and_tokens_dep(T, pre_code)
         return {'tokens': code_tokens, 'matrix': matrix}
 
 
@@ -167,9 +167,9 @@ def compute_distinct_labels(dataset_path, args):
             data = json.loads(data_point)
             G, pre_code = code2ast(data['original_string'], parser)
             G_not_enr = nx.DiGraph(G)
-            enrichAstWithDeps(G)
-            T = getDependencyTree(G)
-            labelDepTree(G_not_enr, T)
+            enrich_ast_with_deps(G)
+            T = get_dependency_tree(G)
+            label_dep_tree(G_not_enr, T)
             for _, _, cat in get_tuples_from_labeled_dep_tree(T, pre_code)[0]:
                 if not cat in categories:
                     categories[cat] = idd

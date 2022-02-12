@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .utils import get_embeddings, align_function
-from src.data.code2ast import getTreeFromDistances, getUAS, getSpear
+from src.data.code2ast import get_tree_from_distances, get_uas, get_spear
 
 
 def report_uas(test_loader, probe_model, lmodel, args):
@@ -26,9 +26,9 @@ def report_uas(test_loader, probe_model, lmodel, args):
                 # getTreeFromDistances needs the tokens to label the nodes
                 code_tokens_invented = ['a']*l
                 # get trees
-                T_real = getTreeFromDistances(dis_real, code_tokens_invented)
-                T_pred = getTreeFromDistances(dis_pred, code_tokens_invented)
-                uas_scores.append(getUAS(T_real, T_pred))
+                T_real = get_tree_from_distances(dis_real, code_tokens_invented)
+                T_pred = get_tree_from_distances(dis_pred, code_tokens_invented)
+                uas_scores.append(get_uas(T_real, T_pred))
     return np.mean(uas_scores)
 
 
@@ -45,7 +45,7 @@ def report_spear(test_loader, probe_model, lmodel, args):
             l = lens[j].item()
             dis_real = dis[j].cpu().detach().numpy()[0:l, 0:l]
             dis_pred = dis_pred[0:l, 0:l].cpu().detach().numpy()
-            spear = getSpear(dis_real, dis_pred)
+            spear = get_spear(dis_real, dis_pred)
             lengths_to_spearmanrs[l].extend(spear)
     mean_spearman_for_each_length = {length: np.mean(lengths_to_spearmanrs[length])
                                      for length in lengths_to_spearmanrs}

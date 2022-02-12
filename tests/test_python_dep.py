@@ -1,7 +1,7 @@
 import unittest
 from tree_sitter import Language, Parser
-from src.data.code2ast import (code2ast, enrichAstWithDeps,
-                               getDependencyTree, remove_useless_non_terminals,
+from src.data.code2ast import (code2ast, enrich_ast_with_deps,
+                               get_dependency_tree, remove_useless_non_terminals,
                                remplace_non_terminals)
 from src.data.utils import (remove_comments_and_docstrings_python,
                             remove_comments_and_docstrings_java_js)
@@ -44,8 +44,8 @@ class Code2ast(unittest.TestCase):
         G, _ = code2ast(code, parser)
         g = remplace_non_terminals(remove_useless_non_terminals(G), conf)
         G_ast = nx.Graph(G)
-        enrichAstWithDeps(G)
-        T = getDependencyTree(G)
+        enrich_ast_with_deps(G)
+        T = get_dependency_tree(G)
         nx.draw(nx.Graph(g), labels=nx.get_node_attributes(g, 'type'), with_labels=True)
         plt.show()
         plt.savefig("figure.png")

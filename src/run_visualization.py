@@ -2,7 +2,7 @@ import random
 from data.utils import match_tokenized_to_untokenized_roberta
 import torch
 from probe.utils import get_embeddings, align_function
-from data.code2ast import getTreeFromDistances, getUAS
+from data.code2ast import get_tree_from_distances, get_uas
 import networkx as nx
 import matplotlib.pyplot as plt
 from data import convert_sample_to_features, PY_LANGUAGE, JS_LANGUAGE
@@ -92,8 +92,8 @@ def __run_visualization(lmodel, tokenizer, probe_model, dataset, samples, args):
         pred_dis = outputs[0, 0:len(tokens), 0:len(tokens)].cpu().detach().numpy()
 
         # generating trees
-        T_real = getTreeFromDistances(real_dis, tokens)
-        T_pred = getTreeFromDistances(pred_dis, tokens)
+        T_real = get_tree_from_distances(real_dis, tokens)
+        T_pred = get_tree_from_distances(pred_dis, tokens)
 
         # plotting trees
         figure, axis = plt.subplots(2)
@@ -110,4 +110,4 @@ def __run_visualization(lmodel, tokenizer, probe_model, dataset, samples, args):
         plt.show()
 
         # UAS
-        print('UAS in sample', i, ':', getUAS(T_real, T_pred))
+        print('UAS in sample', i, ':', get_uas(T_real, T_pred))

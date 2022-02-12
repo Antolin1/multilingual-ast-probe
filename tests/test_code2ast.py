@@ -8,12 +8,12 @@ Created on Sun Jan 30 08:34:53 2022
 
 import unittest
 from tree_sitter import Language, Parser
-from src.data.code2ast import (code2ast, enrichAstWithDeps, 
-                          getDependencyTree, getMatrixAndTokens,
-                          getTreeFromDistances, getUAS, getSpear,
-                               labelDepTree, from_label_dep_tree_to_ast,
-                               getTokens, get_tuples_from_labeled_dep_tree,
-                               get_matrix_tokens_ast, get_depths_tokens_ast)
+from src.data.code2ast import (code2ast, enrich_ast_with_deps,
+                               get_dependency_tree, get_matrix_and_tokens_dep,
+                               get_tree_from_distances, get_uas, get_spear,
+                               label_dep_tree, from_label_dep_tree_to_ast,
+                               remove_useless_non_terminals, get_tuples_from_labeled_dep_tree,
+                               get_matrix_tokens_ast, get_depths_tokens_ast, get_tokens_ast)
 from src.data.utils import (remove_comments_and_docstrings_python,
                             remove_comments_and_docstrings_java_js)
 import networkx as nx
@@ -67,16 +67,16 @@ class Code2ast(unittest.TestCase):
     
     def test_dependency(self):
         G,_ = code2ast(code, parser)
-        enrichAstWithDeps(G)
-        T = getDependencyTree(G)
+        enrich_ast_with_deps(G)
+        T = get_dependency_tree(G)
         nx.draw(T, labels=nx.get_node_attributes(T,'type'), with_labels = True)
         plt.show()
     
     def test_distanceToks(self):
         G, pre_code = code2ast(code, parser)
-        enrichAstWithDeps(G)
-        T = getDependencyTree(G)
-        matrix, code_toks = getMatrixAndTokens(T,pre_code)
+        enrich_ast_with_deps(G)
+        T = get_dependency_tree(G)
+        matrix, code_toks = get_matrix_and_tokens_dep(T, pre_code)
         print(matrix)
         print(code_toks)
         self.assertEqual(len(code_toks), matrix.shape[0])
@@ -85,26 +85,26 @@ class Code2ast(unittest.TestCase):
         
     def test_inverse(self):
         G, pre_code = code2ast(code, parser)
-        enrichAstWithDeps(G)
-        T = getDependencyTree(G)
-        matrix, code_toks = getMatrixAndTokens(T,pre_code)
-        T2 = getTreeFromDistances(matrix, code_toks)
+        enrich_ast_with_deps(G)
+        T = get_dependency_tree(G)
+        matrix, code_toks = get_matrix_and_tokens_dep(T, pre_code)
+        T2 = get_tree_from_distances(matrix, code_toks)
         nx.draw(T2, labels=nx.get_node_attributes(T2,'type'), with_labels = True)
         plt.show()
     
     def test_Eval(self):
         G, pre_code = code2ast(code, parser)
-        enrichAstWithDeps(G)
-        T = getDependencyTree(G)
-        matrix, code_toks = getMatrixAndTokens(T,pre_code)
-        T2 = getTreeFromDistances(matrix, code_toks)
+        enrich_ast_with_deps(G)
+        T = get_dependency_tree(G)
+        matrix, code_toks = get_matrix_and_tokens_dep(T, pre_code)
+        T2 = get_tree_from_distances(matrix, code_toks)
         
         T_pred = nx.Graph(T2)
         T_pred.remove_edge(8,15)
         T_pred.add_edge(15,14)
-        self.assertAlmostEqual(getUAS(T2,T_pred), 
-                               float(len(T_pred.edges)-1)/float(len(T_pred.edges)))
-        print(getSpear(matrix,matrix))
+        self.assertAlmostEqual(get_uas(T2, T_pred),
+                               float(len(T_pred.edges)-1) / float(len(T_pred.edges)))
+        print(get_spear(matrix, matrix))
 
     def test_js(self):
         parser = Parser()
@@ -112,17 +112,17 @@ class Code2ast(unittest.TestCase):
         G,_ = code2ast(code_js, parser, 'javascript')
         nx.draw(G, labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
-        enrichAstWithDeps(G)
-        T = getDependencyTree(G)
+        enrich_ast_with_deps(G)
+        T = get_dependency_tree(G)
         nx.draw(T, labels=nx.get_node_attributes(T,'type'), with_labels = True)
         plt.show()
 
     def test_labelEdges(self):
         G, pre_code = code2ast(code, parser)
         G_not_enr = nx.DiGraph(G)
-        enrichAstWithDeps(G)
-        T = getDependencyTree(G)
-        labelDepTree(G_not_enr, T)
+        enrich_ast_with_deps(G)
+        T = get_dependency_tree(G)
+        label_dep_tree(G_not_enr, T)
         T_ast = from_label_dep_tree_to_ast(T)
         #print(list(T.edges(data=True)))
         print(list((*edge, d['complex_edge_str']) for *edge, d in T.edges(data=True)))
@@ -141,6 +141,24 @@ class Code2ast(unittest.TestCase):
 
     def test_distane_ast(self):
         G, pre_code = code2ast(code, parser)
+        print(get_matrix_tokens_ast(G, pre_code))
+        print(get_depths_tokens_ast(G, pre_code))
+
+    def test_str_ast(self):
+        code = """def split_phylogeny(p, level="s"):
+    level = level+"__"
+    result = p.split(level)
+    return result[0]+level+result[1].split(";")[0]"""
+        G, pre_code = code2ast(code, parser)
+        for n in G:
+            print(G.nodes[n])
+        g = remove_useless_non_terminals(G)
+        print('------')
+        for n in g:
+            print(g.nodes[n])
+        self.assertTrue(nx.is_connected(nx.Graph(g)))
+        print(get_tokens_ast(G, pre_code))
+
         print(get_matrix_tokens_ast(G, pre_code))
         print(get_depths_tokens_ast(G, pre_code))
 

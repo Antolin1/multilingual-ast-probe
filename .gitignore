@@ -2,6 +2,7 @@ notebooks
 tests.ipynb
 figure.png
 dataset.zip
+dataset.jsonl
 dataset/
 
 #folders

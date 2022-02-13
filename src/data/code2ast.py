@@ -338,10 +338,15 @@ def remove_useless_non_terminals(G):
         n = [n for n in g if not has_terminals(g, n) and not g.nodes[n]['is_terminal']][0]
         edges_in = list(g.in_edges(n))
         edges_out = list(g.out_edges(n))
+        label = g.nodes[n]['type']
         if len(edges_in) != 0:
             u, _ = edges_in[0]
+            if 'label' in G[u][n]:
+                label = G[u][n]['label'] + '-' + label
             for _, v in edges_out:
-                g0.add_edge(u, v)
+                if 'label' in G[n][v]:
+                    label = label + '-' + G[n][v]['label']
+                g0.add_edge(u, v, label=label)
         g0.remove_node(n)
         g = g0
         #print(len([n for n in g if not has_terminals(g, n)]))
@@ -371,14 +376,17 @@ def remplace_non_terminals(G, conf = None):
                 m = conf[type_nt](g, n)
             else:
                 m = get_left_most_node(g, n)
-            edges_in = list(g.in_edges(n))
-            edges_out = list(g.out_edges(n))
+            edges_in = list(g.in_edges(n, data=True))
+            edges_out = list(g.out_edges(n, data=True))
             if len(edges_in) != 0:
-                u, _ = edges_in[0]
-                g0.add_edge(u, m)
-            for _, v in edges_out:
+                u, _, dic_in = edges_in[0]
+                g0.add_edge(u, m, **dic_in)
+            for _, v, dic_out in edges_out:
                 if v != m:
-                    g0.add_edge(m, v)
+                    label = g.nodes[n]['type']
+                    if 'label' in dic_out:
+                        label = label + '-' + dic_out['label']
+                    g0.add_edge(m, v, label=label)
             g0.remove_node(n)
         g = g0
     return g

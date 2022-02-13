@@ -35,10 +35,8 @@ class Code2ast(unittest.TestCase):
 
     def test_dependency(self):
         code = """def max(a,b):
-    if a == b:
+    if a > b:
         return a
-    else:
-        return a+b+c/2**2
     return b"""
 
         G, _ = code2ast(code, parser)
@@ -48,7 +46,10 @@ class Code2ast(unittest.TestCase):
         T = get_dependency_tree(G)
         nx.draw(nx.Graph(g), labels=nx.get_node_attributes(g, 'type'), with_labels=True)
         plt.show()
-        plt.savefig("figure.png")
+        #plt.savefig("figure.png")
+        print(g.nodes(data=True))
+        print('--'*10)
+        print(g.edges(data=True))
 
         self.assertTrue(nx.algorithms.tree.recognition.is_tree(g))
 

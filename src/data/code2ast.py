@@ -341,11 +341,11 @@ def remove_useless_non_terminals(G):
         label = g.nodes[n]['type']
         if len(edges_in) != 0:
             u, _ = edges_in[0]
-            if 'label' in G[u][n]:
-                label = G[u][n]['label'] + '-' + label
+            if 'label' in g[u][n]:
+                label = g[u][n]['label'] + '-' + label
             for _, v in edges_out:
-                if 'label' in G[n][v]:
-                    label = label + '-' + G[n][v]['label']
+                if 'label' in g[n][v]:
+                    label = label + '-' + g[n][v]['label']
                 g0.add_edge(u, v, label=label)
         g0.remove_node(n)
         g = g0

@@ -71,13 +71,14 @@ def get_tokens_dep(T, code):
 
 
 def solve_string_problems(G):
-    strings = [n for n in G if G.nodes[n]['type']=='string' and not G.nodes[n]['is_terminal']]
+    strings = [n for n in G if G.nodes[n]['type'] == 'string'
+               and not G.nodes[n]['is_terminal']]
     for n in strings:
-        nodes_to_remove = []
-        for _,v in G.out_edges(n):
-            nodes_to_remove.append(v)
-        for v in nodes_to_remove:
-            G.remove_node(v)
+        if n not in G:
+            continue
+        for v in nx.single_source_shortest_path(G, n).keys():
+            if v != n:
+                G.remove_node(v)
         G.nodes[n]['is_terminal'] = True
 
 #preprocess code, obtain the ast and returns a network graph.

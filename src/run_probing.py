@@ -12,7 +12,8 @@ from tree_sitter import Parser
 from tqdm import tqdm
 
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE
-from probe import TwoWordPSDProbe, L1DistanceLoss, get_embeddings, align_function, report_uas, report_spear
+from probe import OneWordPSDProbe, TwoWordPSDProbe, L1DistanceLoss, get_embeddings,\
+    align_function, report_uas, report_spear, L1DepthLoss
 from data.utils import match_tokenized_to_untokenized_roberta
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,13 @@ def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
     logger.info('Running probing training.')
     logger.info('-' * 100)
+
+    # select the parser
+    parser = Parser()
+    if args.lang == 'python':
+        parser.set_language(PY_LANGUAGE)
+    elif args.lang == 'javascript':
+        parser.set_language(JS_LANGUAGE)
 
     logger.info('Loading dataset from local file.')
     data_files = {'train': os.path.join(args.dataset_name_or_path, 'train.jsonl'),
@@ -76,34 +84,31 @@ def run_probing_train(args: argparse.Namespace):
             lmodel = generate_baseline(lmodel)
         lmodel = lmodel.to(args.device)
 
-    #select the parser
-    parser = Parser()
-    if args.lang == 'python':
-        parser.set_language(PY_LANGUAGE)
-    elif args.lang == 'javascript':
-        parser.set_language(JS_LANGUAGE)
-
 
 
 
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,
                                   shuffle=True,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer, args.type_probe),
                                   num_workers=10)
     valid_dataloader = DataLoader(dataset=valid_set,
                                   batch_size=args.batch_size,
                                   shuffle=False,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer, args.type_probe),
                                   num_workers=10)
     test_dataloader = DataLoader(dataset=test_set,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer, args.type_probe),
                                  num_workers=10)
 
-    probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
-    criterion = L1DistanceLoss(args.device)
+    if args.type_probe == 'depth_probe':
+        probe_model = OneWordPSDProbe(args.rank, args.hidden, args.device)
+        criterion = L1DistanceLoss(args.device)
+    else:
+        probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
+        criterion = L1DepthLoss(args.device)
 
     optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)

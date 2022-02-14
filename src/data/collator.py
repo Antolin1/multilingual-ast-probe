@@ -12,7 +12,7 @@ import torch
 from .utils import match_tokenized_to_untokenized_roberta
 
 
-def collator_fn(batch, tokenizer):
+def collator_fn(batch, tokenizer, type_probe):
     tokens = [b['tokens'] for b in batch]
     matrices = [np.array(b['matrix']) for b in batch]
 
@@ -21,19 +21,27 @@ def collator_fn(batch, tokenizer):
     max_len_tokens = np.max(len_tokens)
     len_tokens = torch.tensor(len_tokens)
 
-    #pad matrices
-    padded_matices = []
-    for m in matrices:
-        if m.shape[0] < max_len_tokens:
-            ones = -np.ones((m.shape[0], max_len_tokens - m.shape[0]))
-            padded_dis = np.concatenate((m, ones), axis=1)
-            ones = -np.ones((max_len_tokens - m.shape[0], max_len_tokens))
-            padded_dis = np.concatenate((padded_dis, ones), 0)
-            padded_matices.append(padded_dis)
-        else:
-            padded_matices.append(m)
-    padded_matices = torch.tensor(np.array(padded_matices))
-
+    padded_matrices = []
+    if type_probe != 'depth_probe':
+        #pad matrices
+        for m in matrices:
+            if m.shape[0] < max_len_tokens:
+                ones = -np.ones((m.shape[0], max_len_tokens - m.shape[0]))
+                padded_dis = np.concatenate((m, ones), axis=1)
+                ones = -np.ones((max_len_tokens - m.shape[0], max_len_tokens))
+                padded_dis = np.concatenate((padded_dis, ones), 0)
+                padded_matrices.append(padded_dis)
+            else:
+                padded_matrices.append(m)
+    else:
+        for m in matrices:
+            if m.shape[0] < max_len_tokens:
+                ones = -np.ones((max_len_tokens - m.shape[0]))
+                padded_dis = np.concatenate((m, ones), axis=0)
+                padded_matrices.append(padded_dis)
+            else:
+                padded_matrices.append(m)
+    padded_matrices = torch.tensor(np.array(padded_matrices))
     
     #generate inputs and attention masks
     all_inputs = []
@@ -68,6 +76,5 @@ def collator_fn(batch, tokenizer):
         indices += [j]*(max_len_subtokens - 1 - len(indices))
         alig.append(indices)
     alig = torch.tensor(alig)
-
     
-    return (all_inputs, all_attentions, padded_matices, len_tokens, alig)
+    return (all_inputs, all_attentions, padded_matrices, len_tokens, alig)

@@ -137,7 +137,7 @@ class Code2ast(unittest.TestCase):
         self.assertTrue('"s"' in tokens)
         plt.figure()
         plt.title('test_str_ast')
-        nx.draw(G, labels=nx.get_node_attributes(G, 'type'), with_labels=True)
+        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
 
     def test_replace_functions_and_labels(self):

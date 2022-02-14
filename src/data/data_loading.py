@@ -12,7 +12,7 @@ import networkx as nx
 
 from .utils import download_url, unzip_file
 from .code2ast import code2ast, enrich_ast_with_deps, get_dependency_tree, get_matrix_and_tokens_dep, label_dep_tree, \
-    get_tuples_from_labeled_dep_tree, get_matrix_tokens_ast
+    get_tuples_from_labeled_dep_tree, get_matrix_tokens_ast, get_depths_tokens_ast
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +138,8 @@ def create_splits(dataset_path, split):
 
 def convert_sample_to_features(code, parser, type_probe, lang='python'):
     G, pre_code = code2ast(code, parser, lang)
+    assert nx.is_tree(nx.Graph(G))
+    assert nx.is_connected(nx.Graph(G))
     if type_probe == 'ast_probe':
         matrix, code_tokens = get_matrix_tokens_ast(G, pre_code)
         return {'tokens': code_tokens, 'matrix': matrix}
@@ -146,6 +148,9 @@ def convert_sample_to_features(code, parser, type_probe, lang='python'):
         T = get_dependency_tree(G)
         matrix, code_tokens = get_matrix_and_tokens_dep(T, pre_code)
         return {'tokens': code_tokens, 'matrix': matrix}
+    elif type_probe == 'depth_probe':
+        depths, code_tokens = get_depths_tokens_ast(G, pre_code)
+        return {'tokens': code_tokens, 'matrix': depths}
 
 
 def compute_distinct_labels(dataset_path, args):

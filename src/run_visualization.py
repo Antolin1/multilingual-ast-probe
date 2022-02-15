@@ -60,7 +60,7 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ar
     lmodel.eval()
     probe_model.eval()
 
-    for code in code_samples:
+    for c, code in enumerate(code_samples):
         G, pre_code = code2ast(code, parser, args.lang)
         if args.type_probe == 'depth_probe':
             depths, code_tokens = get_depths_tokens_ast(G, pre_code)
@@ -132,6 +132,7 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ar
                 ax.text(x[i], max(pred_dis[i], real_dis[i]) + 0.5, txt, rotation=90)
                 #ax.annotate(txt, (x[i], pred_dis[i]))
             plt.show()
+            plt.savefig(f'code_samples/plot_{c}.png')
 
 
         # UAS

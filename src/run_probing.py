@@ -14,7 +14,8 @@ from tqdm import tqdm
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE
 from probe import OneWordPSDProbe, TwoWordPSDProbe, L1DistanceLoss, get_embeddings,\
     align_function, report_uas, report_spear, L1DepthLoss
-from data.utils import match_tokenized_to_untokenized_roberta
+from data.utils import match_tokenized_to_untokenized_roberta, \
+    remove_comments_and_docstrings_java_js, remove_comments_and_docstrings_python
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,16 @@ def generate_baseline(model):
 def filter_strategy(code_tokens, tokenizer, max_tokens):
     to_convert, _ = match_tokenized_to_untokenized_roberta(code_tokens, tokenizer)
     return len(code_tokens) <= max_tokens and (len(to_convert) + 2 <= 512)
+
+def filter_non_parse(code, lang):
+    try:
+        if lang == 'python':
+            remove_comments_and_docstrings_python(code)
+        elif lang == 'javascript':
+            remove_comments_and_docstrings_java_js(code)
+        return True
+    except:
+        return False
 
 def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
@@ -55,21 +66,27 @@ def run_probing_train(args: argparse.Namespace):
     test_set = load_dataset('json', data_files=data_files, split='test')
 
 
+    train_set = train_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
     train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
     train_set = train_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
     train_set = train_set.shuffle(args.seed).select(range(min(20000, len(train_set))))
     train_set = train_set.remove_columns(['original_string', 'code_tokens'])
 
+    valid_set = valid_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
     valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
     valid_set = valid_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
     valid_set = valid_set.shuffle(args.seed).select(range(min(2000, len(valid_set))))
     valid_set = valid_set.remove_columns(['original_string', 'code_tokens'])
 
-
+    test_set = test_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
     test_set = test_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
     test_set = test_set.shuffle(args.seed).select(range(min(4000, len(test_set))))
     test_set = test_set.remove_columns(['original_string', 'code_tokens'])
+
+    logger.info(f'Training samples model {len(train_set)}')
+    logger.info(f'Validation samples model {len(valid_set)}')
+    logger.info(f'Testing samples model {len(test_set)}')
 
     # @todo: load lmodel and tokenizer from checkpoint
     # @todo: model_type in ProgramArguments
@@ -105,10 +122,10 @@ def run_probing_train(args: argparse.Namespace):
 
     if args.type_probe == 'depth_probe':
         probe_model = OneWordPSDProbe(args.rank, args.hidden, args.device)
-        criterion = L1DistanceLoss(args.device)
+        criterion = L1DepthLoss(args.device)
     else:
         probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
-        criterion = L1DepthLoss(args.device)
+        criterion = L1DistanceLoss(args.device)
 
     optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)

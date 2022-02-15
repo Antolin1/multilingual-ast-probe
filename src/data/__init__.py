@@ -6,4 +6,5 @@ from .utils import \
     download_url, \
     unzip_file, \
     match_tokenized_to_untokenized_roberta, \
-    remove_comments_and_docstrings_python
+    remove_comments_and_docstrings_python, \
+    remove_comments_and_docstrings_java_js

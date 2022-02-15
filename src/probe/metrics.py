@@ -1,5 +1,5 @@
 from collections import defaultdict
-
+from scipy.stats import spearmanr
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -41,12 +41,20 @@ def report_spear(test_loader, probe_model, lmodel, args):
         emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer, args.model_type)
         emb = align_function(emb.to(args.device), alig.to(args.device))
         outputs = probe_model(emb.to(args.device))
-        for j, dis_pred in enumerate(outputs):
-            l = lens[j].item()
-            dis_real = dis[j].cpu().detach().numpy()[0:l, 0:l]
-            dis_pred = dis_pred[0:l, 0:l].cpu().detach().numpy()
-            spear = get_spear(dis_real, dis_pred)
-            lengths_to_spearmanrs[l].extend(spear)
+        if args.type_probe != 'depth_probe':
+            for j, dis_pred in enumerate(outputs):
+                l = lens[j].item()
+                dis_real = dis[j].cpu().detach().numpy()[0:l, 0:l]
+                dis_pred = dis_pred[0:l, 0:l].cpu().detach().numpy()
+                spear = get_spear(dis_real, dis_pred)
+                lengths_to_spearmanrs[l].extend(spear)
+        else:
+            for j, dis_pred in enumerate(outputs):
+                l = lens[j].item()
+                dis_real = dis[j].cpu().detach().numpy()[0:l]
+                dis_pred = dis_pred[0:l].cpu().detach().numpy()
+                spear = spearmanr(dis_real, dis_pred)
+                lengths_to_spearmanrs[l].append(spear.correlation)
     mean_spearman_for_each_length = {length: np.mean(lengths_to_spearmanrs[length])
                                      for length in lengths_to_spearmanrs}
     return mean_spearman_for_each_length, np.mean([mean_spearman_for_each_length[x]

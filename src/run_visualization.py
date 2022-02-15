@@ -2,7 +2,7 @@ import random
 from data.utils import match_tokenized_to_untokenized_roberta
 from data.code2ast import code2ast, get_depths_tokens_ast, \
     get_matrix_tokens_ast, enrich_ast_with_deps, get_dependency_tree, \
-    get_matrix_and_tokens_dep
+    get_matrix_and_tokens_dep, get_spear
 import torch
 import numpy as np
 from probe.utils import get_embeddings, align_function
@@ -18,12 +18,18 @@ from run_probing import generate_baseline
 from tree_sitter import Parser
 import seaborn as sns
 import glob
+from scipy.stats import spearmanr
 
 def run_visualization(args):
     code_samples = []
-    for filename in glob.glob('code_samples/*.py'):
-        with open(filename, 'r') as f:
-            code_samples.append(f.read())
+    if args.lang == 'python':
+        for filename in glob.glob('code_samples/*.py'):
+            with open(filename, 'r') as f:
+                code_samples.append(f.read())
+    elif args.lang == 'javascript':
+        for filename in glob.glob('code_samples/*.js'):
+            with open(filename, 'r') as f:
+                code_samples.append(f.read())
 
     # @todo: load lmodel and tokenizer from checkpoint
     # @todo: model_type in ProgramArguments
@@ -129,11 +135,17 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ar
             ax.scatter(x, pred_dis, color='blue')
             ax.scatter(x, real_dis, color='0.8')
             for i, txt in enumerate(tokens):
-                ax.text(x[i], max(pred_dis[i], real_dis[i]) + 0.5, txt, rotation=90)
+                ax.text(x[i], max(pred_dis[i], real_dis[i]) + 0.2, txt, rotation=90)
                 #ax.annotate(txt, (x[i], pred_dis[i]))
             plt.show()
             plt.savefig(f'code_samples/plot_{c}.png')
 
+        if args.type_probe != 'depth_probe':
+            spear = np.mean(get_spear(real_dis, pred_dis))
+            print(f'Spear corr for {c}: {spear}')
+        else:
+            spear = spearmanr(real_dis, pred_dis).correlation
+            print(f'Spear corr for {c}: {spear}')
 
         # UAS
         #print('UAS in sample', i, ':', get_uas(T_real, T_pred))

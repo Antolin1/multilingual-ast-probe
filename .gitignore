@@ -1,3 +1,4 @@
+*.png
 notebooks
 tests.ipynb
 figure.png

@@ -69,11 +69,6 @@ class ProgramArguments:
         metadata={'help': 'Seed for experiments replication.'}
     )
 
-    samples: Optional[int] = field(
-        default=5,
-        metadata={'help': 'Samples to visualize.'}
-    )
-
     max_tokens: Optional[int] = field(
         default=100,
         metadata={'help': 'Max tokens considered.'}

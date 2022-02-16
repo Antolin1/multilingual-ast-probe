@@ -391,3 +391,10 @@ def remplace_non_terminals(G, conf = None):
             g0.remove_node(n)
         g = g0
     return g
+
+
+def has_error(G):
+    for n in G:
+        if G.nodes[n]['type'] == 'ERROR':
+            return True
+    return False

@@ -1,26 +1,18 @@
 import logging
-from argparse import ArgumentParser
+import argparse
 import random
-import numpy as np
-import torch
-from data import download_codesearchnet_dataset
 import os
-from datasets import load_dataset
-from data.utils import remove_comments_and_docstrings_python, remove_comments_and_docstrings_java_js
-from data.code2ast import code2ast, get_tokens_ast
+
+import numpy as np
 import networkx as nx
-from data.utils import match_tokenized_to_untokenized_roberta
+import torch
 from transformers import AutoTokenizer
 from tree_sitter import Parser
-from data import PY_LANGUAGE, JS_LANGUAGE
-logger = logging.getLogger()
-logger.setLevel(level=logging.INFO)
+from datasets import load_dataset
 
-console = logging.StreamHandler()
-console.setLevel(level=logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
-console.setFormatter(formatter)
-logger.addHandler(console)
+from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE
+from data.code2ast import code2ast, get_tokens_ast, has_error
+from data.utils import match_tokenized_to_untokenized_roberta
 
 
 tokenizer_roberta = AutoTokenizer.from_pretrained('roberta-base')
@@ -33,16 +25,17 @@ tokenizers = [tokenizer_roberta, tokenizer_t5,
               tokenizer_codebert, tokenizer_graphcodebert,
               tokenizer_codeberta]
 
-def filter_by_tokens_subtokens(code, lang, parser, max_tokens):
+
+def filter_by_tokens_subtokens(code, lang, parser):
     try:
         G, code_pre = code2ast(code=code, parser=parser, lang=lang)
         assert nx.is_tree(nx.Graph(G))
         assert nx.is_connected(nx.Graph(G))
     except:
         return False
-    tokens = get_tokens_ast(G, code_pre)
-    if len(tokens) > max_tokens:
+    if has_error(G):
         return False
+    tokens = get_tokens_ast(G, code_pre)
     #filter for roberta, codebert, t5, graphcodebert, codeberta
     for tokenizer in tokenizers:
         to_convert, _ = match_tokenized_to_untokenized_roberta(tokens, tokenizer)
@@ -50,22 +43,29 @@ def filter_by_tokens_subtokens(code, lang, parser, max_tokens):
             return False
     return True
 
+
 def main():
-    #parser
-    parser = ArgumentParser(description='Script for generating the dataset for probing')
+    parser = argparse.ArgumentParser(description='Script for generating the dataset for probing')
     parser.add_argument("--dir", default="dataset", help="Path to save the dataset")
     parser.add_argument("--seed", help="seed.", type=int, default=123)
     parser.add_argument("--lang", help="Language.", choices=['javascript', 'python'],
                         default="python")
     parser.add_argument("--download", help="If download the csn", action="store_true")
-    parser.add_argument("--tokens", help="Max tokens.", type=int, default=100)
+
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.INFO)
+
+    console = logging.StreamHandler()
+    console.setLevel(level=logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
+    console.setFormatter(formatter)
+    logger.addHandler(console)
 
     #parse arguments
     args = parser.parse_args()
     dataset_dir = args.dir
     seed = args.seed
     lang = args.lang
-    max_tokens = args.tokens
     
     #seed everything
     if seed > 0:
@@ -91,7 +91,7 @@ def main():
     #filter dataset
     logger.info('Filtering dataset.')
     hugg_dataset = hugg_dataset.filter(lambda e: filter_by_tokens_subtokens(e['original_string'], lang,
-                                                                            parser_lang, max_tokens))
+                                                                            parser_lang))
     logger.info('Shuffling dataset.')
     hugg_dataset = hugg_dataset.shuffle(seed)
 
@@ -104,6 +104,7 @@ def main():
     train_dataset.to_json(os.path.join(dataset_dir, lang, 'train.jsonl'))
     test_dataset.to_json(os.path.join(dataset_dir, lang, 'test.jsonl'))
     val_dataset.to_json(os.path.join(dataset_dir, lang, 'valid.jsonl'))
+
 
 if __name__ == '__main__':
     main()

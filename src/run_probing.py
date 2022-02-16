@@ -66,22 +66,22 @@ def run_probing_train(args: argparse.Namespace):
     test_set = load_dataset('json', data_files=data_files, split='test')
 
 
-    train_set = train_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
+    #train_set = train_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
     train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
-    train_set = train_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
-    train_set = train_set.shuffle(args.seed).select(range(min(20000, len(train_set))))
+    #train_set = train_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
+    #train_set = train_set.shuffle(args.seed).select(range(min(20000, len(train_set))))
     train_set = train_set.remove_columns(['original_string', 'code_tokens'])
 
-    valid_set = valid_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
+    #valid_set = valid_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
     valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
-    valid_set = valid_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
-    valid_set = valid_set.shuffle(args.seed).select(range(min(2000, len(valid_set))))
+    #valid_set = valid_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
+    #valid_set = valid_set.shuffle(args.seed).select(range(min(2000, len(valid_set))))
     valid_set = valid_set.remove_columns(['original_string', 'code_tokens'])
 
-    test_set = test_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
+    #test_set = test_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
-    test_set = test_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
-    test_set = test_set.shuffle(args.seed).select(range(min(4000, len(test_set))))
+    #test_set = test_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
+    #test_set = test_set.shuffle(args.seed).select(range(min(4000, len(test_set))))
     test_set = test_set.remove_columns(['original_string', 'code_tokens'])
 
     logger.info(f'Training samples model {len(train_set)}')

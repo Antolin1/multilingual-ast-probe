@@ -36,14 +36,13 @@ JS_PARSER = Parser()
 JS_PARSER.set_language(JS_LANGUAGE)
 
 
-def download_codesearchnet_dataset():
+def download_codesearchnet_dataset(dataset_dir):
     """Download CodeSearchNet dataset and clean it using GraphCodeBERT cleaning splits (Guo et al's)
 
     Return:
         dataset_dir (str): the path containing the downloaded dataset.
     """
     zip_file_path = 'dataset.zip'
-    dataset_dir = './dataset'
 
     if not os.path.exists(zip_file_path):
         logger.info('Downloading CodeSearchNet dataset...')
@@ -99,7 +98,6 @@ def download_codesearchnet_dataset():
         if re.match('.*.(zip|pkl|py|sh)', file):
             os.remove(file)
     os.chdir('../')
-    return dataset_dir
 
 
 def create_splits(dataset_path, split):

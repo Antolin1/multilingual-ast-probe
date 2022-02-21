@@ -86,10 +86,10 @@ def tree_to_distance(tree, node):
     return d, c, h
 
 def distance_to_tree(d, c, tokens):
-    def distance_to_tree_aux(G, d, c, father, tokens):
+    def distance_to_tree_aux(G, d, c, father, tokens, start_token):
         if d == []:
             new_id = get_id(G)
-            G.add_node(new_id, type=tokens[0])
+            G.add_node(new_id, type=tokens[0], start=start_token)
             G.add_edge(father, new_id)
         else:
             i = np.argmax(d)
@@ -97,10 +97,10 @@ def distance_to_tree(d, c, tokens):
             G.add_node(new_id, type=c[i])
             if father != None:
                 G.add_edge(father, new_id)
-            distance_to_tree_aux(G, d[0:i], c[0:i], new_id, tokens[0:i+1])
-            distance_to_tree_aux(G, d[i+1:], c[i+1:], new_id, tokens[i+1:])
+            distance_to_tree_aux(G, d[0:i], c[0:i], new_id, tokens[0:i+1], start_token)
+            distance_to_tree_aux(G, d[i+1:], c[i+1:], new_id, tokens[i+1:], start_token + i + 1)
     G = nx.DiGraph()
-    distance_to_tree_aux(G, d, c, None, tokens)
+    distance_to_tree_aux(G, d, c, None, tokens, 0)
     return G
 
 def remove_empty_nodes(G):
@@ -142,3 +142,21 @@ def extend_complex_nodes(G):
         g = g0
         # print(len([n for n in g if not has_terminals(g, n)]))
     return g
+
+
+def get_multiset_ast(G):
+    result = []
+    for n in G:
+        if G.out_degree(n) > 0:
+            leaves = get_leaves(G, n)
+            leaves = sorted(leaves, key=lambda n: G.nodes[n]['start'])
+            result.append(G.nodes[n]['type'] + '-' + '-'.join([str(G.nodes[l]['start']) for l in leaves]))
+    return result
+
+def get_precision_recall_f1(G_true, G_pred):
+    m_true = get_multiset_ast(G_true)
+    m_pred = get_multiset_ast(G_pred)
+    prec = float(len([n for n in m_pred if n in m_true]))/float(len(m_pred))
+    rec = float(len([n for n in m_pred if n in m_true]))/float(len(m_true))
+    f1 = 2 * prec * rec / (prec + rec)
+    return prec, rec, f1

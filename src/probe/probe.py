@@ -73,3 +73,32 @@ class OneWordPSDProbe(Probe):
         transformed.view(batchlen* seqlen, rank, 1))
         norms = norms.view(batchlen, seqlen)
         return norms
+
+class ParserProbe(Probe):
+    def __init__(self, probe_rank, model_dim, number_vectors, device):
+        print('Constructing ParserProbe')
+        super(ParserProbe, self).__init__()
+        self.probe_rank = probe_rank
+        self.model_dim = model_dim
+        self.number_vectors = number_vectors
+        self.proj = nn.Parameter(data=torch.zeros(self.model_dim, self.probe_rank))
+        nn.init.uniform_(self.proj, -0.05, 0.05)
+        self.vectors = nn.Parameter(data=torch.zeros(self.probe_rank, self.number_vectors))
+        self.to(device)
+        self.device = device
+
+    def forward(self, batch):
+        """
+
+        Args:
+            batch: a batch of word representations of the shape
+            (batch_size, max_seq_len, representation_dim)
+
+        Returns:
+            d_pred: (batch_size, max_seq_len - 1)
+            scores: (batch_size, max_seq_len - 1, number classes)
+        """
+        transformed = torch.matmul(batch, self.proj)
+        shift = transformed[:, 1:, :]
+        diffs = shift - transformed[:, :-1, :]
+        return (diffs**2).sum(dim=2), torch.matmul(diffs, self.vectors)

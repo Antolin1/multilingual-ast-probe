@@ -1,7 +1,9 @@
 import unittest
 from tree_sitter import Language, Parser
 from src.data.code2ast import code2ast, get_tokens_ast
-from src.data.binary_tree import ast2binary, tree_to_distance, distance_to_tree, remove_empty_nodes, extend_complex_nodes
+from src.data.binary_tree import ast2binary, tree_to_distance, \
+    distance_to_tree, remove_empty_nodes, extend_complex_nodes, \
+    get_multiset_ast, get_precision_recall_f1
 import networkx as nx
 import matplotlib.pyplot as plt
 from networkx.drawing.nx_pydot import graphviz_layout
@@ -32,6 +34,7 @@ class TestBinary(unittest.TestCase):
         print([binary_ast.out_degree(n) for n in binary_ast])
         d, c, _ = tree_to_distance(binary_ast, 0)
         binary_ast_recov = distance_to_tree(d, c, get_tokens_ast(G, pre_code))
+        print(binary_ast_recov.nodes(data=True))
         self.assertTrue(nx.is_tree(binary_ast_recov))
 
         print(len(binary_ast_recov))
@@ -42,6 +45,19 @@ class TestBinary(unittest.TestCase):
 
         binary_ast_recov_full = extend_complex_nodes(remove_empty_nodes(binary_ast_recov))
         nx.draw(nx.Graph(binary_ast_recov_full), labels=nx.get_node_attributes(binary_ast_recov_full, 'type'),
+                with_labels=True)
+        plt.show()
+        print(get_multiset_ast(binary_ast_recov_full))
+        print(get_precision_recall_f1(binary_ast_recov_full, binary_ast_recov_full))
+
+        perturbed = nx.DiGraph(binary_ast_recov)
+        for n in perturbed:
+            if perturbed.nodes[n]['type'] == 'block#return_statement':
+                perturbed.nodes[n]['type'] = 'return_statement'
+        perturbed = extend_complex_nodes(remove_empty_nodes(perturbed))
+        print(get_precision_recall_f1(binary_ast_recov_full, perturbed))
+
+        nx.draw(nx.Graph(perturbed), labels=nx.get_node_attributes(perturbed, 'type'),
                 with_labels=True)
         plt.show()
         #print(binary_ast.nodes(data=True))

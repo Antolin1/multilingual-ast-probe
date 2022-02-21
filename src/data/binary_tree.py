@@ -15,7 +15,7 @@ def ast2binary(G):
         elif len(out_edges) == 1:
             m = out_edges[0][1]
             if not G.nodes[m]['is_terminal']:
-                new_G.nodes[parent_in_new_G]['type'] = new_G.nodes[parent_in_new_G]['type'] + '-' + G.nodes[m]['type']
+                new_G.nodes[parent_in_new_G]['type'] = new_G.nodes[parent_in_new_G]['type'] + '#' + G.nodes[m]['type']
                 ast2binary_aux(m, G, new_G, parent_in_new_G)
             else:
                 #todo: check this, unary things
@@ -46,15 +46,38 @@ def ast2binary(G):
     ast2binary_aux(root_G, G, new_G, 0)
     return new_G
 
+def get_leaves(tree, node):
+    if tree.out_degree(node) == 0:
+        return [node]
+    else:
+        result = []
+        for _, m in tree.out_edges(node):
+            result += get_leaves(tree, m)
+        return result
+
+def get_most_left(tree, nodes):
+    nodes_sort = sorted(nodes, key=lambda n: tree.nodes[n]['start'])
+    return tree.nodes[nodes_sort[0]]['start']
+
+def get_left_right_child(tree, node):
+    child_1 = list(tree.out_edges(node))[0][1]
+    child_2 = list(tree.out_edges(node))[1][1]
+    child_1_leaves = get_leaves(tree, child_1)
+    child_2_leaves = get_leaves(tree, child_2)
+    child_1_left_most = get_most_left(tree, child_1_leaves)
+    child_2_left_most = get_most_left(tree, child_2_leaves)
+    if child_1_left_most < child_2_left_most:
+        return child_1, child_2
+    else:
+        return child_2, child_1
+
 def tree_to_distance(tree, node):
     if tree.out_degree(node) == 0:
         d = []
         c = []
         h = 0
     else:
-        #todo: ->sort left to right
-        left_child = list(tree.out_edges(node))[0][1]
-        right_child = list(tree.out_edges(node))[1][1]
+        left_child, right_child = get_left_right_child(tree, node)
         d_l, c_l, h_l = tree_to_distance(tree, left_child)
         d_r, c_r, h_r = tree_to_distance(tree, right_child)
         h = max(h_r, h_l) + 1
@@ -62,11 +85,11 @@ def tree_to_distance(tree, node):
         c = c_l + [tree.nodes[node]['type']] + c_r
     return d, c, h
 
-def distance_to_tree(d, c):
-    def distance_to_tree_aux(G, d, c, father):
+def distance_to_tree(d, c, tokens):
+    def distance_to_tree_aux(G, d, c, father, tokens):
         if d == []:
             new_id = get_id(G)
-            G.add_node(new_id)
+            G.add_node(new_id, type=tokens[0])
             G.add_edge(father, new_id)
         else:
             i = np.argmax(d)
@@ -74,8 +97,48 @@ def distance_to_tree(d, c):
             G.add_node(new_id, type=c[i])
             if father != None:
                 G.add_edge(father, new_id)
-            distance_to_tree_aux(G, d[0:i], c[0:i], new_id)
-            distance_to_tree_aux(G, d[i+1:], c[i+1:], new_id)
+            distance_to_tree_aux(G, d[0:i], c[0:i], new_id, tokens[0:i+1])
+            distance_to_tree_aux(G, d[i+1:], c[i+1:], new_id, tokens[i+1:])
     G = nx.DiGraph()
-    distance_to_tree_aux(G, d, c, None)
+    distance_to_tree_aux(G, d, c, None, tokens)
     return G
+
+def remove_empty_nodes(G):
+    g = G.copy()
+    while len([n for n in g if g.nodes[n]['type'] == '<empty>']) != 0:
+        g0 = g.copy()
+        n = [n for n in g if g.nodes[n]['type'] == '<empty>'][0]
+        edges_in = list(g.in_edges(n))
+        edges_out = list(g.out_edges(n))
+        if len(edges_in) != 0:
+            u, _ = edges_in[0]
+            for _, v in edges_out:
+                g0.add_edge(u, v)
+        g0.remove_node(n)
+        g = g0
+        # print(len([n for n in g if not has_terminals(g, n)]))
+    return g
+
+def extend_complex_nodes(G):
+    g = G.copy()
+    while len([n for n in g if '#' in g.nodes[n]['type'] and g.out_edges(n) != 0]) != 0:
+        g0 = g.copy()
+        n = [n for n in g if '#' in g.nodes[n]['type'] and g.out_edges(n) != 0][0]
+        edges_in = list(g.in_edges(n))
+        edges_out = list(g.out_edges(n))
+        labels = g.nodes[n]['type'].split('#')
+        new_nodes = []
+        for l in labels:
+            new_id = get_id(g0)
+            g0.add_node(new_id, type=l)
+            if len(new_nodes)!=0:
+                g0.add_edge(new_nodes[-1], new_id)
+            new_nodes.append(new_id)
+        for u, _ in edges_in:
+            g0.add_edge(u, new_nodes[0])
+        for _, v in edges_out:
+            g0.add_edge(new_nodes[-1], v)
+        g0.remove_node(n)
+        g = g0
+        # print(len([n for n in g if not has_terminals(g, n)]))
+    return g

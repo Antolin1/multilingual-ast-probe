@@ -7,6 +7,7 @@ import torch
 class Probe(nn.Module):
     pass
 
+
 class TwoWordPSDProbe(Probe):
     """Computes squared L2 distance after projection by a matrix.
 
@@ -45,6 +46,7 @@ class TwoWordPSDProbe(Probe):
         squared_distances = torch.sum(squared_diffs, -1)
         return squared_distances
 
+
 class OneWordPSDProbe(Probe):
     """ Computes squared L2 norm of words after projection by a matrix."""
     def __init__(self, probe_rank, model_dim, device):
@@ -74,18 +76,17 @@ class OneWordPSDProbe(Probe):
         norms = norms.view(batchlen, seqlen)
         return norms
 
+
 class ParserProbe(Probe):
-    def __init__(self, probe_rank, model_dim, number_vectors, device):
+    def __init__(self, probe_rank, hidden_dim, number_labels):
         print('Constructing ParserProbe')
         super(ParserProbe, self).__init__()
         self.probe_rank = probe_rank
-        self.model_dim = model_dim
-        self.number_vectors = number_vectors
-        self.proj = nn.Parameter(data=torch.zeros(self.model_dim, self.probe_rank))
+        self.hidden_dim = hidden_dim
+        self.number_vectors = number_labels
+        self.proj = nn.Parameter(data=torch.zeros(self.hidden_dim, self.probe_rank))
         nn.init.uniform_(self.proj, -0.05, 0.05)
         self.vectors = nn.Parameter(data=torch.zeros(self.probe_rank, self.number_vectors))
-        self.to(device)
-        self.device = device
 
     def forward(self, batch):
         """

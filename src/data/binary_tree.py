@@ -153,10 +153,13 @@ def get_multiset_ast(G):
             result.append(G.nodes[n]['type'] + '-' + '-'.join([str(G.nodes[l]['start']) for l in leaves]))
     return result
 
+
 def get_precision_recall_f1(G_true, G_pred):
     m_true = get_multiset_ast(G_true)
     m_pred = get_multiset_ast(G_pred)
     prec = float(len([n for n in m_pred if n in m_true]))/float(len(m_pred))
     rec = float(len([n for n in m_pred if n in m_true]))/float(len(m_true))
+    if prec + rec == 0:
+        return 0, 0, 0
     f1 = 2 * prec * rec / (prec + rec)
     return prec, rec, f1

@@ -76,10 +76,10 @@ class L1DepthLoss(nn.Module):
           batch_loss = torch.tensor(0.0, device=self.device)
         return batch_loss, total_sents
 
+
 class ParserLoss(nn.Module):
-    def __init__(self, device):
+    def __init__(self):
         super(ParserLoss, self).__init__()
-        self.device = device
         self.cs = nn.CrossEntropyLoss(ignore_index=-1)
 
     def forward(self, d_pred, scores, d_real, c_real, length_batch):
@@ -90,4 +90,4 @@ class ParserLoss(nn.Module):
         loss_d = torch.sum(torch.abs(d_pred_masked - d_real_masked), dim=1) / length_batch.float()
         loss_d = torch.sum(loss_d) / total_sents
         loss_c = self.cs(scores.view(-1, scores.shape[2]), c_real.view(-1))
-        return loss_c + loss_d
+        return .3 * loss_c + .7 * loss_d

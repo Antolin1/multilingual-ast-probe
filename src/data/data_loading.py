@@ -5,14 +5,16 @@ import pathlib
 import json
 import random
 import logging
+from collections import Counter
 
 from tqdm import tqdm
 from tree_sitter import Language, Parser
 import networkx as nx
 
+from .binary_tree import ast2binary, tree_to_distance
 from .utils import download_url, unzip_file
 from .code2ast import code2ast, enrich_ast_with_deps, get_dependency_tree, get_matrix_and_tokens_dep, label_dep_tree, \
-    get_tuples_from_labeled_dep_tree, get_matrix_tokens_ast, get_depths_tokens_ast
+    get_tuples_from_labeled_dep_tree, get_tokens_ast
 
 logger = logging.getLogger(__name__)
 
@@ -134,21 +136,37 @@ def create_splits(dataset_path, split):
             f3.write(json.dumps(js) + '\n')
 
 
-def convert_sample_to_features(code, parser, type_probe, lang='python'):
-    G, pre_code = code2ast(code, parser, lang)
-    assert nx.is_tree(nx.Graph(G))
-    assert nx.is_connected(nx.Graph(G))
-    if type_probe == 'ast_probe':
-        matrix, code_tokens = get_matrix_tokens_ast(G, pre_code)
-        return {'tokens': code_tokens, 'matrix': matrix}
-    elif type_probe == 'dep_probe':
-        enrich_ast_with_deps(G)
-        T = get_dependency_tree(G)
-        matrix, code_tokens = get_matrix_and_tokens_dep(T, pre_code)
-        return {'tokens': code_tokens, 'matrix': matrix}
-    elif type_probe == 'depth_probe':
-        depths, code_tokens = get_depths_tokens_ast(G, pre_code)
-        return {'tokens': code_tokens, 'matrix': depths}
+def convert_sample_to_features(code, parser):
+    G, pre_code = code2ast(code, parser)
+    binary_ast = ast2binary(G)
+    d, c, _ = tree_to_distance(binary_ast, 0)
+    code_tokens = get_tokens_ast(G, pre_code)
+
+    return {
+        'd': d,
+        'c': c,
+        'num_tokens': len(code_tokens),
+        'code_tokens': code_tokens
+    }
+
+
+def get_non_terminals_labels(train_set_labels, valid_set_labels, test_set_labels):
+    all_labels = [label for seq in train_set_labels for label in seq] + \
+                 [label for seq in valid_set_labels for label in seq] + \
+                 [label for seq in test_set_labels for label in seq]
+    # use a Counter to constantly get the same order in the labels
+    ct = Counter(all_labels)
+    labels_to_ids = {}
+    for i, label in enumerate(ct):
+        labels_to_ids[label] = i
+    return labels_to_ids
+
+
+def convert_c_to_ids(c, labels_to_ids):
+    labels_ids = []
+    for label in c:
+        labels_ids.append(labels_to_ids[label])
+    return {'c': labels_ids}
 
 
 def compute_distinct_labels(dataset_path, args):

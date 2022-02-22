@@ -1,10 +1,10 @@
 import os
-import pickle
 import argparse
 import logging
-from typing import Union
+import pickle
 
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
 from datasets import load_dataset
@@ -12,10 +12,12 @@ from tree_sitter import Parser
 from tqdm import tqdm
 
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE
-from probe import OneWordPSDProbe, TwoWordPSDProbe, L1DistanceLoss, get_embeddings,\
-    align_function, report_uas, report_spear, L1DepthLoss
+from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.utils import match_tokenized_to_untokenized_roberta, \
     remove_comments_and_docstrings_java_js, remove_comments_and_docstrings_python
+from data.data_loading import get_non_terminals_labels, convert_c_to_ids
+from data.binary_tree import distance_to_tree, remove_empty_nodes, extend_complex_nodes, get_precision_recall_f1
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +28,11 @@ def generate_baseline(model):
     baseline.embeddings = model.embeddings
     return baseline
 
+
 def filter_strategy(code_tokens, tokenizer, max_tokens):
     to_convert, _ = match_tokenized_to_untokenized_roberta(code_tokens, tokenizer)
     return len(code_tokens) <= max_tokens and (len(to_convert) + 2 <= 512)
+
 
 def filter_non_parse(code, lang):
     try:
@@ -39,6 +43,7 @@ def filter_non_parse(code, lang):
         return True
     except:
         return False
+
 
 def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
@@ -65,89 +70,70 @@ def run_probing_train(args: argparse.Namespace):
     valid_set = load_dataset('json', data_files=data_files, split='valid')
     test_set = load_dataset('json', data_files=data_files, split='test')
 
+    # get d and c for each sample
+    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
 
-    #train_set = train_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
-    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
-    #train_set = train_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
-    #train_set = train_set.shuffle(args.seed).select(range(min(20000, len(train_set))))
-    train_set = train_set.remove_columns(['original_string', 'code_tokens'])
-
-    #valid_set = valid_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
-    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
-    #valid_set = valid_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
-    #valid_set = valid_set.shuffle(args.seed).select(range(min(2000, len(valid_set))))
-    valid_set = valid_set.remove_columns(['original_string', 'code_tokens'])
-
-    #test_set = test_set.filter(lambda e: filter_non_parse(e['original_string'], args.lang))
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.type_probe, args.lang))
-    #test_set = test_set.filter(lambda e: filter_strategy(e['tokens'], tokenizer, args.max_tokens))
-    #test_set = test_set.shuffle(args.seed).select(range(min(4000, len(test_set))))
-    test_set = test_set.remove_columns(['original_string', 'code_tokens'])
-
-    logger.info(f'Training samples model {len(train_set)}')
-    logger.info(f'Validation samples model {len(valid_set)}')
-    logger.info(f'Testing samples model {len(test_set)}')
-
-    # @todo: load lmodel and tokenizer from checkpoint
-    # @todo: model_type in ProgramArguments
-    logger.info('Loading model')
-
-    if args.model_type == 't5':
-        lmodel = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
-        lmodel = lmodel.to(args.device)
-    else:
-        lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
-        if '-baseline' in args.run_name:
-            lmodel = generate_baseline(lmodel)
-        lmodel = lmodel.to(args.device)
-
-
-
+    # convert each non-terminal labels to its id
+    labels_to_ids = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
+    ids_to_labels = {x: y for y, x in labels_to_ids.items()}
+    train_set = train_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids))
+    valid_set = valid_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids))
+    test_set = test_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids))
 
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,
                                   shuffle=True,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer, args.type_probe),
-                                  num_workers=10)
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  num_workers=8)
     valid_dataloader = DataLoader(dataset=valid_set,
                                   batch_size=args.batch_size,
                                   shuffle=False,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer, args.type_probe),
-                                  num_workers=10)
-    test_dataloader = DataLoader(dataset=test_set,
-                                 batch_size=args.batch_size,
-                                 shuffle=False,
-                                 collate_fn=lambda batch: collator_fn(batch, tokenizer, args.type_probe),
-                                 num_workers=10)
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  num_workers=8)
 
-    if args.type_probe == 'depth_probe':
-        probe_model = OneWordPSDProbe(args.rank, args.hidden, args.device)
-        criterion = L1DepthLoss(args.device)
+    logger.info('Loading models.')
+    if args.model_type == 't5':
+        lmodel = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
     else:
-        probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
-        criterion = L1DistanceLoss(args.device)
+        lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+        if '-baseline' in args.run_name:
+            lmodel = generate_baseline(lmodel)
+    lmodel = lmodel.to(args.device)
+
+    probe_model = ParserProbe(
+        probe_rank=args.rank,
+        hidden_dim=args.hidden,
+        number_labels=len(labels_to_ids)).to(args.device)
 
     optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
+    criterion = ParserLoss()
 
     probe_model.train()
     lmodel.eval()
     best_eval_loss = float('inf')
-    metrics = {'training_loss': [], 'validation_loss': [], 'validation_spear': [], 'test_spear': []}
+    metrics = {'training_loss': [], 'validation_loss': [], 'validation_f1': [], 'test_f1': []}
     patience_count = 0
-    for epoch in tqdm(range(args.epochs), desc='[training epoch loop]'):
+    for epoch in range(1, args.epochs + 1):
         training_loss = 0.0
         for step, batch in enumerate(tqdm(train_dataloader,
                                           desc='[training batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
-            probe_model.train()
-            all_inputs, all_attentions, dis, lens, alig = batch
+            all_inputs, all_attentions, ds, cs, batch_len_tokens, alignment = batch
 
-            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer, args.model_type)
-            emb = align_function(emb.to(args.device), alig.to(args.device))
+            embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
+                                   args.model_type)
+            embds = align_function(embds.to(args.device), alignment.to(args.device))
 
-            outputs = probe_model(emb.to(args.device))
-            loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))
+            d_pred, scores = probe_model(embds.to(args.device))
+            loss = criterion(
+                d_pred=d_pred.to(args.device),
+                scores=scores.to(args.device),
+                d_real=ds.to(args.device),
+                c_real=cs.to(args.device),
+                length_batch=batch_len_tokens.to(args.device))
 
             loss.backward()
             optimizer.step()
@@ -155,15 +141,11 @@ def run_probing_train(args: argparse.Namespace):
             training_loss += loss.item()
 
         training_loss = training_loss / len(train_dataloader)
-        eval_loss = run_probing_eval(valid_dataloader, probe_model, criterion, lmodel, args.layer, args)
-
-        _, eval_spear = report_spear(valid_dataloader, probe_model, lmodel, args)
+        eval_loss = run_probing_eval(valid_dataloader, probe_model, lmodel, criterion, args)
         scheduler.step(eval_loss)
-        logger.info(f'[epoch {epoch}] train loss: {round(training_loss, 4)}, '
-                    f'validation loss: {round(eval_loss, 4)}, validation SPEAR: {round(eval_spear, 4)}')
+        logger.info(f'[epoch {epoch}] train loss: {round(training_loss, 4)}, validation loss: {round(eval_loss, 4)}')
         metrics['training_loss'].append(round(training_loss, 4))
         metrics['validation_loss'].append(round(eval_loss, 4))
-        metrics['validation_spear'].append(round(eval_spear, 4))
 
         if eval_loss < best_eval_loss:
             logger.info('-' * 100)
@@ -180,13 +162,14 @@ def run_probing_train(args: argparse.Namespace):
             logger.info('Stopping training loop (out of patience).')
             break
 
-    logger.info('-' * 100)
-    logger.info('Loading best probe model.')
-    final_probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
-    final_probe_model.load_state_dict(torch.load(os.path.join(args.output_path, f'pytorch_model.bin')))
-    _, test_spear = report_spear(test_dataloader, probe_model, lmodel, args)
-    logger.info(f'Test SPEAR: {test_spear}')
-    metrics['test_spear'].append(round(test_spear, 4))
+    logger.info('Loading test set.')
+    test_dataloader = DataLoader(dataset=test_set,
+                                 batch_size=args.batch_size,
+                                 shuffle=False,
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 num_workers=8)
+    eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels, args)
+    metrics['test_f1'].append(round(eval_f1_score, 4))
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
@@ -194,21 +177,63 @@ def run_probing_train(args: argparse.Namespace):
         pickle.dump(metrics, f)
 
 
-def run_probing_eval(
-        test_dataloader: Union[DataLoader, None] = None,
-        probe_model: Union[TwoWordPSDProbe, None] = None,
-        criterion: Union[L1DistanceLoss, None] = None,
-        lmodel: Union[AutoModel, None] = None,
-        layer: Union[int, None] = None,
-        args: Union[argparse.Namespace, None] = None):
+def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
     probe_model.eval()
     eval_loss = 0.0
     with torch.no_grad():
-        for batch in tqdm(test_dataloader, desc='[valid batch]'):
-            all_inputs, all_attentions, dis, lens, alig = batch
-            emb = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, layer, args.model_type)
-            emb = align_function(emb.to(args.device), alig.to(args.device))
-            outputs = probe_model(emb.to(args.device))
-            loss, count = criterion(outputs, dis.to(args.device), lens.to(args.device))
+        for step, batch in enumerate(tqdm(test_dataloader,
+                                          desc='[test batch]',
+                                          bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
+            all_inputs, all_attentions, ds, cs, batch_len_tokens, alignment = batch
+
+            embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
+                                   args.model_type)
+            embds = align_function(embds.to(args.device), alignment.to(args.device))
+
+            d_pred, scores = probe_model(embds.to(args.device))
+            loss = criterion(
+                d_pred=d_pred.to(args.device),
+                scores=scores.to(args.device),
+                d_real=ds.to(args.device),
+                c_real=cs.to(args.device),
+                length_batch=batch_len_tokens.to(args.device))
             eval_loss += loss.item()
     return eval_loss / len(test_dataloader)
+
+
+def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels, args):
+    probe_model.eval()
+    f1_scores = []
+    with torch.no_grad():
+        for step, batch in enumerate(tqdm(test_dataloader,
+                                          desc='[test batch]',
+                                          bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
+            all_inputs, all_attentions, ds, cs, batch_len_tokens, alignment = batch
+
+            embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
+                                   args.model_type)
+            embds = align_function(embds.to(args.device), alignment.to(args.device))
+
+            d_pred, scores = probe_model(embds.to(args.device))
+            scores = torch.argmax(scores, dim=2)
+
+            for i, len_tokens in enumerate(batch_len_tokens):
+                len_tokens = len_tokens.item()
+                d_pred_current = d_pred[i, 0:len_tokens - 1].tolist()
+                score_current = scores[i, 0:len_tokens - 1].tolist()
+                ds_current = ds[i, 0:len_tokens - 1].tolist()
+                cs_current = cs[i, 0:len_tokens - 1].tolist()
+
+                cs_labels = [ids_to_labels[c] for c in cs_current]
+                scores_labels = [ids_to_labels[s] for s in score_current]
+
+                ground_truth_tree = distance_to_tree(ds_current, cs_labels, [str(i) for i in range(len_tokens)])
+                ground_truth_tree = extend_complex_nodes(remove_empty_nodes(ground_truth_tree))
+
+                pred_tree = distance_to_tree(d_pred_current, scores_labels, [str(i) for i in range(len_tokens)])
+                pred_tree = extend_complex_nodes(remove_empty_nodes(pred_tree))
+
+                _, _, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
+                f1_scores.append(f1_score)
+
+    return np.mean(f1_scores)

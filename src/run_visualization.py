@@ -20,6 +20,7 @@ import seaborn as sns
 import glob
 from scipy.stats import spearmanr
 
+#todo: add the dictionaries for the classification
 def run_visualization(args):
     code_samples = []
     if args.lang == 'python':
@@ -116,4 +117,4 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ar
 
         _, _, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
 
-        
+

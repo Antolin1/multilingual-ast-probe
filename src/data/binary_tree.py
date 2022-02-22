@@ -20,6 +20,7 @@ def ast2binary(G):
             else:
                 #todo: check this, unary things
                 new_G.nodes[parent_in_new_G]['is_terminal'] = True
+                new_G.nodes[parent_in_new_G]['unary'] = new_G.nodes[parent_in_new_G]['type']
         elif len(out_edges) > 2:
             out_nodes = [m for _, m in out_edges]
             out_nodes.sort(key=lambda m: G.nodes[m]['start'])
@@ -76,20 +77,25 @@ def tree_to_distance(tree, node):
         d = []
         c = []
         h = 0
+        if 'unary' in tree.nodes[node]:
+            u = [tree.nodes[node]['unary']]
+        else:
+            u = ['<empty>']
     else:
         left_child, right_child = get_left_right_child(tree, node)
-        d_l, c_l, h_l = tree_to_distance(tree, left_child)
-        d_r, c_r, h_r = tree_to_distance(tree, right_child)
+        d_l, c_l, h_l, u_l = tree_to_distance(tree, left_child)
+        d_r, c_r, h_r, u_r = tree_to_distance(tree, right_child)
         h = max(h_r, h_l) + 1
         d = d_l + [h] + d_r
         c = c_l + [tree.nodes[node]['type']] + c_r
-    return d, c, h
+        u = u_l + u_r
+    return d, c, h, u
 
-def distance_to_tree(d, c, tokens):
-    def distance_to_tree_aux(G, d, c, father, tokens, start_token):
+def distance_to_tree(d, c, u, tokens):
+    def distance_to_tree_aux(G, d, c, u, father, tokens, start_token):
         if d == []:
             new_id = get_id(G)
-            G.add_node(new_id, type=tokens[0], start=start_token)
+            G.add_node(new_id, type=tokens[0], start=start_token, unary=u[0])
             G.add_edge(father, new_id)
         else:
             i = np.argmax(d)
@@ -97,10 +103,10 @@ def distance_to_tree(d, c, tokens):
             G.add_node(new_id, type=c[i])
             if father != None:
                 G.add_edge(father, new_id)
-            distance_to_tree_aux(G, d[0:i], c[0:i], new_id, tokens[0:i+1], start_token)
-            distance_to_tree_aux(G, d[i+1:], c[i+1:], new_id, tokens[i+1:], start_token + i + 1)
+            distance_to_tree_aux(G, d[0:i], c[0:i], u[0:i+1], new_id, tokens[0:i+1], start_token)
+            distance_to_tree_aux(G, d[i+1:], c[i+1:], u[i+1:], new_id, tokens[i+1:], start_token + i + 1)
     G = nx.DiGraph()
-    distance_to_tree_aux(G, d, c, None, tokens, 0)
+    distance_to_tree_aux(G, d, c, u, None, tokens, 0)
     return G
 
 def remove_empty_nodes(G):
@@ -141,6 +147,18 @@ def extend_complex_nodes(G):
         g0.remove_node(n)
         g = g0
         # print(len([n for n in g if not has_terminals(g, n)]))
+    return g
+
+def add_unary(G):
+    g = G.copy()
+    for n in [n for n in g if g.out_degree(n) == 0]:
+        if g.nodes[n]['unary'] != '<empty>':
+            new_id = get_id(g)
+            g.add_node(new_id, type=g.nodes[n]['unary'])
+            g.add_edge(new_id, n)
+            u, _ = list(g.in_edges(n))[0]
+            g.add_edge(u, new_id)
+            g.remove_edge(u, n)
     return g
 
 

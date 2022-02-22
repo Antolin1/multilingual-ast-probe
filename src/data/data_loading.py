@@ -139,12 +139,13 @@ def create_splits(dataset_path, split):
 def convert_sample_to_features(code, parser):
     G, pre_code = code2ast(code, parser)
     binary_ast = ast2binary(G)
-    d, c, _ = tree_to_distance(binary_ast, 0)
+    d, c, _, u = tree_to_distance(binary_ast, 0)
     code_tokens = get_tokens_ast(G, pre_code)
 
     return {
         'd': d,
         'c': c,
+        'u': u,
         'num_tokens': len(code_tokens),
         'code_tokens': code_tokens
     }

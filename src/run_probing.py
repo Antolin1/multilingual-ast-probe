@@ -16,7 +16,8 @@ from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.utils import match_tokenized_to_untokenized_roberta, \
     remove_comments_and_docstrings_java_js, remove_comments_and_docstrings_python
 from data.data_loading import get_non_terminals_labels, convert_c_to_ids
-from data.binary_tree import distance_to_tree, remove_empty_nodes, extend_complex_nodes, get_precision_recall_f1
+from data.binary_tree import distance_to_tree, remove_empty_nodes, \
+    extend_complex_nodes, get_precision_recall_f1, add_unary
 
 
 logger = logging.getLogger(__name__)
@@ -76,11 +77,17 @@ def run_probing_train(args: argparse.Namespace):
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
 
     # convert each non-terminal labels to its id
-    labels_to_ids = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
-    ids_to_labels = {x: y for y, x in labels_to_ids.items()}
-    train_set = train_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids))
-    valid_set = valid_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids))
-    test_set = test_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids))
+    labels_to_ids_c = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
+    ids_to_labels_c = {x: y for y, x in labels_to_ids_c.items()}
+    labels_to_ids_u = get_non_terminals_labels(train_set['u'], valid_set['u'], test_set['u'])
+    ids_to_labels_u = {x: y for y, x in labels_to_ids_u.items()}
+    train_set = train_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids_c))
+    valid_set = valid_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids_c))
+    test_set = test_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids_c))
+
+    train_set = train_set.map(lambda e: convert_c_to_ids(e['u'], labels_to_ids_u))
+    valid_set = valid_set.map(lambda e: convert_c_to_ids(e['u'], labels_to_ids_u))
+    test_set = test_set.map(lambda e: convert_c_to_ids(e['u'], labels_to_ids_u))
 
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,
@@ -105,7 +112,8 @@ def run_probing_train(args: argparse.Namespace):
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
-        number_labels=len(labels_to_ids)).to(args.device)
+        number_labels_c=len(labels_to_ids_c),
+        number_labels_u=len(labels_to_ids_u)).to(args.device)
 
     optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
@@ -121,18 +129,20 @@ def run_probing_train(args: argparse.Namespace):
         for step, batch in enumerate(tqdm(train_dataloader,
                                           desc='[training batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
-            all_inputs, all_attentions, ds, cs, batch_len_tokens, alignment = batch
+            all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
 
             embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
                                    args.model_type)
             embds = align_function(embds.to(args.device), alignment.to(args.device))
 
-            d_pred, scores = probe_model(embds.to(args.device))
+            d_pred, scores_c, scores_u = probe_model(embds.to(args.device))
             loss = criterion(
                 d_pred=d_pred.to(args.device),
-                scores=scores.to(args.device),
+                scores_c=scores_c.to(args.device),
+                scores_u=scores_u.to(args.device),
                 d_real=ds.to(args.device),
                 c_real=cs.to(args.device),
+                u_real=us.to(args.device),
                 length_batch=batch_len_tokens.to(args.device))
 
             loss.backward()
@@ -168,7 +178,7 @@ def run_probing_train(args: argparse.Namespace):
                                  shuffle=False,
                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
                                  num_workers=8)
-    eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels, args)
+    eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args)
     metrics['test_f1'].append(round(eval_f1_score, 4))
 
     logger.info('-' * 100)
@@ -184,54 +194,61 @@ def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
         for step, batch in enumerate(tqdm(test_dataloader,
                                           desc='[test batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
-            all_inputs, all_attentions, ds, cs, batch_len_tokens, alignment = batch
+            all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
 
             embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
                                    args.model_type)
             embds = align_function(embds.to(args.device), alignment.to(args.device))
 
-            d_pred, scores = probe_model(embds.to(args.device))
+            d_pred, scores_c, scores_u = probe_model(embds.to(args.device))
             loss = criterion(
                 d_pred=d_pred.to(args.device),
-                scores=scores.to(args.device),
+                scores_c=scores_c.to(args.device),
+                scores_u=scores_u.to(args.device),
                 d_real=ds.to(args.device),
                 c_real=cs.to(args.device),
+                u_real=us.to(args.device),
                 length_batch=batch_len_tokens.to(args.device))
             eval_loss += loss.item()
     return eval_loss / len(test_dataloader)
 
 
-def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels, args):
+def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
     probe_model.eval()
     f1_scores = []
     with torch.no_grad():
         for step, batch in enumerate(tqdm(test_dataloader,
                                           desc='[test batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
-            all_inputs, all_attentions, ds, cs, batch_len_tokens, alignment = batch
+            all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
 
             embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
                                    args.model_type)
             embds = align_function(embds.to(args.device), alignment.to(args.device))
 
-            d_pred, scores = probe_model(embds.to(args.device))
-            scores = torch.argmax(scores, dim=2)
+            d_pred, scores_c, scores_u = probe_model(embds.to(args.device))
+            scores_c = torch.argmax(scores_c, dim=2)
+            scores_u = torch.argmax(scores_u, dim=2)
 
             for i, len_tokens in enumerate(batch_len_tokens):
                 len_tokens = len_tokens.item()
                 d_pred_current = d_pred[i, 0:len_tokens - 1].tolist()
-                score_current = scores[i, 0:len_tokens - 1].tolist()
+                score_c_current = scores_c[i, 0:len_tokens - 1].tolist()
+                score_u_current = scores_u[i, 0:len_tokens].tolist()
                 ds_current = ds[i, 0:len_tokens - 1].tolist()
                 cs_current = cs[i, 0:len_tokens - 1].tolist()
+                us_current = us[i, 0:len_tokens].tolist()
 
-                cs_labels = [ids_to_labels[c] for c in cs_current]
-                scores_labels = [ids_to_labels[s] for s in score_current]
+                cs_labels = [ids_to_labels_c[c] for c in cs_current]
+                us_labels = [ids_to_labels_u[c] for c in us_current]
+                scores_c_labels = [ids_to_labels_c[s] for s in score_c_current]
+                scores_u_labels = [ids_to_labels_u[s] for s in score_u_current]
 
-                ground_truth_tree = distance_to_tree(ds_current, cs_labels, [str(i) for i in range(len_tokens)])
-                ground_truth_tree = extend_complex_nodes(remove_empty_nodes(ground_truth_tree))
+                ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels, [str(i) for i in range(len_tokens)])
+                ground_truth_tree = extend_complex_nodes(add_unary(remove_empty_nodes(ground_truth_tree)))
 
-                pred_tree = distance_to_tree(d_pred_current, scores_labels, [str(i) for i in range(len_tokens)])
-                pred_tree = extend_complex_nodes(remove_empty_nodes(pred_tree))
+                pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels, [str(i) for i in range(len_tokens)])
+                pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
                 _, _, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
                 f1_scores.append(f1_score)

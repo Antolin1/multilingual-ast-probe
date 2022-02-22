@@ -9,6 +9,7 @@ def collator_fn(batch, tokenizer):
     tokens = [b['code_tokens'] for b in batch]
     cs = [b['c'] for b in batch]
     ds = [b['d'] for b in batch]
+    us = [b['u'] for b in batch]
 
     # generate inputs and attention masks
     all_inputs = []
@@ -34,6 +35,7 @@ def collator_fn(batch, tokenizer):
     max_len_tokens = np.max(batch_len_tokens)
     cs = torch.tensor([c + [-1] * (max_len_tokens - 1 - len(c)) for c in cs])
     ds = torch.tensor([d + [-1] * (max_len_tokens - 1 - len(d)) for d in ds])
+    us = torch.tensor([u + [-1] * (max_len_tokens - len(d)) for u in us])
 
     # generate token alignment
     alignment = []
@@ -47,4 +49,4 @@ def collator_fn(batch, tokenizer):
         alignment.append(indices)
     alignment = torch.tensor(alignment)
     
-    return all_inputs, all_attentions, ds, cs, torch.tensor(batch_len_tokens), alignment
+    return all_inputs, all_attentions, ds, cs, us, torch.tensor(batch_len_tokens), alignment

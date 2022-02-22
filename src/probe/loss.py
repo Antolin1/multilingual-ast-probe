@@ -82,12 +82,13 @@ class ParserLoss(nn.Module):
         super(ParserLoss, self).__init__()
         self.cs = nn.CrossEntropyLoss(ignore_index=-1)
 
-    def forward(self, d_pred, scores, d_real, c_real, length_batch):
+    def forward(self, d_pred, scores_c, scores_u, d_real, c_real, u_real, length_batch):
         total_sents = torch.sum(length_batch != 0).float()
         labels_1s = (d_real != -1).float()
         d_pred_masked = d_pred * labels_1s
         d_real_masked = d_real * labels_1s
         loss_d = torch.sum(torch.abs(d_pred_masked - d_real_masked), dim=1) / length_batch.float()
         loss_d = torch.sum(loss_d) / total_sents
-        loss_c = self.cs(scores.view(-1, scores.shape[2]), c_real.view(-1))
-        return .3 * loss_c + .7 * loss_d
+        loss_c = self.cs(scores_c.view(-1, scores_c.shape[2]), c_real.view(-1))
+        loss_u = self.cs(scores_u.view(-1, scores_u.shape[2]), u_real.view(-1))
+        return (loss_c + loss_d + loss_u) / 3

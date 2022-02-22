@@ -6,7 +6,6 @@ from src.data.binary_tree import ast2binary, tree_to_distance, \
     get_multiset_ast, get_precision_recall_f1, add_unary
 import networkx as nx
 import matplotlib.pyplot as plt
-from networkx.drawing.nx_pydot import graphviz_layout
 
 
 code = """'''Compute the maximum'''

@@ -10,7 +10,7 @@ from data.code2ast import get_tree_from_distances, get_uas
 import networkx as nx
 import matplotlib.pyplot as plt
 from data import convert_sample_to_features, PY_LANGUAGE, JS_LANGUAGE
-from probe import TwoWordPSDProbe, OneWordPSDProbe
+from probe import ParserProbe
 import os
 from datasets import load_dataset
 from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
@@ -51,10 +51,13 @@ def run_visualization(args):
     elif args.lang == 'javascript':
         parser.set_language(JS_LANGUAGE)
 
-    if args.type_probe != 'depth_probe':
-        final_probe_model = TwoWordPSDProbe(args.rank, args.hidden, args.device)
-    else:
-        final_probe_model = OneWordPSDProbe(args.rank, args.hidden, args.device)
+
+    final_probe_model = ParserProbe(
+        probe_rank=args.rank,
+        hidden_dim=args.hidden,
+        number_labels_c=len(labels_to_ids_c),
+        number_labels_u=len(labels_to_ids_u)).to(args.device)
+
 
     final_probe_model.load_state_dict(torch.load(os.path.join(args.output_path, f'pytorch_model.bin'),
                                                  map_location=torch.device(args.device)))
@@ -67,21 +70,10 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ar
     probe_model.eval()
 
     for c, code in enumerate(code_samples):
-        G, pre_code = code2ast(code, parser, args.lang)
-        if args.type_probe == 'depth_probe':
-            depths, code_tokens = get_depths_tokens_ast(G, pre_code)
-            tokens = code_tokens
-            real_dis = depths
-        elif args.type_probe == 'ast_probe':
-            matrix, code_tokens = get_matrix_tokens_ast(G, pre_code)
-            tokens = code_tokens
-            real_dis = matrix
-        elif args.type_probe == 'dep_probe':
-            enrich_ast_with_deps(G)
-            T = get_dependency_tree(G)
-            matrix, code_tokens = get_matrix_and_tokens_dep(T, pre_code)
-            tokens = code_tokens
-            real_dis = matrix
+        G, pre_code = code2ast(code, parser)
+        binary_ast = ast2binary(G)
+        ds_current, cs_labels, _, us_labels = tree_to_distance(binary_ast, 0)
+        tokens = get_tokens_ast(G, pre_code)
 
         # align tokens with subtokens
         to_convert, mapping = match_tokenized_to_untokenized_roberta(tokens, tokenizer)
@@ -105,47 +97,23 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ar
         emb = align_function(emb, alig)
 
         # generating distance matrix
-        outputs = probe_model(emb.to(args.device))
-        if args.type_probe != 'depth_probe':
-            pred_dis = outputs[0, 0:len(tokens), 0:len(tokens)].cpu().detach().numpy()
-        else:
-            pred_dis = outputs[0, 0:len(tokens)].cpu().detach().numpy()
+        d_pred, scores_c, scores_u = probe_model(emb.to(args.device))
+        len_tokens = len(tokens)
 
-        # generating trees
-        #T_real = get_tree_from_distances(real_dis, tokens)
-        #T_pred = get_tree_from_distances(pred_dis, tokens)
+        d_pred_current = d_pred[0, 0:len_tokens - 1].tolist()
+        score_c_current = scores_c[0, 0:len_tokens - 1].tolist()
+        score_u_current = scores_u[0, 0:len_tokens].tolist()
 
-        # plotting trees
-        #figure, axis = plt.subplots(2)
-        #nx.draw(T_real, labels=nx.get_node_attributes(T_real, 'type'), with_labels=True, ax=axis[0])
-        #axis[0].set_title("Real tree sample " + str(i))
-        #nx.draw(T_pred, labels=nx.get_node_attributes(T_pred, 'type'), with_labels=True, ax=axis[1])
-        #axis[1].set_title("Predicted tree sample " + str(i))
-        #plt.show()
+        scores_c_labels = [ids_to_labels_c[s] for s in score_c_current]
+        scores_u_labels = [ids_to_labels_u[s] for s in score_u_current]
 
-        #plotting heatmaps
-        if args.type_probe != 'depth_probe':
-            figure, axis = plt.subplots(2)
-            sns.heatmap(real_dis, ax=axis[0], xticklabels=tokens, yticklabels=tokens)
-            sns.heatmap(pred_dis, ax=axis[1], xticklabels=tokens, yticklabels=tokens)
-            plt.show()
-        else:
-            x = np.arange(len(tokens))
-            fig, ax = plt.subplots()
-            ax.scatter(x, pred_dis, color='blue')
-            ax.scatter(x, real_dis, color='0.8')
-            for i, txt in enumerate(tokens):
-                ax.text(x[i], max(pred_dis[i], real_dis[i]) + 0.2, txt, rotation=90)
-                #ax.annotate(txt, (x[i], pred_dis[i]))
-            plt.show()
-            plt.savefig(f'code_samples/plot_{c}.png')
+        ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels, [str(i) for i in range(len_tokens)])
+        ground_truth_tree = extend_complex_nodes(add_unary(remove_empty_nodes(ground_truth_tree)))
 
-        if args.type_probe != 'depth_probe':
-            spear = np.mean(get_spear(real_dis, pred_dis))
-            print(f'Spear corr for {c}: {spear}')
-        else:
-            spear = spearmanr(real_dis, pred_dis).correlation
-            print(f'Spear corr for {c}: {spear}')
+        pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels,
+                                     [str(i) for i in range(len_tokens)])
+        pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
-        # UAS
-        #print('UAS in sample', i, ':', get_uas(T_real, T_pred))
+        _, _, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
+
+        

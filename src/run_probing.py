@@ -170,6 +170,7 @@ def run_probing_train(args: argparse.Namespace):
                                  num_workers=8)
     eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels, args)
     metrics['test_f1'].append(round(eval_f1_score, 4))
+    logger.info(f'Test F1 score: {round(eval_f1_score, 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
@@ -237,3 +238,69 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels, arg
                 f1_scores.append(f1_score)
 
     return np.mean(f1_scores)
+
+
+def run_probing_test(args):
+    logger.info('-' * 100)
+    logger.info('Running probing test.')
+    logger.info('-' * 100)
+
+    # select the parser
+    parser = Parser()
+    if args.lang == 'python':
+        parser.set_language(PY_LANGUAGE)
+    elif args.lang == 'javascript':
+        parser.set_language(JS_LANGUAGE)
+
+    logger.info('Loading dataset from local file.')
+    data_files = {'train': os.path.join(args.dataset_name_or_path, 'train.jsonl'),
+                  'valid': os.path.join(args.dataset_name_or_path, 'valid.jsonl'),
+                  'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
+
+    logger.info('Loading tokenizer')
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+
+    train_set = load_dataset('json', data_files=data_files, split='train')
+    valid_set = load_dataset('json', data_files=data_files, split='valid')
+    test_set = load_dataset('json', data_files=data_files, split='test')
+
+    # get d and c for each sample
+    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+
+    # convert each non-terminal labels to its id
+    labels_to_ids = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
+    ids_to_labels = {x: y for y, x in labels_to_ids.items()}
+    test_set = test_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids))
+
+    test_dataloader = DataLoader(dataset=test_set,
+                                 batch_size=args.batch_size,
+                                 shuffle=False,
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 num_workers=8)
+
+    logger.info('Loading models.')
+    if args.model_type == 't5':
+        lmodel = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+    else:
+        lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+        if '-baseline' in args.run_name:
+            lmodel = generate_baseline(lmodel)
+    lmodel = lmodel.to(args.device)
+
+    probe_model = ParserProbe(
+        probe_rank=args.rank,
+        hidden_dim=args.hidden,
+        number_labels=len(labels_to_ids)).to(args.device)
+
+    if args.model_checkpoint:
+        logger.info('Restoring model checkpoint.')
+        checkpoint = torch.load(os.path.join(args.model_checkpoint, 'pytorch_model.bin'))
+        probe_model.load_state_dict(checkpoint)
+
+    probe_model.eval()
+    lmodel.eval()
+    results = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels, args)
+    logger.info(f'Test F1 score: {results}')

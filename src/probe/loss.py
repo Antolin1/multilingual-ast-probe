@@ -90,4 +90,4 @@ class ParserLoss(nn.Module):
         loss_d = torch.sum(torch.abs(d_pred_masked - d_real_masked), dim=1) / length_batch.float()
         loss_d = torch.sum(loss_d) / total_sents
         loss_c = self.cs(scores.view(-1, scores.shape[2]), c_real.view(-1))
-        return .3 * loss_c + .7 * loss_d
+        return (loss_c + loss_d) / 2

@@ -24,6 +24,11 @@ class ProgramArguments:
         metadata={'help': 'Architecture of the transformer model. Currently just supported t5 and roberta.'}
     )
 
+    model_checkpoint: Optional[str] = field(
+        default=None,
+        metadata={'help': 'Model checkpoint directory.'}
+    )
+
     dataset_name_or_path: Optional[str] = field(
         default='./dataset',
         metadata={'help': 'Path to the folder that contains the dataset.'}

@@ -132,7 +132,7 @@ def run_probing_train(args: argparse.Namespace):
 
     optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
-    criterion = ParserLoss()
+    criterion = ParserLoss(loss='rank')
 
     probe_model.train()
     lmodel.eval()

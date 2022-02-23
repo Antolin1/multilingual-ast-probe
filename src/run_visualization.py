@@ -66,8 +66,7 @@ def run_visualization(args):
         number_labels_c=len(labels_to_ids_c),
         number_labels_u=len(labels_to_ids_u)).to(args.device)
 
-
-    final_probe_model.load_state_dict(torch.load(os.path.join(args.output_path, f'pytorch_model.bin'),
+    final_probe_model.load_state_dict(torch.load(os.path.join(args.model_checkpoint, f'pytorch_model.bin'),
                                                  map_location=torch.device(args.device)))
 
     __run_visualization(lmodel, tokenizer, final_probe_model, code_samples, parser,
@@ -107,6 +106,8 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, id
 
         # generating distance matrix
         d_pred, scores_c, scores_u = probe_model(emb.to(args.device))
+        scores_c = torch.argmax(scores_c, dim=2)
+        scores_u = torch.argmax(scores_u, dim=2)
         len_tokens = len(tokens)
 
         d_pred_current = d_pred[0, 0:len_tokens - 1].tolist()
@@ -116,11 +117,10 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, id
         scores_c_labels = [ids_to_labels_c[s] for s in score_c_current]
         scores_u_labels = [ids_to_labels_u[s] for s in score_u_current]
 
-        ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels, [str(i) for i in range(len_tokens)])
+        ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels, tokens)
         ground_truth_tree = extend_complex_nodes(add_unary(remove_empty_nodes(ground_truth_tree)))
 
-        pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels,
-                                     [str(i) for i in range(len_tokens)])
+        pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels, tokens)
         pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
         prec_score, recall_score, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
@@ -135,5 +135,4 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, id
                 ax=axis[1])
         axis[1].set_title("Pred ast")
         plt.show()
-
-
+        plt.savefig(f'fig_{c}.png')

@@ -75,7 +75,7 @@ def run_probing_train(args: argparse.Namespace):
     valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
 
-    # get classes labels-ids mapping for c and u
+    # get class labels-ids mapping for c and u
     labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
     if not os.path.exists(labels_file_path):
         # convert each non-terminal labels to its id

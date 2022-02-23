@@ -19,7 +19,7 @@ from data.data_loading import get_non_terminals_labels, convert_to_ids
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
     extend_complex_nodes, get_precision_recall_f1, add_unary
 
-
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logger = logging.getLogger(__name__)
 
 
@@ -58,14 +58,13 @@ def run_probing_train(args: argparse.Namespace):
     elif args.lang == 'javascript':
         parser.set_language(JS_LANGUAGE)
 
+    logger.info('Loading tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+
     logger.info('Loading dataset from local file.')
     data_files = {'train': os.path.join(args.dataset_name_or_path, 'train.jsonl'),
                   'valid': os.path.join(args.dataset_name_or_path, 'valid.jsonl'),
                   'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
-
-    logger.info('Loading tokenizer')
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
 
     train_set = load_dataset('json', data_files=data_files, split='train')
     valid_set = load_dataset('json', data_files=data_files, split='valid')
@@ -76,11 +75,26 @@ def run_probing_train(args: argparse.Namespace):
     valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
 
-    # convert each non-terminal labels to its id
-    labels_to_ids_c = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
-    ids_to_labels_c = {x: y for y, x in labels_to_ids_c.items()}
-    labels_to_ids_u = get_non_terminals_labels(train_set['u'], valid_set['u'], test_set['u'])
-    ids_to_labels_u = {x: y for y, x in labels_to_ids_u.items()}
+    # get classes labels-ids mapping for c and u
+    labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
+    if not os.path.exists(labels_file_path):
+        # convert each non-terminal labels to its id
+        labels_to_ids_c = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
+        ids_to_labels_c = {x: y for y, x in labels_to_ids_c.items()}
+        labels_to_ids_u = get_non_terminals_labels(train_set['u'], valid_set['u'], test_set['u'])
+        ids_to_labels_u = {x: y for y, x in labels_to_ids_u.items()}
+        with open(labels_file_path, 'wb') as f:
+            pickle.dump({
+                'labels_to_ids_c': labels_to_ids_c, 'ids_to_labels_c': ids_to_labels_c,
+                'labels_to_ids_u': labels_to_ids_u, 'ids_to_labels_u': ids_to_labels_u
+            }, f)
+    else:
+        with open(labels_file_path, 'rb') as f:
+            data = pickle.load(f)
+            labels_to_ids_c = data['labels_to_ids_c']
+            ids_to_labels_c = data['ids_to_labels_c']
+            labels_to_ids_u = data['labels_to_ids_u']
+            ids_to_labels_u = data['ids_to_labels_u']
 
     train_set = train_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
     valid_set = valid_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))

@@ -14,6 +14,7 @@ from run_probing import generate_baseline
 from tree_sitter import Parser
 import glob
 import logging
+import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,14 @@ def run_visualization(args):
     elif args.lang == 'javascript':
         parser.set_language(JS_LANGUAGE)
 
+    #load the labels
+    labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
+    with open(labels_file_path, 'rb') as f:
+        data = pickle.load(f)
+        labels_to_ids_c = data['labels_to_ids_c']
+        ids_to_labels_c = data['ids_to_labels_c']
+        labels_to_ids_u = data['labels_to_ids_u']
+        ids_to_labels_u = data['ids_to_labels_u']
 
     final_probe_model = ParserProbe(
         probe_rank=args.rank,
@@ -61,10 +70,11 @@ def run_visualization(args):
     final_probe_model.load_state_dict(torch.load(os.path.join(args.output_path, f'pytorch_model.bin'),
                                                  map_location=torch.device(args.device)))
 
-    __run_visualization(lmodel, tokenizer, final_probe_model, code_samples, parser, args)
+    __run_visualization(lmodel, tokenizer, final_probe_model, code_samples, parser,
+                        ids_to_labels_c, ids_to_labels_u, args)
 
 
-def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, args):
+def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ids_to_labels_c, ids_to_labels_u, args):
     lmodel.eval()
     probe_model.eval()
 

@@ -6,6 +6,7 @@ from src.data.binary_tree import ast2binary, tree_to_distance, \
     get_multiset_ast, get_precision_recall_f1, add_unary
 import networkx as nx
 import matplotlib.pyplot as plt
+import torch
 
 
 code = """'''Compute the maximum'''
@@ -22,6 +23,29 @@ parser.set_language(PY_LANGUAGE)
 
 
 class TestBinary(unittest.TestCase):
+
+    def test_torch_loss(self):
+        seqlen_minus_one = 3
+        length_batch = torch.tensor([4, 4])
+        norm = length_batch.float() * (length_batch.float() - 1) / 2
+        d_real = torch.tensor([[3, 2, 1],
+                  [1, 5, 6]])
+        d_pred = torch.tensor([[33, 32, 31],
+                  [3, 4, 1]])
+        d_pred_masked = d_pred.unsqueeze(2).expand(-1, -1, seqlen_minus_one)
+        d_real_masked = d_real.unsqueeze(2).expand(-1, -1, seqlen_minus_one)
+        d_pred_masked_transposed = d_pred_masked.transpose(1, 2)
+        d_real_masked_transposed = d_real_masked.transpose(1, 2)
+        d_hat = d_pred_masked - d_pred_masked_transposed  # b x seq-1 x seq-1
+        print(d_hat)
+        d_no_hat = d_real_masked - d_real_masked_transposed
+        print(d_no_hat)
+        tri = torch.triu(torch.relu(1 - torch.sign(d_no_hat) * d_hat), diagonal=1)
+        print(tri, norm)
+        loss_d = torch.sum(tri.view(2, -1), dim=1) / norm
+        print(loss_d)
+        loss_d = torch.sum(loss_d) / 2
+        print(loss_d)
 
     def test_random(self):
         d = [12.749075889587402, 12.086353302001953, 3.5092380046844482, 2.8773586750030518, 1.8203082084655762,

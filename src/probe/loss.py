@@ -102,7 +102,7 @@ class ParserLoss(nn.Module):
             d_real_masked_transposed = d_real_masked.transpose(1, 2)
             d_hat = d_pred_masked - d_pred_masked_transposed # b x seq-1 x seq-1
             d_no_hat = d_real_masked - d_real_masked_transposed # b x seq-1 x seq-1
-            tri = torch.tri(torch.relu(1 - torch.sign(d_no_hat) * d_hat), diagonal=1)
+            tri = torch.triu(torch.relu(1 - torch.sign(d_no_hat) * d_hat), diagonal=1)
             norm = length_batch.float() * (length_batch.float() - 1) / 2
             loss_d = torch.sum(tri.view(-1, -1), dim=1) / norm
             loss_d = torch.sum(loss_d) / total_sents

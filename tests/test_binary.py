@@ -22,6 +22,31 @@ parser.set_language(PY_LANGUAGE)
 
 
 class TestBinary(unittest.TestCase):
+
+    def test_random(self):
+        d = [12.749075889587402, 12.086353302001953, 3.5092380046844482, 2.8773586750030518, 1.8203082084655762,
+         1.105534553527832, 16.498552322387695, 14.007007598876953, 10.105134963989258, 8.575981140136719,
+         9.284015655517578, 10.76449203491211, 9.185318946838379, 6.908447265625, 2.8699421882629395,
+         1.5084803104400635, 3.9279606342315674, 1.9249317646026611, 1.1106932163238525, 5.392538070678711,
+         1.335496187210083]
+        c = ['module#function_definition', '<empty>', 'parameters', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
+         'block#for_statement', '<empty>', '<empty>', '<empty>', '<empty>', 'block#if_statement', 'comparison_operator',
+         '<empty>', '<empty>', '<empty>', 'block#return_statement', '<empty>', 'return_statement']
+        u = ['<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
+         '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
+         '<empty>', '<empty>']
+
+        binary_ast_recov = distance_to_tree(d, c, u, [str(i) for i in range(len(u))])
+
+        nx.draw(nx.Graph(binary_ast_recov), labels=nx.get_node_attributes(binary_ast_recov, 'type'), with_labels=True)
+        plt.show()
+
+        binary_ast_recov_full =  extend_complex_nodes(add_unary(remove_empty_nodes(binary_ast_recov)))
+
+        nx.draw(nx.Graph(binary_ast_recov_full), labels=nx.get_node_attributes(binary_ast_recov_full, 'type'),
+                with_labels=True)
+        plt.show()
+
     def test_binary(self):
         G, pre_code = code2ast(code, parser)
         binary_ast = ast2binary(G)

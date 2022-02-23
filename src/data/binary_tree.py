@@ -114,6 +114,10 @@ def remove_empty_nodes(G):
     while len([n for n in g if g.nodes[n]['type'] == '<empty>']) != 0:
         g0 = g.copy()
         n = [n for n in g if g.nodes[n]['type'] == '<empty>'][0]
+        if g.in_degree(n) == 0:
+            g0.nodes[n]['type'] = 'bad_root'
+            g = g0
+            continue
         edges_in = list(g.in_edges(n))
         edges_out = list(g.out_edges(n))
         if len(edges_in) != 0:

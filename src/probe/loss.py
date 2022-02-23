@@ -78,17 +78,34 @@ class L1DepthLoss(nn.Module):
 
 
 class ParserLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, loss='l1'):
         super(ParserLoss, self).__init__()
         self.cs = nn.CrossEntropyLoss(ignore_index=-1)
+        self.loss = loss
 
     def forward(self, d_pred, scores_c, scores_u, d_real, c_real, u_real, length_batch):
         total_sents = torch.sum(length_batch != 0).float()
         labels_1s = (d_real != -1).float()
-        d_pred_masked = d_pred * labels_1s
-        d_real_masked = d_real * labels_1s
-        loss_d = torch.sum(torch.abs(d_pred_masked - d_real_masked), dim=1) / length_batch.float()
-        loss_d = torch.sum(loss_d) / total_sents
+        d_pred_masked = d_pred * labels_1s # b x seq-1
+        d_real_masked = d_real * labels_1s # b x seq-1
+        if self.loss == 'l1':
+            loss_d = torch.sum(torch.abs(d_pred_masked - d_real_masked), dim=1) / (length_batch.float() - 1)
+            loss_d = torch.sum(loss_d) / total_sents
+        elif self.loss == 'l2':
+            loss_d = torch.sum(torch.abs(d_pred_masked - d_real_masked)**2, dim=1) / (length_batch.float() - 1)
+            loss_d = torch.sum(loss_d) / total_sents
+        elif self.loss == 'rank':
+            seqlen_minus_one = d_pred_masked.shape[1]
+            d_pred_masked = d_pred_masked.unsqueeze(2).expand(-1, -1, seqlen_minus_one)
+            d_real_masked = d_real_masked.unsqueeze(2).expand(-1, -1, seqlen_minus_one)
+            d_pred_masked_transposed = d_pred_masked.transpose(1, 2)
+            d_real_masked_transposed = d_real_masked.transpose(1, 2)
+            d_hat = d_pred_masked - d_pred_masked_transposed # b x seq-1 x seq-1
+            d_no_hat = d_real_masked - d_real_masked_transposed # b x seq-1 x seq-1
+            tri = torch.tri(torch.relu(1 - torch.sign(d_no_hat) * d_hat), diagonal=1)
+            norm = length_batch.float() * (length_batch.float() - 1) / 2
+            loss_d = torch.sum(tri.view(-1, -1), dim=1) / norm
+            loss_d = torch.sum(loss_d) / total_sents
         loss_c = self.cs(scores_c.view(-1, scores_c.shape[2]), c_real.view(-1))
         loss_u = self.cs(scores_u.view(-1, scores_u.shape[2]), u_real.view(-1))
         return (loss_c + loss_d + loss_u) / 3

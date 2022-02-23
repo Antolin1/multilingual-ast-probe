@@ -1,24 +1,22 @@
-import random
 from data.utils import match_tokenized_to_untokenized_roberta
-from data.code2ast import code2ast, get_depths_tokens_ast, \
-    get_matrix_tokens_ast, enrich_ast_with_deps, get_dependency_tree, \
-    get_matrix_and_tokens_dep, get_spear
+from data.code2ast import code2ast, get_tokens_ast
+from data.binary_tree import ast2binary, tree_to_distance, distance_to_tree, \
+    extend_complex_nodes, add_unary, remove_empty_nodes, get_precision_recall_f1
 import torch
-import numpy as np
 from probe.utils import get_embeddings, align_function
-from data.code2ast import get_tree_from_distances, get_uas
 import networkx as nx
 import matplotlib.pyplot as plt
-from data import convert_sample_to_features, PY_LANGUAGE, JS_LANGUAGE
+from data import PY_LANGUAGE, JS_LANGUAGE
 from probe import ParserProbe
 import os
-from datasets import load_dataset
 from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
 from run_probing import generate_baseline
 from tree_sitter import Parser
-import seaborn as sns
 import glob
-from scipy.stats import spearmanr
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 #todo: add the dictionaries for the classification
 def run_visualization(args):
@@ -115,6 +113,17 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ar
                                      [str(i) for i in range(len_tokens)])
         pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
-        _, _, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
+        prec_score, recall_score, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
+
+        logger.info(f'For code {c}, prec = {prec_score}, recall = {recall_score}, f1 = {f1_score}.')
+
+        figure, axis = plt.subplots(2)
+        nx.draw(nx.Graph(ground_truth_tree), labels=nx.get_node_attributes(ground_truth_tree, 'type'), with_labels=True,
+                ax=axis[0])
+        axis[0].set_title("True ast")
+        nx.draw(nx.Graph(pred_tree), labels=nx.get_node_attributes(pred_tree, 'type'), with_labels=True,
+                ax=axis[1])
+        axis[1].set_title("Pred ast")
+        plt.show()
 
 

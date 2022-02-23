@@ -127,7 +127,7 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, id
 
         logger.info(f'For code {c}, prec = {prec_score}, recall = {recall_score}, f1 = {f1_score}.')
 
-        figure, axis = plt.subplots(2)
+        figure, axis = plt.subplots(2, figsize=(15, 15))
         nx.draw(nx.Graph(ground_truth_tree), labels=nx.get_node_attributes(ground_truth_tree, 'type'), with_labels=True,
                 ax=axis[0])
         axis[0].set_title("True ast")

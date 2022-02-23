@@ -15,7 +15,7 @@ from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUA
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.utils import match_tokenized_to_untokenized_roberta, \
     remove_comments_and_docstrings_java_js, remove_comments_and_docstrings_python
-from data.data_loading import get_non_terminals_labels, convert_c_to_ids
+from data.data_loading import get_non_terminals_labels, convert_to_ids
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
     extend_complex_nodes, get_precision_recall_f1, add_unary
 
@@ -81,13 +81,14 @@ def run_probing_train(args: argparse.Namespace):
     ids_to_labels_c = {x: y for y, x in labels_to_ids_c.items()}
     labels_to_ids_u = get_non_terminals_labels(train_set['u'], valid_set['u'], test_set['u'])
     ids_to_labels_u = {x: y for y, x in labels_to_ids_u.items()}
-    train_set = train_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids_c))
-    valid_set = valid_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids_c))
-    test_set = test_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids_c))
 
-    train_set = train_set.map(lambda e: convert_c_to_ids(e['u'], labels_to_ids_u))
-    valid_set = valid_set.map(lambda e: convert_c_to_ids(e['u'], labels_to_ids_u))
-    test_set = test_set.map(lambda e: convert_c_to_ids(e['u'], labels_to_ids_u))
+    train_set = train_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
+    valid_set = valid_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
+    test_set = test_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
+
+    train_set = train_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
+    valid_set = valid_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
+    test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
 
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,
@@ -290,7 +291,7 @@ def run_probing_test(args):
     # convert each non-terminal labels to its id
     labels_to_ids = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
     ids_to_labels = {x: y for y, x in labels_to_ids.items()}
-    test_set = test_set.map(lambda e: convert_c_to_ids(e['c'], labels_to_ids))
+    test_set = test_set.map(lambda e: convert_to_ids(e['c'], labels_to_ids))
 
     test_dataloader = DataLoader(dataset=test_set,
                                  batch_size=args.batch_size,

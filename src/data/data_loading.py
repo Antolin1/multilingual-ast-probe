@@ -163,11 +163,11 @@ def get_non_terminals_labels(train_set_labels, valid_set_labels, test_set_labels
     return labels_to_ids
 
 
-def convert_c_to_ids(c, labels_to_ids):
+def convert_to_ids(c, column_name, labels_to_ids):
     labels_ids = []
     for label in c:
         labels_ids.append(labels_to_ids[label])
-    return {'c': labels_ids}
+    return {column_name: labels_ids}
 
 
 def compute_distinct_labels(dataset_path, args):

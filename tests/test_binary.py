@@ -21,6 +21,16 @@ PY_LANGUAGE = Language('grammars/languages.so', 'python')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
+def rankloss(input, target, mask, exp=False):
+    diff = input[:, :, None] - input[:, None, :]
+    target_diff = ((target[:, :, None] - target[:, None, :]) > 0).float()
+    mask = mask[:, :, None] * mask[:, None, :] * target_diff
+    if exp:
+        loss = torch.exp(torch.relu(target_diff - diff)) - 1
+    else:
+        loss = torch.relu(target_diff - diff)
+    loss = (loss * mask).sum() / (mask.sum() + 1e-9)
+    return loss
 
 class TestBinary(unittest.TestCase):
 
@@ -31,7 +41,7 @@ class TestBinary(unittest.TestCase):
         d_real = torch.tensor([[3, 2, 1],
                   [1, 5, 6]])
         d_pred = torch.tensor([[33, 32, 31],
-                  [3, 4, 1]])
+                  [34, 54, 25]])
         d_pred_masked = d_pred.unsqueeze(2).expand(-1, -1, seqlen_minus_one)
         d_real_masked = d_real.unsqueeze(2).expand(-1, -1, seqlen_minus_one)
         d_pred_masked_transposed = d_pred_masked.transpose(1, 2)
@@ -46,6 +56,11 @@ class TestBinary(unittest.TestCase):
         print(loss_d)
         loss_d = torch.sum(loss_d) / 2
         print(loss_d)
+
+        lens = torch.tensor([3,3])
+        max_len = 3
+        mask = torch.arange(max_len)[None, :] < lens[:, None]
+        print(rankloss(d_pred, d_real, mask, exp=False))
 
     def test_random(self):
         d = [12.749075889587402, 12.086353302001953, 3.5092380046844482, 2.8773586750030518, 1.8203082084655762,

@@ -166,7 +166,7 @@ def run_probing_train(args: argparse.Namespace):
             training_loss += loss.item()
 
         training_loss = training_loss / len(train_dataloader)
-        eval_loss = run_probing_eval(valid_dataloader, probe_model, lmodel, criterion, args)
+        eval_loss, _, _, _ = run_probing_eval(valid_dataloader, probe_model, lmodel, criterion, args)
         scheduler.step(eval_loss)
         logger.info(f'[epoch {epoch}] train loss: {round(training_loss, 4)}, validation loss: {round(eval_loss, 4)}')
         metrics['training_loss'].append(round(training_loss, 4))
@@ -206,6 +206,12 @@ def run_probing_train(args: argparse.Namespace):
 def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
     probe_model.eval()
     eval_loss = 0.0
+    total_hits_c = 0
+    total_c = 0
+    total_hits_u = 0
+    total_u = 0
+    total_hits_d = 0
+    total_d = 0
     with torch.no_grad():
         for step, batch in enumerate(tqdm(test_dataloader,
                                           desc='[test batch]',
@@ -226,8 +232,47 @@ def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
                 u_real=us.to(args.device),
                 length_batch=batch_len_tokens.to(args.device))
             eval_loss += loss.item()
-    return eval_loss / len(test_dataloader)
 
+            #compute the classes c and u
+            scores_c = torch.argmax(scores_c, dim=2)
+            scores_u = torch.argmax(scores_u, dim=2)
+
+            lens_d = batch_len_tokens - 1
+            max_len_d = torch.max(lens_d)
+            mask = torch.arange(max_len_d).to(args.device)[None, :] < lens_d[:, None]
+
+            scores_c = torch.masked_select(scores_c, mask)
+            scores_u = torch.masked_select(scores_u, mask)
+            cs = torch.masked_select(cs, mask)
+            us = torch.masked_select(us, mask)
+
+            hits_c = (scores_c == cs).sum().item()
+            hits_u = (scores_u == us).sum().item()
+            total_hits_u += hits_u
+            total_hits_c += hits_c
+            total_c += cs.shape[0]
+            total_u += us.shape[0]
+
+            hits_d, total_d_current = compute_hits_d(d_pred, ds, mask)
+            total_hits_d += hits_d
+            total_d += total_d_current
+
+            #compute the accuracy on d
+
+    acc_u = float(hits_u) / float(total_hits_u)
+    acc_c = float(hits_c) / float(total_hits_c)
+    acc_d = float(hits_d) / float(total_hits_d)
+
+    return (eval_loss / len(test_dataloader)), acc_c, acc_u, acc_d
+
+
+def compute_hits_d(input, target, mask):
+    diff = input[:, :, None] - input[:, None, :]
+    target_diff = ((target[:, :, None] - target[:, None, :]) > 0).float()
+    mask = mask[:, :, None] * mask[:, None, :] * target_diff
+    loss = torch.relu(target_diff - diff)
+    hits = (((loss * mask) == 0) * mask).sum().item()
+    return hits, mask.sum().item()
 
 def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
     probe_model.eval()

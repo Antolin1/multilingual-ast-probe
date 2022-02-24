@@ -217,6 +217,9 @@ def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
                                           desc='[test batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
             all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+            ds = ds.to(args.device)
+            cs = cs.to(args.device)
+            us = us.to(args.device)
 
             embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
                                    args.model_type)
@@ -233,35 +236,40 @@ def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
                 length_batch=batch_len_tokens.to(args.device))
             eval_loss += loss.item()
 
-            #compute the classes c and u
+            # compute the classes c and u
+            # scores_c /= probe_model.vectors_c.norm(p=2, dim=0)
+            # scores_u /= probe_model.vectors_u.norm(p=2, dim=0)
             scores_c = torch.argmax(scores_c, dim=2)
             scores_u = torch.argmax(scores_u, dim=2)
 
-            lens_d = batch_len_tokens - 1
+            batch_len_tokens = batch_len_tokens.to(args.device)
+            lens_d = (batch_len_tokens - 1).to(args.device)
             max_len_d = torch.max(lens_d)
-            mask = torch.arange(max_len_d).to(args.device)[None, :] < lens_d[:, None]
+            mask_c = torch.arange(max_len_d, device=args.device)[None, :] < lens_d[:, None]
+            mask_u = torch.arange(max_len_d + 1, device=args.device)[None, :] < batch_len_tokens[:, None]
 
-            scores_c = torch.masked_select(scores_c, mask)
-            scores_u = torch.masked_select(scores_u, mask)
-            cs = torch.masked_select(cs, mask)
-            us = torch.masked_select(us, mask)
+            scores_c = torch.masked_select(scores_c, mask_c)
+            scores_u = torch.masked_select(scores_u, mask_u)
+            cs = torch.masked_select(cs, mask_c)
+            us = torch.masked_select(us, mask_u)
 
             hits_c = (scores_c == cs).sum().item()
             hits_u = (scores_u == us).sum().item()
+
             total_hits_u += hits_u
             total_hits_c += hits_c
-            total_c += cs.shape[0]
-            total_u += us.shape[0]
+            total_c += mask_c.sum().item()
+            total_u += mask_u.sum().item()
 
-            hits_d, total_d_current = compute_hits_d(d_pred, ds, mask)
+            hits_d, total_d_current = compute_hits_d(d_pred, ds, mask_c)
             total_hits_d += hits_d
             total_d += total_d_current
 
             #compute the accuracy on d
 
-    acc_u = float(hits_u) / float(total_hits_u)
-    acc_c = float(hits_c) / float(total_hits_c)
-    acc_d = float(hits_d) / float(total_hits_d)
+    acc_u = float(total_hits_u) / float(total_u)
+    acc_c = float(total_hits_c) / float(total_c)
+    acc_d = float(total_hits_d) / float(total_d)
 
     return (eval_loss / len(test_dataloader)), acc_c, acc_u, acc_d
 
@@ -329,28 +337,26 @@ def run_probing_test(args):
     elif args.lang == 'javascript':
         parser.set_language(JS_LANGUAGE)
 
-    logger.info('Loading dataset from local file.')
-    data_files = {'train': os.path.join(args.dataset_name_or_path, 'train.jsonl'),
-                  'valid': os.path.join(args.dataset_name_or_path, 'valid.jsonl'),
-                  'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
-
     logger.info('Loading tokenizer')
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
 
-    train_set = load_dataset('json', data_files=data_files, split='train')
-    valid_set = load_dataset('json', data_files=data_files, split='valid')
+    logger.info('Loading dataset from local file.')
+    data_files = {'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
+
+    # get class labels-ids mapping for c and u
+    labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
+    with open(labels_file_path, 'rb') as f:
+        data = pickle.load(f)
+        labels_to_ids_c = data['labels_to_ids_c']
+        labels_to_ids_u = data['labels_to_ids_u']
+
     test_set = load_dataset('json', data_files=data_files, split='test')
 
     # get d and c for each sample
-    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
     test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-
-    # convert each non-terminal labels to its id
-    labels_to_ids = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
-    ids_to_labels = {x: y for y, x in labels_to_ids.items()}
-    test_set = test_set.map(lambda e: convert_to_ids(e['c'], labels_to_ids))
+    test_set = test_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
+    test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
 
     test_dataloader = DataLoader(dataset=test_set,
                                  batch_size=args.batch_size,
@@ -370,7 +376,9 @@ def run_probing_test(args):
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
-        number_labels=len(labels_to_ids)).to(args.device)
+        number_labels_c=len(labels_to_ids_c),
+        number_labels_u=len(labels_to_ids_u)).to(args.device)
+    criterion = ParserLoss(loss='rank')
 
     if args.model_checkpoint:
         logger.info('Restoring model checkpoint.')
@@ -379,5 +387,5 @@ def run_probing_test(args):
 
     probe_model.eval()
     lmodel.eval()
-    results = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels, args)
-    logger.info(f'Test F1 score: {results}')
+    eval_loss, acc_c, acc_u, acc_d = run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args)
+    logger.info(f'test loss: {eval_loss} | acc_c: {acc_c} | acc_u: {acc_u} | acc_d: {acc_d}')

@@ -98,7 +98,7 @@ class ParserLoss(nn.Module):
         elif self.loss == 'rank':
             lens_d = length_batch - 1
             max_len_d = torch.max(lens_d)
-            mask = torch.arange(max_len_d)[None, :] < lens_d[:, None]
+            mask = torch.arange(max_len_d, device=max_len_d.device)[None, :] < lens_d[:, None]
             loss_d = rankloss(d_pred, d_real, mask, exp=False)
         loss_c = self.cs(scores_c.view(-1, scores_c.shape[2]), c_real.view(-1))
         loss_u = self.cs(scores_u.view(-1, scores_u.shape[2]), u_real.view(-1))

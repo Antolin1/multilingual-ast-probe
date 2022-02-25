@@ -1,6 +1,6 @@
 import unittest
 from tree_sitter import Language, Parser
-from src.data.code2ast import code2ast, get_tokens_ast
+from src.data.code2ast import code2ast, get_tokens_ast, get_token
 from src.data.binary_tree import ast2binary, tree_to_distance, \
     distance_to_tree, remove_empty_nodes, extend_complex_nodes, \
     get_multiset_ast, get_precision_recall_f1, add_unary
@@ -68,9 +68,9 @@ class TestBinary(unittest.TestCase):
          9.284015655517578, 10.76449203491211, 9.185318946838379, 6.908447265625, 2.8699421882629395,
          1.5084803104400635, 3.9279606342315674, 1.9249317646026611, 1.1106932163238525, 5.392538070678711,
          1.335496187210083]
-        c = ['module#function_definition', '<empty>', 'parameters', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
-         'block#for_statement', '<empty>', '<empty>', '<empty>', '<empty>', 'block#if_statement', 'comparison_operator',
-         '<empty>', '<empty>', '<empty>', 'block#return_statement', '<empty>', 'return_statement']
+        c = ['module<sep>function_definition', '<empty>', 'parameters', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
+         'block<sep>for_statement', '<empty>', '<empty>', '<empty>', '<empty>', 'block<sep>if_statement', 'comparison_operator',
+         '<empty>', '<empty>', '<empty>', 'block<sep>return_statement', '<empty>', 'return_statement']
         u = ['<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
          '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
          '<empty>', '<empty>']
@@ -87,8 +87,21 @@ class TestBinary(unittest.TestCase):
         plt.show()
 
     def test_binary(self):
+
+        def label_leaves(g, code):
+            G = nx.DiGraph(g)
+            for n in G:
+                if G.nodes[n]['is_terminal']:
+                    G.nodes[n]['type'] = get_token(code, G.nodes[n]['start'], G.nodes[n]['end'])
+            return G
+
         G, pre_code = code2ast(code, parser)
+        G_label_leaves = label_leaves(G, pre_code)
         binary_ast = ast2binary(G)
+
+        nx.draw(nx.Graph(G_label_leaves), labels=nx.get_node_attributes(G_label_leaves, 'type'), with_labels=True)
+        plt.show()
+
         nx.draw(nx.Graph(binary_ast), labels=nx.get_node_attributes(binary_ast, 'type'), with_labels=True)
         plt.show()
 
@@ -108,6 +121,12 @@ class TestBinary(unittest.TestCase):
 
         print(binary_ast_recov.nodes(data=True))
         binary_ast_recov_full = extend_complex_nodes(add_unary(remove_empty_nodes(binary_ast_recov)))
+
+        def node_match_type(n1, n2):
+            return n1['type'] == n2['type']
+
+        self.assertTrue(nx.is_isomorphic(binary_ast_recov_full, G_label_leaves, node_match_type))
+
         nx.draw(nx.Graph(binary_ast_recov_full), labels=nx.get_node_attributes(binary_ast_recov_full, 'type'),
                 with_labels=True)
         plt.show()
@@ -124,6 +143,9 @@ class TestBinary(unittest.TestCase):
         nx.draw(nx.Graph(perturbed), labels=nx.get_node_attributes(perturbed, 'type'),
                 with_labels=True)
         plt.show()
+
+        print(get_multiset_ast(binary_ast_recov_full))
+        print(get_multiset_ast(G_label_leaves))
         #print(binary_ast.nodes(data=True))
 
 if __name__ == '__main__':

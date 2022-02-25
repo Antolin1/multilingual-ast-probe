@@ -2,6 +2,8 @@ from src.data.code2ast import get_id, get_root_ast
 import networkx as nx
 import numpy as np
 
+SEPARATOR = '<sep>'
+
 def ast2binary(G):
     #fussion non-terminals with on non-terminal child
     def ast2binary_aux(current_node_G, G, new_G, parent_in_new_G):
@@ -15,7 +17,7 @@ def ast2binary(G):
         elif len(out_edges) == 1:
             m = out_edges[0][1]
             if not G.nodes[m]['is_terminal']:
-                new_G.nodes[parent_in_new_G]['type'] = new_G.nodes[parent_in_new_G]['type'] + '#' + G.nodes[m]['type']
+                new_G.nodes[parent_in_new_G]['type'] = new_G.nodes[parent_in_new_G]['type'] + SEPARATOR + G.nodes[m]['type']
                 ast2binary_aux(m, G, new_G, parent_in_new_G)
             else:
                 #todo: check this, unary things
@@ -131,17 +133,17 @@ def remove_empty_nodes(G):
 
 def extend_complex_nodes(G):
     g = G.copy()
-    while len([n for n in g if '#' in g.nodes[n]['type'] and g.out_edges(n) != 0]) != 0:
+    while len([n for n in g if SEPARATOR in g.nodes[n]['type'] and g.out_edges(n) != 0]) != 0:
         g0 = g.copy()
-        n = [n for n in g if '#' in g.nodes[n]['type'] and g.out_edges(n) != 0][0]
+        n = [n for n in g if SEPARATOR in g.nodes[n]['type'] and g.out_edges(n) != 0][0]
         edges_in = list(g.in_edges(n))
         edges_out = list(g.out_edges(n))
-        labels = g.nodes[n]['type'].split('#')
+        labels = g.nodes[n]['type'].split(SEPARATOR)
         new_nodes = []
         for l in labels:
             new_id = get_id(g0)
             g0.add_node(new_id, type=l)
-            if len(new_nodes)!=0:
+            if len(new_nodes) != 0:
                 g0.add_edge(new_nodes[-1], new_id)
             new_nodes.append(new_id)
         for u, _ in edges_in:

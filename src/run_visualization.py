@@ -139,6 +139,18 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         plt.show()
         plt.savefig(f'fig_{c}.png')
 
+        labels_axis = [tokens[i] + '-' + tokens[i+1] for i in range(0, len(tokens) - 1)]
+        figure, axis = plt.subplots(2, figsize=(15, 15))
+        axis[0].bar(labels_axis, ds_current)
+        axis[0].set_title("True dist")
+
+        axis[1].bar(labels_axis, d_pred_current)
+        axis[1].set_title("Pred dist")
+        plt.show()
+        plt.savefig(f'fig_{c}_syn_dis.png')
+
+
+
 
 def __run_visualization_vectors(probe_model, ids_to_labels_c, ids_to_labels_u, args):
     vectors_c = probe_model.vectors_c.detach().cpu().numpy().T

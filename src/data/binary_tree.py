@@ -4,8 +4,9 @@ import numpy as np
 
 SEPARATOR = '<sep>'
 
+
 def ast2binary(G):
-    #fussion non-terminals with on non-terminal child
+    # fussion non-terminals with on non-terminal child
     def ast2binary_aux(current_node_G, G, new_G, parent_in_new_G):
         out_edges = list(G.out_edges(current_node_G))
         if len(out_edges) == 2:
@@ -17,10 +18,11 @@ def ast2binary(G):
         elif len(out_edges) == 1:
             m = out_edges[0][1]
             if not G.nodes[m]['is_terminal']:
-                new_G.nodes[parent_in_new_G]['type'] = new_G.nodes[parent_in_new_G]['type'] + SEPARATOR + G.nodes[m]['type']
+                new_G.nodes[parent_in_new_G]['type'] = new_G.nodes[parent_in_new_G]['type'] + SEPARATOR + G.nodes[m][
+                    'type']
                 ast2binary_aux(m, G, new_G, parent_in_new_G)
             else:
-                #todo: check this, unary things
+                # todo: check this, unary things
                 new_G.nodes[parent_in_new_G]['is_terminal'] = True
                 new_G.nodes[parent_in_new_G]['unary'] = new_G.nodes[parent_in_new_G]['type']
         elif len(out_edges) > 2:
@@ -43,11 +45,13 @@ def ast2binary(G):
                 new_G.add_node(id_m_new, **G.nodes[out_node])
                 new_G.add_edge(new_empty_id, id_m_new)
                 ast2binary_aux(out_node, G, new_G, id_m_new)
+
     new_G = nx.DiGraph()
     root_G = get_root_ast(G)
     new_G.add_node(0, **G.nodes[root_G])
     ast2binary_aux(root_G, G, new_G, 0)
     return new_G
+
 
 def get_leaves(tree, node):
     if tree.out_degree(node) == 0:
@@ -58,9 +62,11 @@ def get_leaves(tree, node):
             result += get_leaves(tree, m)
         return result
 
+
 def get_most_left(tree, nodes):
     nodes_sort = sorted(nodes, key=lambda n: tree.nodes[n]['start'])
     return tree.nodes[nodes_sort[0]]['start']
+
 
 def get_left_right_child(tree, node):
     child_1 = list(tree.out_edges(node))[0][1]
@@ -73,6 +79,7 @@ def get_left_right_child(tree, node):
         return child_1, child_2
     else:
         return child_2, child_1
+
 
 def tree_to_distance(tree, node):
     if tree.out_degree(node) == 0:
@@ -93,6 +100,7 @@ def tree_to_distance(tree, node):
         u = u_l + u_r
     return d, c, h, u
 
+
 def distance_to_tree(d, c, u, tokens):
     def distance_to_tree_aux(G, d, c, u, father, tokens, start_token):
         if d == []:
@@ -105,11 +113,13 @@ def distance_to_tree(d, c, u, tokens):
             G.add_node(new_id, type=c[i])
             if father != None:
                 G.add_edge(father, new_id)
-            distance_to_tree_aux(G, d[0:i], c[0:i], u[0:i+1], new_id, tokens[0:i+1], start_token)
-            distance_to_tree_aux(G, d[i+1:], c[i+1:], u[i+1:], new_id, tokens[i+1:], start_token + i + 1)
+            distance_to_tree_aux(G, d[0:i], c[0:i], u[0:i + 1], new_id, tokens[0:i + 1], start_token)
+            distance_to_tree_aux(G, d[i + 1:], c[i + 1:], u[i + 1:], new_id, tokens[i + 1:], start_token + i + 1)
+
     G = nx.DiGraph()
     distance_to_tree_aux(G, d, c, u, None, tokens, 0)
     return G
+
 
 def remove_empty_nodes(G):
     g = G.copy()
@@ -130,6 +140,7 @@ def remove_empty_nodes(G):
         g = g0
         # print(len([n for n in g if not has_terminals(g, n)]))
     return g
+
 
 def extend_complex_nodes(G):
     g = G.copy()
@@ -155,6 +166,7 @@ def extend_complex_nodes(G):
         # print(len([n for n in g if not has_terminals(g, n)]))
     return g
 
+
 def add_unary(G):
     g = G.copy()
     for n in [n for n in g if g.out_degree(n) == 0]:
@@ -168,21 +180,22 @@ def add_unary(G):
     return g
 
 
-def get_multiset_ast(G):
+def get_multiset_ast(G, filter_non_terminal=None):
     result = []
     for n in G:
         if G.out_degree(n) > 0:
-            leaves = get_leaves(G, n)
-            leaves = sorted(leaves, key=lambda n: G.nodes[n]['start'])
-            result.append(G.nodes[n]['type'] + '-' + '-'.join([str(G.nodes[l]['start']) for l in leaves]))
+            if filter_non_terminal is None or G.nodes['type'] != filter_non_terminal:
+                leaves = get_leaves(G, n)
+                leaves = sorted(leaves, key=lambda n: G.nodes[n]['start'])
+                result.append(G.nodes[n]['type'] + '-' + '-'.join([str(G.nodes[l]['start']) for l in leaves]))
     return result
 
 
-def get_precision_recall_f1(G_true, G_pred):
-    m_true = get_multiset_ast(G_true)
-    m_pred = get_multiset_ast(G_pred)
-    prec = float(len([n for n in m_pred if n in m_true]))/float(len(m_pred))
-    rec = float(len([n for n in m_pred if n in m_true]))/float(len(m_true))
+def get_precision_recall_f1(G_true, G_pred, filter_non_terminal=None):
+    m_true = get_multiset_ast(G_true, filter_non_terminal)
+    m_pred = get_multiset_ast(G_pred, None)
+    prec = float(len([n for n in m_pred if n in m_true])) / float(len(m_pred))
+    rec = float(len([n for n in m_pred if n in m_true])) / float(len(m_true))
     if prec + rec == 0:
         return 0, 0, 0
     f1 = 2 * prec * rec / (prec + rec)

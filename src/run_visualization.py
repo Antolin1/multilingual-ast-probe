@@ -143,9 +143,13 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         figure, axis = plt.subplots(2, figsize=(15, 15))
         axis[0].bar(labels_axis, ds_current)
         axis[0].set_title("True dist")
+        for ix, label in enumerate(scores_c_labels):
+            axis[0].annotate(label, (labels_axis[ix], ds_current[ix]))
 
         axis[1].bar(labels_axis, d_pred_current)
         axis[1].set_title("Pred dist")
+        for ix, label in enumerate(cs_labels):
+            axis[1].annotate(label, (labels_axis[ix], d_pred_current[ix]))
         plt.show()
         plt.savefig(f'fig_{c}_syn_dis.png')
 

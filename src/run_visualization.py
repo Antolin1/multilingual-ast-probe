@@ -6,6 +6,7 @@ import torch
 from probe.utils import get_embeddings, align_function
 import networkx as nx
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 from data import PY_LANGUAGE, JS_LANGUAGE
 from probe import ParserProbe
 import os
@@ -69,11 +70,12 @@ def run_visualization(args):
     final_probe_model.load_state_dict(torch.load(os.path.join(args.model_checkpoint, f'pytorch_model.bin'),
                                                  map_location=torch.device(args.device)))
 
-    __run_visualization(lmodel, tokenizer, final_probe_model, code_samples, parser,
-                        ids_to_labels_c, ids_to_labels_u, args)
+    __run_visualization_code_samples(lmodel, tokenizer, final_probe_model, code_samples, parser,
+                                     ids_to_labels_c, ids_to_labels_u, args)
+    __run_visualization_vectors(final_probe_model, ids_to_labels_c, ids_to_labels_u, args)
 
-
-def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, ids_to_labels_c, ids_to_labels_u, args):
+def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_samples,
+                                     parser, ids_to_labels_c, ids_to_labels_u, args):
     lmodel.eval()
     probe_model.eval()
 
@@ -136,3 +138,21 @@ def __run_visualization(lmodel, tokenizer, probe_model, code_samples, parser, id
         axis[1].set_title("Pred ast")
         plt.show()
         plt.savefig(f'fig_{c}.png')
+
+
+def __run_visualization_vectors(probe_model, ids_to_labels_c, ids_to_labels_u, args):
+    vectors_c = probe_model.vectors_c.detach().cpu().numpy().T
+    vectors_u = probe_model.vectors_u.detach().cpu().numpy().T
+
+    v_c_2d = TSNE(n_components=2, learning_rate='auto',
+                      init='random', random_state=args.seed).fit_transform(vectors_c)
+    v_u_2d = TSNE(n_components=2, learning_rate='auto',
+                  init='random', random_state=args.seed).fit_transform(vectors_u)
+
+    figure, axis = plt.subplots(2, figsize=(15, 15))
+    axis[0].scatter(v_c_2d[:, 0], v_c_2d[:, 1])
+    axis[0].set_title("Vectors constituency")
+    axis[1].scatter(v_u_2d[:, 0], v_u_2d[:, 1])
+    axis[1].set_title("Vectors unary")
+    plt.show()
+    plt.savefig(f'vectors.png')

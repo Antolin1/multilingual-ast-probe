@@ -152,7 +152,13 @@ def __run_visualization_vectors(probe_model, ids_to_labels_c, ids_to_labels_u, a
     figure, axis = plt.subplots(2, figsize=(15, 15))
     axis[0].scatter(v_c_2d[:, 0], v_c_2d[:, 1])
     axis[0].set_title("Vectors constituency")
+    for ix, label in ids_to_labels_c.items():
+        axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
+
     axis[1].scatter(v_u_2d[:, 0], v_u_2d[:, 1])
     axis[1].set_title("Vectors unary")
+    for ix, label in ids_to_labels_u.items():
+        axis[1].annotate(label, (v_u_2d[ix, 0], v_u_2d[ix, 1]))
+
     plt.show()
     plt.savefig(f'vectors.png')

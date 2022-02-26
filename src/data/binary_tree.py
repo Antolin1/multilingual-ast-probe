@@ -184,7 +184,7 @@ def get_multiset_ast(G, filter_non_terminal=None):
     result = []
     for n in G:
         if G.out_degree(n) > 0:
-            if filter_non_terminal is None or G.nodes['type'] != filter_non_terminal:
+            if filter_non_terminal is None or G.nodes[n]['type'] != filter_non_terminal:
                 leaves = get_leaves(G, n)
                 leaves = sorted(leaves, key=lambda n: G.nodes[n]['start'])
                 result.append(G.nodes[n]['type'] + '-' + '-'.join([str(G.nodes[l]['start']) for l in leaves]))

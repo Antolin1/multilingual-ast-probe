@@ -2,6 +2,7 @@ import os
 import argparse
 import logging
 import pickle
+from collections import defaultdict
 
 import torch
 import numpy as np
@@ -17,7 +18,7 @@ from data.utils import match_tokenized_to_untokenized_roberta, \
     remove_comments_and_docstrings_java_js, remove_comments_and_docstrings_python
 from data.data_loading import get_non_terminals_labels, convert_to_ids
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
-    extend_complex_nodes, get_precision_recall_f1, add_unary
+    extend_complex_nodes, get_precision_recall_f1, add_unary, get_recall_non_terminal
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logger = logging.getLogger(__name__)
@@ -324,6 +325,49 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
 
     return np.mean(f1_scores)
 
+def run_probing_eval_recall_non_terminal(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
+    probe_model.eval()
+    recall_scores = defaultdict(list)
+    with torch.no_grad():
+        for step, batch in enumerate(tqdm(test_dataloader,
+                                          desc='[test batch]',
+                                          bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
+            all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+
+            embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
+                                   args.model_type)
+            embds = align_function(embds.to(args.device), alignment.to(args.device))
+
+            d_pred, scores_c, scores_u = probe_model(embds.to(args.device))
+            scores_c = torch.argmax(scores_c, dim=2)
+            scores_u = torch.argmax(scores_u, dim=2)
+
+            for i, len_tokens in enumerate(batch_len_tokens):
+                len_tokens = len_tokens.item()
+                d_pred_current = d_pred[i, 0:len_tokens - 1].tolist()
+                score_c_current = scores_c[i, 0:len_tokens - 1].tolist()
+                score_u_current = scores_u[i, 0:len_tokens].tolist()
+                ds_current = ds[i, 0:len_tokens - 1].tolist()
+                cs_current = cs[i, 0:len_tokens - 1].tolist()
+                us_current = us[i, 0:len_tokens].tolist()
+
+                cs_labels = [ids_to_labels_c[c] for c in cs_current]
+                us_labels = [ids_to_labels_u[c] for c in us_current]
+                scores_c_labels = [ids_to_labels_c[s] for s in score_c_current]
+                scores_u_labels = [ids_to_labels_u[s] for s in score_u_current]
+
+                ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels, [str(i) for i in range(len_tokens)])
+                ground_truth_tree = extend_complex_nodes(add_unary(remove_empty_nodes(ground_truth_tree)))
+
+                pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels, [str(i) for i in range(len_tokens)])
+                pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
+
+                recall_score = get_recall_non_terminal(ground_truth_tree, pred_tree)
+                for k, s in recall_score.items():
+                    recall_scores[k].append(s)
+
+    return {k: np.mean(v) for k, v in recall_scores.items()}
+
 
 def run_probing_test(args):
     logger.info('-' * 100)
@@ -349,7 +393,10 @@ def run_probing_test(args):
     with open(labels_file_path, 'rb') as f:
         data = pickle.load(f)
         labels_to_ids_c = data['labels_to_ids_c']
+        ids_to_labels_c = data['ids_to_labels_c']
         labels_to_ids_u = data['labels_to_ids_u']
+        ids_to_labels_u = data['ids_to_labels_u']
+
 
     test_set = load_dataset('json', data_files=data_files, split='test')
 
@@ -389,3 +436,9 @@ def run_probing_test(args):
     lmodel.eval()
     eval_loss, acc_c, acc_u, acc_d = run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args)
     logger.info(f'test loss: {eval_loss} | acc_c: {acc_c} | acc_u: {acc_u} | acc_d: {acc_d}')
+
+    recall_dict = run_probing_eval_recall_non_terminal(test_dataloader, probe_model, lmodel,
+                                                       ids_to_labels_c, ids_to_labels_u, args)
+
+    for v, k in sorted(((v, k) for k,v in recall_dict.items()), reverse=True):
+        logger.info(f'Non-terminal {k} | recall {v}')

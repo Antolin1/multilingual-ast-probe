@@ -205,3 +205,17 @@ def get_precision_recall_f1(G_true, G_pred, filter_non_terminal=None):
         return 0, 0, 0
     f1 = 2 * prec * rec / (prec + rec)
     return prec, rec, f1
+
+
+def get_recall_non_terminal(G_true, G_pred):
+    non_terminals = set([])
+    for n in G_true:
+        if G_true.out_degree(n) > 0:
+            non_terminals.add(G_true.nodes[n]['type'])
+    dic_results = {}
+    for n in non_terminals:
+        m_true = get_multiset_ast(G_true, n)
+        m_pred = get_multiset_ast(G_pred, None)
+        rec = float(len([n for n in m_pred if n in m_true])) / float(len(m_true))
+        dic_results[n] = rec
+    return dic_results

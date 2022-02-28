@@ -31,22 +31,6 @@ def generate_baseline(model):
     return baseline
 
 
-def filter_strategy(code_tokens, tokenizer, max_tokens):
-    to_convert, _ = match_tokenized_to_untokenized_roberta(code_tokens, tokenizer)
-    return len(code_tokens) <= max_tokens and (len(to_convert) + 2 <= 512)
-
-
-def filter_non_parse(code, lang):
-    try:
-        if lang == 'python':
-            remove_comments_and_docstrings_python(code)
-        elif lang == 'javascript':
-            remove_comments_and_docstrings_java_js(code)
-        return True
-    except:
-        return False
-
-
 def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
     logger.info('Running probing training.')

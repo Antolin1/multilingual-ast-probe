@@ -1,11 +1,5 @@
-"""Classes for specifying probe pytorch modules."""
-
 import torch.nn as nn
 import torch
-
-
-class Probe(nn.Module):
-    pass
 
 
 class TwoWordPSDProbe(Probe):
@@ -48,7 +42,7 @@ class TwoWordPSDProbe(Probe):
 
 
 class OneWordPSDProbe(Probe):
-    """ Computes squared L2 norm of words after projection by a matrix."""
+    """Computes squared L2 norm of words after projection by a matrix."""
     def __init__(self, probe_rank, model_dim, device):
         print('Constructing OneWordPSDProbe')
         super(OneWordPSDProbe, self).__init__()
@@ -63,11 +57,13 @@ class OneWordPSDProbe(Probe):
         """ Computes all n depths after projection
         for each sentence in a batch.
         Computes (Bh_i)^T(Bh_i) for all i
+
         Args:
-        batch: a batch of word representations of the shape
-            (batch_size, max_seq_len, representation_dim)
+            batch: a batch of word representations of the shape
+                    (batch_size, max_seq_len, representation_dim)
+
         Returns:
-        A tensor of depths of shape (batch_size, max_seq_len)
+            A tensor of depths of shape (batch_size, max_seq_len)
         """
         transformed = torch.matmul(batch, self.proj)
         batchlen, seqlen, rank = transformed.size()
@@ -94,10 +90,9 @@ class ParserProbe(Probe):
 
     def forward(self, batch):
         """
-
         Args:
             batch: a batch of word representations of the shape
-            (batch_size, max_seq_len, representation_dim)
+                    (batch_size, max_seq_len, representation_dim)
 
         Returns:
             d_pred: (batch_size, max_seq_len - 1)

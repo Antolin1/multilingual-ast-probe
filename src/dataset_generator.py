@@ -23,24 +23,6 @@ tokenizer_codeberta = AutoTokenizer.from_pretrained('huggingface/CodeBERTa-small
 tokenizers = [tokenizer_roberta, tokenizer_t5, tokenizer_codebert, tokenizer_graphcodebert, tokenizer_codeberta]
 
 
-def filter_by_tokens_subtokens(code, lang, parser):
-    try:
-        G, code_pre = code2ast(code=code, parser=parser, lang=lang)
-        assert nx.is_tree(nx.Graph(G))
-        assert nx.is_connected(nx.Graph(G))
-    except:
-        return False
-    if has_error(G):
-        return False
-    tokens = get_tokens_ast(G, code_pre)
-    # filter for roberta, codebert, t5, graphcodebert, codeberta
-    for tokenizer in tokenizers:
-        to_convert, _ = match_tokenized_to_untokenized_roberta(tokens, tokenizer)
-        if (len(to_convert) + 2) > 512:
-            return False
-    return True
-
-
 def filter_samples(code, max_length, lang, parser):
     try:
         G, code_pre = code2ast(code=code, parser=parser, lang=lang)

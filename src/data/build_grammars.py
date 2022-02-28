@@ -15,6 +15,7 @@ Language.build_library(
   # Include one or more languages
   [
     'grammars/tree-sitter-python',
-    'grammars/tree-sitter-javascript'
+    'grammars/tree-sitter-javascript',
+    'grammars/tree-sitter-go'
   ]
 )

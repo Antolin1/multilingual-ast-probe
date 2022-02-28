@@ -3,8 +3,8 @@ import tokenize
 import requests
 import zipfile
 import gzip
-from typing import Optional
 import re
+from typing import Optional
 
 from tqdm import tqdm
 

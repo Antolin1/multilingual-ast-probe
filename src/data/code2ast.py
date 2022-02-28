@@ -1,14 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jan 29 16:08:24 2022
-
-@author: Jose Antonio
-"""
-
-from .utils import remove_comments_and_docstrings_python, remove_comments_and_docstrings_java_js
 import networkx as nx
 from scipy.stats import spearmanr
+
+from .utils import remove_comments_and_docstrings_python, remove_comments_and_docstrings_java_js
+
 
 #aux function, get a new id in the graph
 def get_id(G):

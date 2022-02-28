@@ -14,43 +14,39 @@ from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE, GO_LA
 from data.code2ast import code2ast, get_tokens_ast, has_error
 from data.utils import match_tokenized_to_untokenized_roberta
 
-
 tokenizer_roberta = AutoTokenizer.from_pretrained('roberta-base')
 tokenizer_t5 = AutoTokenizer.from_pretrained('Salesforce/codet5-base')
 tokenizer_codebert = AutoTokenizer.from_pretrained('microsoft/codebert-base')
 tokenizer_graphcodebert = AutoTokenizer.from_pretrained('microsoft/graphcodebert-base')
 tokenizer_codeberta = AutoTokenizer.from_pretrained('huggingface/CodeBERTa-small-v1')
 
-tokenizers = [tokenizer_roberta, tokenizer_t5,
-              tokenizer_codebert, tokenizer_graphcodebert,
-              tokenizer_codeberta]
+tokenizers = [tokenizer_roberta, tokenizer_t5, tokenizer_codebert, tokenizer_graphcodebert, tokenizer_codeberta]
 
 
-def filter_by_tokens_subtokens(code, lang, parser):
+def filter_samples(code, max_length, lang, parser):
     try:
         G, code_pre = code2ast(code=code, parser=parser, lang=lang)
         assert nx.is_tree(nx.Graph(G))
         assert nx.is_connected(nx.Graph(G))
     except:
-        return False
+        return True
     if has_error(G):
-        return False
-    tokens = get_tokens_ast(G, code_pre)
-    #filter for roberta, codebert, t5, graphcodebert, codeberta
+        return True
+
     for tokenizer in tokenizers:
-        to_convert, _ = match_tokenized_to_untokenized_roberta(tokens, tokenizer)
-        if (len(to_convert) + 2) > 512:
-            return False
-    return True
+        if len(tokenizer(code).input_ids) > max_length:
+            return True
+    return False
 
 
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for generating the dataset for probing')
-    parser.add_argument("--dir", default="dataset", help="Path to save the dataset")
-    parser.add_argument("--seed", help="seed.", type=int, default=123)
-    parser.add_argument("--lang", help="Language.", choices=['javascript', 'python', 'go'],
-                        default="python")
-    parser.add_argument("--download", help="If download the csn", action="store_true")
+    parser.add_argument('--dataset_dir', default='./dataset', help='Path to save the dataset')
+    parser.add_argument('--lang', help='Language.', choices=['javascript', 'python', 'go'], default='python')
+    parser.add_argument('--max_code_length', help='Maximum code length.', default=512)
+    parser.add_argument('--download', help='If download the csn', action='store_true')
+    parser.add_argument('--seed', help='seed.', type=int, default=123)
+    args = parser.parse_args()
 
     logger = logging.getLogger()
     logger.setLevel(level=logging.INFO)
@@ -61,52 +57,43 @@ def main():
     console.setFormatter(formatter)
     logger.addHandler(console)
 
-    #parse arguments
-    args = parser.parse_args()
-    dataset_dir = args.dir
-    seed = args.seed
-    lang = args.lang
-    
-    #seed everything
-    if seed > 0:
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+    # seed everything
+    if args.seed > 0:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
 
-    #download dataset
+    # download dataset
     if args.download:
-        download_codesearchnet_dataset(dataset_dir=dataset_dir)
-    dataset_path = os.path.join(dataset_dir, lang, 'dataset.jsonl')
-    logger.info('Loading huggingface dataset.')
-    hugg_dataset = load_dataset('json', data_files=dataset_path, split='train')
+        download_codesearchnet_dataset(dataset_dir=args.dataset_dir)
+    dataset_path = os.path.join(args.dataset_dir, args.lang, 'dataset.jsonl')
+    logger.info('Loading dataset.')
+    dataset = load_dataset('json', data_files=dataset_path, split='train')
 
     # select the parser
     parser_lang = Parser()
-    if lang == 'python':
+    if args.lang == 'python':
         parser_lang.set_language(PY_LANGUAGE)
-    elif lang == 'javascript':
+    elif args.lang == 'javascript':
         parser_lang.set_language(JS_LANGUAGE)
-    elif lang == 'go':
+    elif args.lang == 'go':
         parser_lang.set_language(GO_LANGUAGE)
 
-    #filter dataset
+    # filter dataset
     logger.info('Filtering dataset.')
-    hugg_dataset = hugg_dataset.filter(lambda e: filter_by_tokens_subtokens(e['original_string'], lang,
-                                                                            parser_lang))
+    dataset = dataset.filter(
+        lambda e: filter_samples(e['original_string'], args.max_code_length, args.lang, parser), num_proc=4)
+
     logger.info('Shuffling dataset.')
-    hugg_dataset = hugg_dataset.shuffle(seed)
+    dataset = dataset.shuffle(args.seed)
 
     logger.info('Splitting dataset.')
-    train_dataset = hugg_dataset.select(range(0, 20000))
-    test_dataset = hugg_dataset.select(range(20000, 24000))
-    val_dataset = hugg_dataset.select(range(24000, 26000))
+    train_dataset = dataset.select(range(0, 20000))
+    test_dataset = dataset.select(range(20000, 24000))
+    val_dataset = dataset.select(range(24000, 26000))
 
     logger.info('Storing dataset.')
-    train_dataset.to_json(os.path.join(dataset_dir, lang, 'train.jsonl'))
-    test_dataset.to_json(os.path.join(dataset_dir, lang, 'test.jsonl'))
-    val_dataset.to_json(os.path.join(dataset_dir, lang, 'valid.jsonl'))
-
-
-if __name__ == '__main__':
-    main()
+    train_dataset.to_json(os.path.join(args.dataset_dir, args.lang, 'train.jsonl'))
+    test_dataset.to_json(os.path.join(args.dataset_dir, args.lang, 'test.jsonl'))
+    val_dataset.to_json(os.path.join(args.dataset_dir, args.lang, 'valid.jsonl'))

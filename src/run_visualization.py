@@ -1,7 +1,8 @@
 from data.utils import match_tokenized_to_untokenized_roberta
 from data.code2ast import code2ast, get_tokens_ast
 from data.binary_tree import ast2binary, tree_to_distance, distance_to_tree, \
-    extend_complex_nodes, add_unary, remove_empty_nodes, get_precision_recall_f1
+    extend_complex_nodes, add_unary, remove_empty_nodes, get_precision_recall_f1, \
+    get_recall_non_terminal
 import torch
 from probe.utils import get_embeddings, align_function
 import networkx as nx
@@ -130,6 +131,10 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
 
         logger.info(f'For code {c}, prec = {prec_score}, recall = {recall_score}, f1 = {f1_score}.')
         logger.info(f'For code {c}, recall block = {recall_block}.')
+
+        recall_score = get_recall_non_terminal(ground_truth_tree, pred_tree)
+        for k, s in recall_score.items():
+            logger.info(f'Non-terminal {k} | recall {s}')
 
         figure, axis = plt.subplots(2, figsize=(15, 15))
         nx.draw(nx.Graph(ground_truth_tree), labels=nx.get_node_attributes(ground_truth_tree, 'type'), with_labels=True,

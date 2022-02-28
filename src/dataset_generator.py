@@ -29,14 +29,15 @@ def filter_samples(code, max_length, lang, parser):
         assert nx.is_tree(nx.Graph(G))
         assert nx.is_connected(nx.Graph(G))
     except:
-        return True
+        return False
     if has_error(G):
-        return True
+        return False
 
     for tokenizer in tokenizers:
-        if len(tokenizer(code).input_ids) > max_length:
-            return True
-    return False
+        t, _ = match_tokenized_to_untokenized_roberta(untokenized_sent=code_pre, tokenizer=tokenizer)
+        if len(t) + 2 > max_length:
+            return False
+    return True
 
 
 if __name__ == '__main__':
@@ -83,7 +84,7 @@ if __name__ == '__main__':
     # filter dataset
     logger.info('Filtering dataset.')
     dataset = dataset.filter(
-        lambda e: filter_samples(e['original_string'], args.max_code_length, args.lang, parser), num_proc=4)
+        lambda e: filter_samples(e['original_string'], args.max_code_length, args.lang, parser_lang), num_proc=6)
 
     logger.info('Shuffling dataset.')
     dataset = dataset.shuffle(args.seed)

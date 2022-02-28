@@ -19,7 +19,7 @@ def main():
                 layers = list(range(1, 13))
             for layer in layers:
                 folder = '_'.join([folder, lang, str(layer), '128'])
-                os.system(f"python3.9 src/main.py --do_train --run_name {folder} "
+                os.system(f"python src/main.py --do_train --run_name {folder} "
                             f"--pretrained_model_name_or_path {model} "
                             f"--model_type {model_type} --lang {lang} "
                             f"--layer {layer} --rank 128")

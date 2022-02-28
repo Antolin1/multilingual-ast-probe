@@ -37,10 +37,13 @@ sacremoses==0.0.47
 scipy==1.7.3
 six==1.16.0
 tokenizers==0.11.4
-torch==1.10.2+cu102
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+torch==1.10.2+cu113
 torch-scatter==2.0.9
-torchaudio==0.10.2+cu102
-torchvision==0.11.3+cu102
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+torchaudio==0.10.2+cu113
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+torchvision==0.11.3+cu113
 tqdm==4.62.3
 transformers==4.16.2
 tree-sitter==0.20.0
@@ -49,3 +52,5 @@ urllib3==1.26.8
 wcwidth==0.2.5
 xxhash==2.0.2
 yarl==1.7.2
+threadpoolctl=3.1.0
+scikit-lear=1.0.2

@@ -2,12 +2,17 @@ import torch.nn as nn
 import torch
 
 
+class Probe(nn.Module):
+    pass
+
+
 class TwoWordPSDProbe(Probe):
     """Computes squared L2 distance after projection by a matrix.
 
     For a batch of sentences, computes all n^2 pairs of distances
     for each sentence in the batch.
     """
+
     def __init__(self, probe_rank, model_dim, device):
         print('Constructing TwoWordPSDProbe')
         super(TwoWordPSDProbe, self).__init__()
@@ -43,12 +48,13 @@ class TwoWordPSDProbe(Probe):
 
 class OneWordPSDProbe(Probe):
     """Computes squared L2 norm of words after projection by a matrix."""
+
     def __init__(self, probe_rank, model_dim, device):
         print('Constructing OneWordPSDProbe')
         super(OneWordPSDProbe, self).__init__()
         self.probe_rank = probe_rank
         self.model_dim = model_dim
-        self.proj = nn.Parameter(data = torch.zeros(self.model_dim, self.probe_rank))
+        self.proj = nn.Parameter(data=torch.zeros(self.model_dim, self.probe_rank))
         nn.init.uniform_(self.proj, -0.05, 0.05)
         self.to(device)
         self.device = device
@@ -67,8 +73,8 @@ class OneWordPSDProbe(Probe):
         """
         transformed = torch.matmul(batch, self.proj)
         batchlen, seqlen, rank = transformed.size()
-        norms = torch.bmm(transformed.view(batchlen* seqlen, 1, rank),
-        transformed.view(batchlen* seqlen, rank, 1))
+        norms = torch.bmm(transformed.view(batchlen * seqlen, 1, rank),
+                          transformed.view(batchlen * seqlen, rank, 1))
         norms = norms.view(batchlen, seqlen)
         return norms
 
@@ -102,4 +108,4 @@ class ParserProbe(Probe):
         transformed = torch.matmul(batch, self.proj)
         shift = transformed[:, 1:, :]
         diffs = shift - transformed[:, :-1, :]
-        return (diffs**2).sum(dim=2), torch.matmul(diffs, self.vectors_c), torch.matmul(transformed, self.vectors_u)
+        return (diffs ** 2).sum(dim=2), torch.matmul(diffs, self.vectors_c), torch.matmul(transformed, self.vectors_u)

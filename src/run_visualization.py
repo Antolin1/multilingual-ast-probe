@@ -32,6 +32,10 @@ def run_visualization(args):
         for filename in glob.glob('code_samples/*.js'):
             with open(filename, 'r') as f:
                 code_samples.append(f.read())
+    elif args.lang == 'go':
+        for filename in glob.glob('code_samples/*.go'):
+            with open(filename, 'r') as f:
+                code_samples.append(f.read())
 
     # @todo: load lmodel and tokenizer from checkpoint
     # @todo: model_type in ProgramArguments
@@ -83,7 +87,7 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
     probe_model.eval()
 
     for c, code in enumerate(code_samples):
-        G, pre_code = code2ast(code, parser)
+        G, pre_code = code2ast(code, parser, args.lang)
         binary_ast = ast2binary(G)
         ds_current, cs_labels, _, us_labels = tree_to_distance(binary_ast, 0)
         tokens = get_tokens_ast(G, pre_code)

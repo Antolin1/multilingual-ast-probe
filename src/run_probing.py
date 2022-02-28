@@ -58,9 +58,9 @@ def run_probing_train(args: argparse.Namespace):
     test_set = load_dataset('json', data_files=data_files, split='test')
 
     # get d and c for each sample
-    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
 
     # get class labels-ids mapping for c and u
     labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
@@ -389,7 +389,7 @@ def run_probing_test(args):
     test_set = load_dataset('json', data_files=data_files, split='test')
 
     # get d and c for each sample
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser))
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
     test_set = test_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
     test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
 

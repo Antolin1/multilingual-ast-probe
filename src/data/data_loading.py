@@ -139,8 +139,8 @@ def create_splits(dataset_path, split):
             f3.write(json.dumps(js) + '\n')
 
 
-def convert_sample_to_features(code, parser):
-    G, pre_code = code2ast(code, parser)
+def convert_sample_to_features(code, parser, lang):
+    G, pre_code = code2ast(code, parser, lang)
     binary_ast = ast2binary(G)
     d, c, _, u = tree_to_distance(binary_ast, 0)
     code_tokens = get_tokens_ast(G, pre_code)

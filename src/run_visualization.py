@@ -150,7 +150,7 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
                 ax=axis[1])
         axis[1].set_title("Pred ast")
         plt.show()
-        plt.savefig(f'fig_{c}.png')
+        plt.savefig(f'fig_{c}_{args.lang}.png')
 
         labels_axis = [tokens[i] + '-' + tokens[i+1] for i in range(0, len(tokens) - 1)]
         figure, axis = plt.subplots(2, figsize=(15, 15))
@@ -164,7 +164,7 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         for ix, label in enumerate(cs_labels):
             axis[1].annotate(label, (labels_axis[ix], d_pred_current[ix]))
         plt.show()
-        plt.savefig(f'fig_{c}_syn_dis.png')
+        plt.savefig(f'fig_{c}_{args.lang}_syn_dis.png')
 
 
 

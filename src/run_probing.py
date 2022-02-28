@@ -180,6 +180,12 @@ def run_probing_train(args: argparse.Namespace):
                                  shuffle=False,
                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
                                  num_workers=8)
+
+    logger.info('Loading best model.')
+    checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
+    probe_model.load_state_dict(checkpoint)
+
+    logger.info('F1 score computation.')
     eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args)
     metrics['test_f1'].append(round(eval_f1_score, 4))
     logger.info(f'Test F1 score: {round(eval_f1_score, 4)}')

@@ -31,11 +31,14 @@ LANGUAGES = (
 )
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
+GO_LANGUAGE = Language('grammars/languages.so', 'go')
 
 PY_PARSER = Parser()
 PY_PARSER.set_language(PY_LANGUAGE)
 JS_PARSER = Parser()
 JS_PARSER.set_language(JS_LANGUAGE)
+GO_PARSER = Parser()
+GO_PARSER.set_language(GO_LANGUAGE)
 
 
 def download_codesearchnet_dataset(dataset_dir):
@@ -176,6 +179,8 @@ def compute_distinct_labels(dataset_path, args):
         parser = PY_PARSER
     elif lang == 'javascript':
         parser = JS_PARSER
+    elif lang == 'go':
+        parser = GO_PARSER
     else:
         parser = None
     if os.path.isfile(f'{dataset_path}/{lang}/categories.json'):

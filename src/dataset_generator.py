@@ -10,7 +10,7 @@ from transformers import AutoTokenizer
 from tree_sitter import Parser
 from datasets import load_dataset
 
-from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE
+from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE
 from data.code2ast import code2ast, get_tokens_ast, has_error
 from data.utils import match_tokenized_to_untokenized_roberta
 
@@ -48,7 +48,7 @@ def main():
     parser = argparse.ArgumentParser(description='Script for generating the dataset for probing')
     parser.add_argument("--dir", default="dataset", help="Path to save the dataset")
     parser.add_argument("--seed", help="seed.", type=int, default=123)
-    parser.add_argument("--lang", help="Language.", choices=['javascript', 'python'],
+    parser.add_argument("--lang", help="Language.", choices=['javascript', 'python', 'go'],
                         default="python")
     parser.add_argument("--download", help="If download the csn", action="store_true")
 
@@ -87,6 +87,8 @@ def main():
         parser_lang.set_language(PY_LANGUAGE)
     elif lang == 'javascript':
         parser_lang.set_language(JS_LANGUAGE)
+    elif lang == 'go':
+        parser_lang.set_language(GO_LANGUAGE)
 
     #filter dataset
     logger.info('Filtering dataset.')

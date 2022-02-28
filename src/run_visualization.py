@@ -8,7 +8,7 @@ from probe.utils import get_embeddings, align_function
 import networkx as nx
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
-from data import PY_LANGUAGE, JS_LANGUAGE
+from data import PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE
 from probe import ParserProbe
 import os
 from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
@@ -52,6 +52,8 @@ def run_visualization(args):
         parser.set_language(PY_LANGUAGE)
     elif args.lang == 'javascript':
         parser.set_language(JS_LANGUAGE)
+    elif args.lang == 'go':
+        parser.set_language(GO_LANGUAGE)
 
     #load the labels
     labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')

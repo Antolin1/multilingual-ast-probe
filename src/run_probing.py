@@ -12,7 +12,8 @@ from datasets import load_dataset
 from tree_sitter import Parser
 from tqdm import tqdm
 
-from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE
+from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE,\
+    GO_LANGUAGE
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.utils import match_tokenized_to_untokenized_roberta, \
     remove_comments_and_docstrings_java_js, remove_comments_and_docstrings_python
@@ -40,7 +41,7 @@ def filter_non_parse(code, lang):
     try:
         if lang == 'python':
             remove_comments_and_docstrings_python(code)
-        elif lang == 'javascript':
+        elif lang == 'javascript' or lang == 'go':
             remove_comments_and_docstrings_java_js(code)
         return True
     except:
@@ -58,6 +59,8 @@ def run_probing_train(args: argparse.Namespace):
         parser.set_language(PY_LANGUAGE)
     elif args.lang == 'javascript':
         parser.set_language(JS_LANGUAGE)
+    elif args.lang == 'go':
+        parser.set_language(GO_LANGUAGE)
 
     logger.info('Loading tokenizer')
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
@@ -380,6 +383,8 @@ def run_probing_test(args):
         parser.set_language(PY_LANGUAGE)
     elif args.lang == 'javascript':
         parser.set_language(JS_LANGUAGE)
+    elif args.lang == 'go':
+        parser.set_language(GO_LANGUAGE)
 
     logger.info('Loading tokenizer')
     os.environ["TOKENIZERS_PARALLELISM"] = "false"

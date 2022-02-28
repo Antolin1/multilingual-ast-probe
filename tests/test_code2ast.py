@@ -11,8 +11,10 @@ from src.data.utils import (remove_comments_and_docstrings_python,
 import networkx as nx
 import matplotlib.pyplot as plt
 
-def node_match_type_atts(n1,n2):
+
+def node_match_type_atts(n1, n2):
     return n1['type'] == n2['type']
+
 
 code = """'''Compute the maximum'''
 def max(a,b):
@@ -38,12 +40,36 @@ code_js_pre_expected = """function myFunction(p1, p2) {
 return p1 * p2;
 }"""
 
+code_go = """// Function to add two numbers
+func addTwoNumbers(x, y int) int {
+/*
+sdsd
+sdsds
+sdsdsd
+*/
+sum := x + y
+return sum
+}"""
+
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
+GO_LANGUAGE = Language('grammars/languages.so', 'go')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
+
 class Code2ast(unittest.TestCase):
+
+    def test_code2ast_go(self):
+        plt.figure()
+        plt.title('test_code2ast_go')
+        parser = Parser()
+        parser.set_language(GO_LANGUAGE)
+        G, pre_code = code2ast(code_go, parser, lang='javascript')
+        print(pre_code)
+        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
+        plt.show()
+        print(G.nodes(data=True))
 
     def test_preprocessing(self):
         code_pre = remove_comments_and_docstrings_python(code)
@@ -54,21 +80,21 @@ class Code2ast(unittest.TestCase):
     def test_code2ast(self):
         plt.figure()
         plt.title('test_code2ast')
-        G,_ = code2ast(code, parser)
-        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G,'type'), with_labels=True)
+        G, _ = code2ast(code, parser)
+        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
         self.assertEqual(26, len(G))
-    
+
     def test_dependency(self):
         plt.figure()
         plt.title('test_dependency')
         G, code_pre = code2ast(code, parser)
         enrich_ast_with_deps(G)
         T = get_dependency_tree(G)
-        nx.draw(nx.Graph(T), labels=nx.get_node_attributes(T,'type'), with_labels=True)
+        nx.draw(nx.Graph(T), labels=nx.get_node_attributes(T, 'type'), with_labels=True)
         plt.show()
         self.assertEqual(len(T), len(get_tokens_ast(G, code_pre)))
-    
+
     def test_distance_tokens_dep(self):
         G, pre_code = code2ast(code, parser)
         enrich_ast_with_deps(G)
@@ -77,7 +103,7 @@ class Code2ast(unittest.TestCase):
         self.assertEqual(len(code_tokens), matrix.shape[0])
         first_row = [0, 1, 1, 2, 2, 2, 2, 1, 1, 2, 3, 3, 2, 2, 3, 2, 3]
         self.assertEqual(first_row, list(matrix[0]))
-        
+
     def test_inverse(self):
         plt.figure()
         plt.title('test_inverse')
@@ -90,7 +116,7 @@ class Code2ast(unittest.TestCase):
         plt.show()
         self.assertEqual(len(T), len(T2))
         self.assertTrue(nx.is_isomorphic(T2, nx.Graph(T)))
-    
+
     def test_eval(self):
         G, pre_code = code2ast(code, parser)
         enrich_ast_with_deps(G)
@@ -98,10 +124,10 @@ class Code2ast(unittest.TestCase):
         matrix, code_toks = get_matrix_and_tokens_dep(T, pre_code)
         T2 = get_tree_from_distances(matrix, code_toks)
         T_pred = nx.Graph(T2)
-        T_pred.remove_edge(8,15)
-        T_pred.add_edge(15,14)
+        T_pred.remove_edge(8, 15)
+        T_pred.add_edge(15, 14)
         self.assertAlmostEqual(get_uas(T2, T_pred),
-                               float(len(T_pred.edges)-1) / float(len(T_pred.edges)))
+                               float(len(T_pred.edges) - 1) / float(len(T_pred.edges)))
 
     def test_js(self):
         plt.figure()

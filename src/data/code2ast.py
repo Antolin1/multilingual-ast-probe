@@ -97,7 +97,7 @@ def code2ast(code, parser, lang='python'):
                       start = tree.root_node.start_byte,
                       end = tree.root_node.end_byte)
         get_graph_from_tree(tree.root_node, G, 0)
-    elif lang == 'javascript':
+    elif lang == 'javascript' or lang == 'go':
         code = remove_comments_and_docstrings_java_js(code)
         tree = parser.parse(bytes(code, "utf8"))
 

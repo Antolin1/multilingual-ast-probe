@@ -60,7 +60,7 @@ class ProgramArguments:
     )
 
     layer: Optional[int] = field(
-        default=3,
+        default=5,
         metadata={'help': 'Layer used to get the embeddings.'}
     )
 
@@ -84,15 +84,7 @@ class ProgramArguments:
         metadata={'help': 'Max tokens considered.'}
     )
 
-    type_probe: Optional[str] = field(
-        default='ast_probe',
-        metadata={'help': 'ast_probe, depth_probe, dep_probe'}
-    )
-
-
     download_csn: bool = field(default=False, metadata={'help': 'Download CodeSearchNet dataset.'})
-
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_visualization: bool = field(default=False, metadata={'help': 'Run visualizations.'})
-

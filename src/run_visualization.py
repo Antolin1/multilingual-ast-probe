@@ -133,10 +133,10 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
         prec_score, recall_score, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
-        _, recall_block, _ = get_precision_recall_f1(ground_truth_tree, pred_tree, filter_non_terminal='block')
+        #_, recall_block, _ = get_precision_recall_f1(ground_truth_tree, pred_tree, filter_non_terminal='block')
 
         logger.info(f'For code {c}, prec = {prec_score}, recall = {recall_score}, f1 = {f1_score}.')
-        logger.info(f'For code {c}, recall block = {recall_block}.')
+        #logger.info(f'For code {c}, recall block = {recall_block}.')
 
         recall_score = get_recall_non_terminal(ground_truth_tree, pred_tree)
         for k, s in recall_score.items():

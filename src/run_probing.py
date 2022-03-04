@@ -31,6 +31,7 @@ def generate_baseline(model):
     baseline.embeddings = model.embeddings
     return baseline
 
+
 def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
     logger.info('Running probing training.')
@@ -124,7 +125,7 @@ def run_probing_train(args: argparse.Namespace):
     probe_model.train()
     lmodel.eval()
     best_eval_loss = float('inf')
-    metrics = {'training_loss': [], 'validation_loss': [], 'validation_f1': [], 'test_f1': []}
+    metrics = {'training_loss': [], 'validation_loss': [], 'test_precision': None, 'test_recall': None, 'test_f1': None}
     patience_count = 0
     for epoch in range(1, args.epochs + 1):
         training_loss = 0.0
@@ -185,10 +186,13 @@ def run_probing_train(args: argparse.Namespace):
     checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
     probe_model.load_state_dict(checkpoint)
 
-    logger.info('F1 score computation.')
-    eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args)
-    metrics['test_f1'].append(round(eval_f1_score, 4))
-    logger.info(f'Test F1 score: {round(eval_f1_score, 4)}')
+    logger.info('Evaluating probing on test set.')
+    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args)
+    metrics['test_precision'] = round(eval_precision, 4)
+    metrics['test_recall'] = round(eval_recall, 4)
+    metrics['test_f1'] = round(eval_f1_score, 4)
+    logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
+                f'| test F1 score: {round(eval_f1_score, 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
@@ -275,9 +279,10 @@ def compute_hits_d(input, target, mask):
     hits = (((loss * mask) == 0) * mask).sum().item()
     return hits, mask.sum().item()
 
+
 def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
     probe_model.eval()
-    f1_scores = []
+    precisions, recalls, f1_scores = [], [], []
     with torch.no_grad():
         for step, batch in enumerate(tqdm(test_dataloader,
                                           desc='[test batch]',
@@ -312,10 +317,13 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels, [str(i) for i in range(len_tokens)])
                 pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
-                _, _, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
+                p, r, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
                 f1_scores.append(f1_score)
+                precisions.append(p)
+                recalls.append(r)
 
-    return np.mean(f1_scores)
+    return np.mean(precisions), np.mean(recalls), np.mean(f1_scores)
+
 
 def run_probing_eval_recall_non_terminal(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
     probe_model.eval()

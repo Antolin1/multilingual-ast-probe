@@ -45,7 +45,7 @@ class ProgramArguments:
     )
 
     epochs: Optional[int] = field(
-        default=30,
+        default=20,
         metadata={'help': 'Number of training epochs.'}
     )
 

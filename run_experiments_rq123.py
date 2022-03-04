@@ -18,8 +18,8 @@ def main():
             else:
                 layers = list(range(1, 13))
             for layer in layers:
-                folder = '_'.join([folder, lang, str(layer), '128'])
-                os.system(f"CUDA_VISIBLE_DEVICES=3 python src/main.py --do_train --run_name {folder} "
+                run_name = '_'.join([folder, lang, str(layer), '128'])
+                os.system(f"CUDA_VISIBLE_DEVICES=3 python src/main.py --do_train --run_name {run_name} "
                             f"--pretrained_model_name_or_path {model} "
                             f"--model_type {model_type} --lang {lang} "
                             f"--layer {layer} --rank 128")

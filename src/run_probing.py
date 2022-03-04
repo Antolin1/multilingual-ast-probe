@@ -12,7 +12,7 @@ from datasets import load_dataset
 from tree_sitter import Parser
 from tqdm import tqdm
 
-from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE,\
+from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE, \
     GO_LANGUAGE
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.utils import match_tokenized_to_untokenized_roberta, \
@@ -148,6 +148,9 @@ def run_probing_train(args: argparse.Namespace):
                 u_real=us.to(args.device),
                 length_batch=batch_len_tokens.to(args.device))
 
+            reg = args.orthogonal_reg * (torch.norm(torch.matmul(torch.transpose(probe_model.proj, 0, 1), probe_model.proj)
+                                                    - torch.eye(args.rank).to(args.device)) ** 2)
+            loss += reg
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -187,7 +190,8 @@ def run_probing_train(args: argparse.Namespace):
     probe_model.load_state_dict(checkpoint)
 
     logger.info('Evaluating probing on test set.')
-    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args)
+    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                     ids_to_labels_c, ids_to_labels_u, args)
     metrics['test_precision'] = round(eval_precision, 4)
     metrics['test_recall'] = round(eval_recall, 4)
     metrics['test_f1'] = round(eval_f1_score, 4)
@@ -262,7 +266,7 @@ def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
             total_hits_d += hits_d
             total_d += total_d_current
 
-            #compute the accuracy on d
+            # compute the accuracy on d
 
     acc_u = float(total_hits_u) / float(total_u)
     acc_c = float(total_hits_c) / float(total_c)
@@ -311,10 +315,12 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 scores_c_labels = [ids_to_labels_c[s] for s in score_c_current]
                 scores_u_labels = [ids_to_labels_u[s] for s in score_u_current]
 
-                ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels, [str(i) for i in range(len_tokens)])
+                ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels,
+                                                     [str(i) for i in range(len_tokens)])
                 ground_truth_tree = extend_complex_nodes(add_unary(remove_empty_nodes(ground_truth_tree)))
 
-                pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels, [str(i) for i in range(len_tokens)])
+                pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels,
+                                             [str(i) for i in range(len_tokens)])
                 pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
                 p, r, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
@@ -356,10 +362,12 @@ def run_probing_eval_recall_non_terminal(test_dataloader, probe_model, lmodel, i
                 scores_c_labels = [ids_to_labels_c[s] for s in score_c_current]
                 scores_u_labels = [ids_to_labels_u[s] for s in score_u_current]
 
-                ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels, [str(i) for i in range(len_tokens)])
+                ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels,
+                                                     [str(i) for i in range(len_tokens)])
                 ground_truth_tree = extend_complex_nodes(add_unary(remove_empty_nodes(ground_truth_tree)))
 
-                pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels, [str(i) for i in range(len_tokens)])
+                pred_tree = distance_to_tree(d_pred_current, scores_c_labels, scores_u_labels,
+                                             [str(i) for i in range(len_tokens)])
                 pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
                 recall_score = get_recall_non_terminal(ground_truth_tree, pred_tree)
@@ -398,7 +406,6 @@ def run_probing_test(args):
         ids_to_labels_c = data['ids_to_labels_c']
         labels_to_ids_u = data['labels_to_ids_u']
         ids_to_labels_u = data['ids_to_labels_u']
-
 
     test_set = load_dataset('json', data_files=data_files, split='test')
 
@@ -442,5 +449,5 @@ def run_probing_test(args):
     recall_dict = run_probing_eval_recall_non_terminal(test_dataloader, probe_model, lmodel,
                                                        ids_to_labels_c, ids_to_labels_u, args)
 
-    for v, k in sorted(((v, k) for k,v in recall_dict.items()), reverse=True):
+    for v, k in sorted(((v, k) for k, v in recall_dict.items()), reverse=True):
         logger.info(f'Non-terminal {k} | recall {v}')

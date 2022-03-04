@@ -69,6 +69,11 @@ class ProgramArguments:
         metadata={'help': 'Maximum rank of the probe.'}
     )
 
+    orthogonal_reg: float = field(
+        default=5e-2,
+        metadata={'help': 'Orthogonal regularized term.'}
+    )
+
     hidden: Optional[int] = field(
         default=768,
         metadata={'help': 'Dimension of the feature word vectors.'}

@@ -5,6 +5,7 @@ figure.png
 dataset.zip
 dataset.jsonl
 dataset/
+runs_test
 
 #folders
 grammars

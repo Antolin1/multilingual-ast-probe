@@ -38,6 +38,13 @@ def main():
         )
         myPlot.save(f"myplot_{lang}.png", dpi=600)
 
+    for lang in ['python', 'go', 'javascript']:
+        for model in ['codebert', 'graphcodebert', 'codet5', 'codeberta', 'roberta']:
+            df_filtered = df[(df['lang'] == lang) & (df['model'] == model)]
+            row = df.iloc[df_filtered['f1'].idxmax()]
+            print(model, lang, row['layer'], row['f1'])
+
+
 
 if __name__ == '__main__':
     main()

@@ -4,7 +4,7 @@ import os
 import pickle
 
 import pandas as pd
-from plotnine import ggplot, aes, geom_line
+from plotnine import ggplot, aes, geom_line, scale_x_continuous
 
 
 def main():
@@ -18,6 +18,8 @@ def main():
         model, lang, layer, rank = parent.split('_')
         with open(file, 'rb') as f:
             results = pickle.load(f)
+        if model == 'codebert0':
+            model = 'codebert-baseline'
         data['model'].append(model)
         data['lang'].append(lang)
         data['layer'].append(int(layer))
@@ -27,13 +29,14 @@ def main():
         data['f1'].append(results['test_f1'])
 
     df = pd.DataFrame(data)
-    print(df[df['lang'] == 'python'])
-    myPlot = (
-            ggplot(df[df['lang'] == 'python'])  # What data to use
-            + aes(x="layer", y="f1", color='model')  # What variable to use
-            + geom_line()  # Geometric object to use for drawing
-    )
-    myPlot.save("myplot.png", dpi=600)
+    for lang in ['python', 'go', 'javascript']:
+        myPlot = (
+                ggplot(df[df['lang'] == lang])
+                + aes(x="layer", y="f1", color='model')
+                + geom_line()
+                + scale_x_continuous(breaks=range(0, 13, 1))
+        )
+        myPlot.save(f"myplot_{lang}.png", dpi=600)
 
 
 if __name__ == '__main__':

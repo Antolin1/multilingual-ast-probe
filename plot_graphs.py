@@ -12,10 +12,16 @@ def main():
     parser.add_argument('--run_dir', default='./runs', help='Path of the run logs')
     args = parser.parse_args()
 
-    data = {'model': [], 'lang': [], 'layer': [], 'rank': [], 'precision': [], 'recall': [], 'f1': []}
+    data = {'model': [], 'lang': [], 'layer': [], 'rank': [],
+            'precision': [], 'recall': [], 'f1': [], 'rq4': []}
     for file in glob.glob(args.run_dir + "/*/metrics.log"):
         parent = os.path.dirname(file).split('/')[-1]
-        model, lang, layer, rank = parent.split('_')
+        rq4 = False
+        if '_rq4' not in parent:
+            model, lang, layer, rank = parent.split('_')
+        else:
+            model, lang, layer, rank, _ = parent.split('_')
+            rq4 = True
         with open(file, 'rb') as f:
             results = pickle.load(f)
         if model == 'codebert0':
@@ -27,11 +33,12 @@ def main():
         data['precision'].append(results['test_precision'])
         data['recall'].append(results['test_recall'])
         data['f1'].append(results['test_f1'])
+        data['rq4'].append(rq4)
 
     df = pd.DataFrame(data)
     for lang in ['python', 'go', 'javascript']:
         myPlot = (
-                ggplot(df[df['lang'] == lang])
+                ggplot(df[(df['lang'] == lang) & (df['rq4'] == False)])
                 + aes(x="layer", y="f1", color='model')
                 + geom_line()
                 + scale_x_continuous(breaks=range(0, 13, 1))
@@ -44,6 +51,14 @@ def main():
             row = df.iloc[df_filtered['f1'].idxmax()]
             print(model, lang, row['layer'], row['f1'])
 
+    for lang in ['python', 'go', 'javascript']:
+        myPlot = (
+                ggplot(df[(df['lang'] == lang) & (df['rq4'] != False)])
+                + aes(x="rank", y="f1", color='model')
+                + geom_line()
+                + scale_x_continuous(trans='log2')
+        )
+        myPlot.save(f"myplot_rank_{lang}.png", dpi=600)
 
 
 if __name__ == '__main__':

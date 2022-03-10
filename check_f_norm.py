@@ -11,12 +11,14 @@ def main():
     args = parser.parse_args()
 
     for file in glob.glob(args.run_dir + "/*/pytorch_model.bin"):
-        checkpoint = torch.load(file)
+        checkpoint = torch.load(file, map_location=torch.device('cpu'))
         proj = checkpoint['proj'].cpu().detach().numpy()
         mult = np.matmul(proj.T, proj)
-        print(np.round(mult, 3))
+       # print(np.round(mult, 3))
         print(file)
-        print(np.linalg.norm(mult - np.eye(mult.shape[0]), 'fro'))
+        print('Fro norm', np.linalg.norm(mult - np.eye(mult.shape[0]), 'fro'))
+        print('Inf norm', np.linalg.norm(mult - np.eye(mult.shape[0]), np.inf))
+        print('Inf norm normalized', np.linalg.norm(mult - np.eye(mult.shape[0]), np.inf)/mult.shape[0])
 
 
 if __name__ == '__main__':

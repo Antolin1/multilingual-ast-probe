@@ -70,7 +70,7 @@ class ProgramArguments:
     )
 
     orthogonal_reg: float = field(
-        default=5e-2,
+        default=5,
         metadata={'help': 'Orthogonal regularized term.'}
     )
 

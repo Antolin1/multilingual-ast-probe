@@ -23,11 +23,11 @@ def main():
 def get_layer_model(lang, folder):
     if lang == 'python':
         if folder == 'codebert':
-            return 4
+            return 5
         if folder == 'graphcodebert':
             return 4
         if folder == 'codet5':
-            return 6
+            return 7
         if folder == 'codeberta':
             return 5
         if folder == 'roberta':
@@ -36,9 +36,9 @@ def get_layer_model(lang, folder):
         if folder == 'codebert':
             return 4
         if folder == 'graphcodebert':
-            return 4
+            return 5
         if folder == 'codet5':
-            return 7
+            return 8
         if folder == 'codeberta':
             return 4
         if folder == 'roberta':
@@ -51,7 +51,7 @@ def get_layer_model(lang, folder):
         if folder == 'codet5':
             return 6
         if folder == 'codeberta':
-            return 4
+            return 5
         if folder == 'roberta':
             return 8
 

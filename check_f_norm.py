@@ -19,6 +19,7 @@ def main():
         print('Fro norm', np.linalg.norm(mult - np.eye(mult.shape[0]), 'fro'))
         print('Inf norm', np.linalg.norm(mult - np.eye(mult.shape[0]), np.inf))
         print('Inf norm normalized', np.linalg.norm(mult - np.eye(mult.shape[0]), np.inf)/mult.shape[0])
+        print(np.linalg.norm(mult - np.eye(mult.shape[0]), 'fro') < 0.05)
 
 
 if __name__ == '__main__':

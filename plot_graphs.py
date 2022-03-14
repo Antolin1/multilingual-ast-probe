@@ -46,10 +46,12 @@ def main():
         myPlot.save(f"myplot_{lang}.png", dpi=600)
 
     for lang in ['python', 'go', 'javascript']:
-        for model in ['codebert', 'graphcodebert', 'codet5', 'codeberta', 'roberta']:
+        for model in ['codebert', 'graphcodebert', 'codet5', 'codeberta', 'roberta', 'codebert-baseline']:
             df_filtered = df[(df['lang'] == lang) & (df['model'] == model)]
             row = df.iloc[df_filtered['f1'].idxmax()]
-            print(model, lang, row['layer'], row['f1'])
+            print(model, lang, row['layer'], row['precision'], row['recall'], row['f1'])
+            if model == 'codebert-baseline':
+                print(df[(df['lang'] == lang) & (df['model'] == model)])
 
     for lang in ['python', 'go', 'javascript']:
         myPlot = (

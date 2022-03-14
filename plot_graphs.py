@@ -4,7 +4,7 @@ import os
 import pickle
 
 import pandas as pd
-from plotnine import ggplot, aes, geom_line, scale_x_continuous
+from plotnine import ggplot, aes, geom_line, scale_x_continuous, labs
 
 
 def main():
@@ -36,14 +36,21 @@ def main():
         data['rq4'].append(rq4)
 
     df = pd.DataFrame(data)
+    df_renamed = df.replace({'codebert': 'CodeBERT',
+                             'codebert-baseline': 'CodeBERTrand',
+                             'codeberta': 'CodeBERTa',
+                             'codet5': 'CodeT5',
+                             'graphcodebert': 'GraphCodeBERT',
+                             'roberta': 'RoBERTa'})
     for lang in ['python', 'go', 'javascript']:
         myPlot = (
-                ggplot(df[(df['lang'] == lang) & (df['rq4'] == False)])
+                ggplot(df_renamed[(df_renamed['lang'] == lang) & (df_renamed['rq4'] == False)])
                 + aes(x="layer", y="f1", color='model')
                 + geom_line()
                 + scale_x_continuous(breaks=range(0, 13, 1))
+                + labs(x="Layer", y="F1", color="Model")
         )
-        myPlot.save(f"myplot_{lang}.png", dpi=600)
+        myPlot.save(f"myplot_{lang}.pdf", dpi=600)
 
     for lang in ['python', 'go', 'javascript']:
         for model in ['codebert', 'graphcodebert', 'codet5', 'codeberta', 'roberta', 'codebert-baseline']:
@@ -60,7 +67,7 @@ def main():
                 + geom_line()
                 + scale_x_continuous(trans='log2')
         )
-        myPlot.save(f"myplot_rank_{lang}.png", dpi=600)
+        myPlot.save(f"myplot_rank_{lang}.pdf", dpi=600)
 
 
 if __name__ == '__main__':

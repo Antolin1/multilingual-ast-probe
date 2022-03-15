@@ -10,7 +10,7 @@ from transformers import HfArgumentParser
 from prettytable import PrettyTable
 
 from args import ProgramArguments
-from run_probing import run_probing_train, run_probing_test
+from run_probing import run_probing_train, run_probing_test, run_probing_direct_transfer_train
 from run_visualization import run_visualization
 
 
@@ -23,6 +23,8 @@ def main(args):
         run_probing_test(args=args)
     elif args.do_visualization:
         run_visualization(args=args)
+    elif args.do_train_direct_transfer:
+        run_probing_direct_transfer_train(args=args)
     else:
         raise ValueError('--do_train or --do_test should be provided.')
 

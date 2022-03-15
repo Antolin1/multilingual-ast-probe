@@ -28,6 +28,10 @@ class ProgramArguments:
         default=None,
         metadata={'help': 'Model checkpoint directory.'}
     )
+    model_source_checkpoint: Optional[str] = field(
+        default=None,
+        metadata={'help': 'Model source checkpoint directory for direct transfer.'}
+    )
 
     dataset_name_or_path: Optional[str] = field(
         default='./dataset',
@@ -93,3 +97,4 @@ class ProgramArguments:
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_visualization: bool = field(default=False, metadata={'help': 'Run visualizations.'})
+    do_train_direct_transfer: bool = field(default=False, metadata={'help': 'Run probe training direct transfer.'})

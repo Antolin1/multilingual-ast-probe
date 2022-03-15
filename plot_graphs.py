@@ -4,7 +4,9 @@ import os
 import pickle
 
 import pandas as pd
-from plotnine import ggplot, aes, geom_line, scale_x_continuous, labs
+from plotnine import ggplot, aes, geom_line, \
+    scale_x_continuous, labs, scale_color_discrete, \
+    theme, element_text
 
 
 def main():
@@ -49,6 +51,13 @@ def main():
                 + geom_line()
                 + scale_x_continuous(breaks=range(0, 13, 1))
                 + labs(x="Layer", y="F1", color="Model")
+                + scale_color_discrete(breaks=['GraphCodeBERT',
+                                               'CodeBERT',
+                                               'CodeT5',
+                                               'RoBERTa',
+                                               'CodeBERTa',
+                                               'CodeBERTrand'])
+                + theme(text=element_text(size=16))
         )
         myPlot.save(f"myplot_{lang}.pdf", dpi=600)
 
@@ -62,10 +71,18 @@ def main():
 
     for lang in ['python', 'go', 'javascript']:
         myPlot = (
-                ggplot(df[(df['lang'] == lang) & (df['rq4'] != False)])
+                ggplot(df_renamed[(df_renamed['lang'] == lang) & (df_renamed['rq4'] != False)])
                 + aes(x="rank", y="f1", color='model')
                 + geom_line()
                 + scale_x_continuous(trans='log2')
+                + labs(x="Rank", y="F1", color="Model")
+                + scale_color_discrete(breaks=['GraphCodeBERT',
+                                               'CodeBERT',
+                                               'CodeT5',
+                                               'RoBERTa',
+                                               'CodeBERTa',
+                                               'CodeBERTrand'])
+                + theme(text=element_text(size=16))
         )
         myPlot.save(f"myplot_rank_{lang}.pdf", dpi=600)
 

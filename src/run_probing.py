@@ -545,7 +545,7 @@ def run_probing_direct_transfer_train(args):
 
     optimizer = torch.optim.Adam([probe_model.vectors_c, probe_model.vectors_u], lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
-    criterion = ParserLoss(loss='rank')
+    criterion = ParserLoss(loss='rank', pretrained=True)
 
     probe_model.train()
     lmodel.eval()
@@ -573,10 +573,6 @@ def run_probing_direct_transfer_train(args):
                 u_real=us.to(args.device),
                 length_batch=batch_len_tokens.to(args.device))
 
-            reg = args.orthogonal_reg * (
-                        torch.norm(torch.matmul(torch.transpose(probe_model.proj, 0, 1), probe_model.proj)
-                                   - torch.eye(args.rank).to(args.device)) ** 2)
-            loss += reg
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()

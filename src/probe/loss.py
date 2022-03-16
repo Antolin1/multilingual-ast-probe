@@ -79,10 +79,11 @@ class L1DepthLoss(nn.Module):
 
 
 class ParserLoss(nn.Module):
-    def __init__(self, loss='l1'):
+    def __init__(self, loss='l1', pretrained=False):
         super(ParserLoss, self).__init__()
         self.cs = nn.CrossEntropyLoss(ignore_index=-1)
         self.loss = loss
+        self.pretrained = pretrained
 
     def forward(self, d_pred, scores_c, scores_u, d_real, c_real, u_real, length_batch):
         total_sents = torch.sum(length_batch != 0).float()
@@ -102,7 +103,10 @@ class ParserLoss(nn.Module):
             loss_d = rankloss(d_pred, d_real, mask, exp=False)
         loss_c = self.cs(scores_c.view(-1, scores_c.shape[2]), c_real.view(-1))
         loss_u = self.cs(scores_u.view(-1, scores_u.shape[2]), u_real.view(-1))
-        return loss_c + loss_d + loss_u
+        if self.pretrained:
+            return loss_c + loss_u
+        else:
+            return loss_c + loss_d + loss_u
 
 
 def rankloss(input, target, mask, exp=False):

@@ -1,7 +1,9 @@
 import networkx as nx
 from scipy.stats import spearmanr
 
-from .utils import remove_comments_and_docstrings_python, remove_comments_and_docstrings_java_js
+from .utils import remove_comments_and_docstrings_python, \
+    remove_comments_and_docstrings_java_js, \
+    remove_comments_php
 
 
 #aux function, get a new id in the graph
@@ -93,6 +95,17 @@ def code2ast(code, parser, lang='python'):
         get_graph_from_tree(tree.root_node, G, 0)
     elif lang == 'javascript' or lang == 'go':
         code = remove_comments_and_docstrings_java_js(code)
+        tree = parser.parse(bytes(code, "utf8"))
+
+        G = nx.DiGraph()
+        # add root
+        G.add_node(0, type=tree.root_node.type,
+                   is_terminal=False,
+                   start=tree.root_node.start_byte,
+                   end=tree.root_node.end_byte)
+        get_graph_from_tree(tree.root_node, G, 0)
+    elif lang == 'php':
+        code = remove_comments_php(code)
         tree = parser.parse(bytes(code, "utf8"))
 
         G = nx.DiGraph()

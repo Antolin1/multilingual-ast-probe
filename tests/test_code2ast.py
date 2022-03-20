@@ -57,7 +57,7 @@ return sum
 }"""
 
 code_php = """function writeMsg() {
-  echo "Hello world!";
+  echo 'Hello world!';
 }"""
 
 code_ruby = """def initialize(n, a)
@@ -93,7 +93,9 @@ class Code2ast(unittest.TestCase):
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
         print(G.nodes(data=True))
-        print(get_tokens_ast(G, pre_code))
+        tokens = get_tokens_ast(G, pre_code)
+        print(tokens)
+        self.assertTrue('"mystr"' in tokens)
 
     def test_code2ast_php(self):
         plt.figure()
@@ -105,7 +107,9 @@ class Code2ast(unittest.TestCase):
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
         print(G.nodes(data=True))
-        print(get_tokens_ast(G, pre_code))
+        tokens = get_tokens_ast(G, pre_code)
+        print(tokens)
+        self.assertTrue("'Hello world!'" in tokens)
 
     def test_code2ast_ruby(self):
         plt.figure()
@@ -117,7 +121,9 @@ class Code2ast(unittest.TestCase):
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
         print(G.nodes(data=True))
-        print(get_tokens_ast(G, pre_code))
+        tokens = get_tokens_ast(G, pre_code)
+        print(tokens)
+        self.assertTrue('"smith"' in tokens)
 
     def test_code2ast_go(self):
         plt.figure()
@@ -129,7 +135,9 @@ class Code2ast(unittest.TestCase):
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
         print(G.nodes(data=True))
-        print(get_tokens_ast(G, pre_code))
+        tokens = get_tokens_ast(G, pre_code)
+        print(tokens)
+        self.assertTrue('"str"' in tokens)
 
     def test_preprocessing(self):
         code_pre = remove_comments_and_docstrings_python(code)
@@ -137,9 +145,9 @@ class Code2ast(unittest.TestCase):
         code_pre = remove_comments_and_docstrings_java_js(code_js)
         self.assertEqual(code_js_pre_expected, code_pre)
 
-    def test_code2ast(self):
+    def test_code2ast_python(self):
         plt.figure()
-        plt.title('test_code2ast')
+        plt.title('test_code2ast_python')
         G, _ = code2ast(code, parser)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
@@ -175,12 +183,6 @@ class Code2ast(unittest.TestCase):
         parser.set_language(JS_LANGUAGE)
         G, _ = code2ast(code_js, parser, 'javascript')
         nx.draw(G, labels=nx.get_node_attributes(G, 'type'), with_labels=True)
-        plt.show()
-        plt.figure()
-        plt.title('test_js II')
-        enrich_ast_with_deps(G)
-        T = get_dependency_tree(G)
-        nx.draw(T, labels=nx.get_node_attributes(T, 'type'), with_labels=True)
         plt.show()
 
     def test_str_ast(self):

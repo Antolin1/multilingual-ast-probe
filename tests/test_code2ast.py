@@ -18,6 +18,7 @@ def node_match_type_atts(n1, n2):
 
 code = """'''Compute the maximum'''
 def max(a,b):
+    s = "string"
     #compare a and b
     if a > b:
         return a
@@ -25,6 +26,7 @@ def max(a,b):
 """
 
 code_pre_expected = """def max(a,b):
+    s = "string"
     if a > b:
         return a
     return b"""
@@ -32,11 +34,13 @@ code_pre_expected = """def max(a,b):
 code_js = """function myFunction(p1, p2) {
 /* multi-line
 comments */
+s = "string"
 return p1 * p2;// The function returns the product of p1 and p2
 }"""
 plt.show()
 code_js_pre_expected = """function myFunction(p1, p2) {
 
+s = "string"
 return p1 * p2;
 }"""
 
@@ -47,29 +51,85 @@ sdsd
 sdsds
 sdsdsd
 */
+s = "str"
 sum := x + y
 return sum
 }"""
 
+code_php = """function writeMsg() {
+  echo "Hello world!";
+}"""
+
+code_ruby = """def initialize(n, a)
+@name = n
+@surname = "smith"
+@age  = a * DOG_YEARS
+end"""
+
+code_java = """public void myMethod() {
+    String mystr = "mystr";
+}"""
+
+
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
 GO_LANGUAGE = Language('grammars/languages.so', 'go')
+PHP_LANGUAGE = Language('grammars/languages.so', 'php')
+RUBY_LANGUAGE = Language('grammars/languages.so', 'ruby')
+JAVA_LANGUAGE = Language('grammars/languages.so', 'java')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
 
 class Code2ast(unittest.TestCase):
 
+    def test_code2ast_java(self):
+        plt.figure()
+        plt.title('test_code2ast_java')
+        parser = Parser()
+        parser.set_language(JAVA_LANGUAGE)
+        G, pre_code = code2ast(code_java, parser, lang='java')
+        print(pre_code)
+        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
+        plt.show()
+        print(G.nodes(data=True))
+        print(get_tokens_ast(G, pre_code))
+
+    def test_code2ast_php(self):
+        plt.figure()
+        plt.title('test_code2ast_php')
+        parser = Parser()
+        parser.set_language(PHP_LANGUAGE)
+        G, pre_code = code2ast(code_php, parser, lang='php')
+        print(pre_code)
+        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
+        plt.show()
+        print(G.nodes(data=True))
+        print(get_tokens_ast(G, pre_code))
+
+    def test_code2ast_ruby(self):
+        plt.figure()
+        plt.title('test_code2ast_ruby')
+        parser = Parser()
+        parser.set_language(RUBY_LANGUAGE)
+        G, pre_code = code2ast(code_ruby, parser, lang='ruby')
+        print(pre_code)
+        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
+        plt.show()
+        print(G.nodes(data=True))
+        print(get_tokens_ast(G, pre_code))
+
     def test_code2ast_go(self):
         plt.figure()
         plt.title('test_code2ast_go')
         parser = Parser()
         parser.set_language(GO_LANGUAGE)
-        G, pre_code = code2ast(code_go, parser, lang='javascript')
+        G, pre_code = code2ast(code_go, parser, lang='go')
         print(pre_code)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
         print(G.nodes(data=True))
+        print(get_tokens_ast(G, pre_code))
 
     def test_preprocessing(self):
         code_pre = remove_comments_and_docstrings_python(code)
@@ -83,7 +143,7 @@ class Code2ast(unittest.TestCase):
         G, _ = code2ast(code, parser)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
-        self.assertEqual(26, len(G))
+        self.assertEqual(31, len(G))
 
     def test_dependency(self):
         plt.figure()
@@ -94,15 +154,6 @@ class Code2ast(unittest.TestCase):
         nx.draw(nx.Graph(T), labels=nx.get_node_attributes(T, 'type'), with_labels=True)
         plt.show()
         self.assertEqual(len(T), len(get_tokens_ast(G, code_pre)))
-
-    def test_distance_tokens_dep(self):
-        G, pre_code = code2ast(code, parser)
-        enrich_ast_with_deps(G)
-        T = get_dependency_tree(G)
-        matrix, code_tokens = get_matrix_and_tokens_dep(T, pre_code)
-        self.assertEqual(len(code_tokens), matrix.shape[0])
-        first_row = [0, 1, 1, 2, 2, 2, 2, 1, 1, 2, 3, 3, 2, 2, 3, 2, 3]
-        self.assertEqual(first_row, list(matrix[0]))
 
     def test_inverse(self):
         plt.figure()
@@ -116,18 +167,6 @@ class Code2ast(unittest.TestCase):
         plt.show()
         self.assertEqual(len(T), len(T2))
         self.assertTrue(nx.is_isomorphic(T2, nx.Graph(T)))
-
-    def test_eval(self):
-        G, pre_code = code2ast(code, parser)
-        enrich_ast_with_deps(G)
-        T = get_dependency_tree(G)
-        matrix, code_toks = get_matrix_and_tokens_dep(T, pre_code)
-        T2 = get_tree_from_distances(matrix, code_toks)
-        T_pred = nx.Graph(T2)
-        T_pred.remove_edge(8, 15)
-        T_pred.add_edge(15, 14)
-        self.assertAlmostEqual(get_uas(T2, T_pred),
-                               float(len(T_pred.edges) - 1) / float(len(T_pred.edges)))
 
     def test_js(self):
         plt.figure()
@@ -143,13 +182,6 @@ class Code2ast(unittest.TestCase):
         T = get_dependency_tree(G)
         nx.draw(T, labels=nx.get_node_attributes(T, 'type'), with_labels=True)
         plt.show()
-
-    def test_distance_ast(self):
-        G, pre_code = code2ast(code, parser)
-        first_row = [0, 2, 3, 3, 3, 3, 3, 2, 4, 5, 5, 5, 4, 6, 6, 4, 4]
-        depths = [2, 2, 3, 3, 3, 3, 3, 2, 4, 5, 5, 5, 4, 6, 6, 4, 4]
-        self.assertEqual(first_row, list(get_matrix_tokens_ast(G, pre_code)[0][0]))
-        self.assertEqual(depths, list(get_depths_tokens_ast(G, pre_code)[0]))
 
     def test_str_ast(self):
         code = """def split_phylogeny(p, level="s"):

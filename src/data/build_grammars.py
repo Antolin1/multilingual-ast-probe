@@ -9,7 +9,8 @@ Language.build_library(
     'grammars/tree-sitter-python',
     'grammars/tree-sitter-javascript',
     'grammars/tree-sitter-go',
-    'grammars/tree-sitter-c-sharp',
-    'grammars/tree-sitter-php'
+    'grammars/tree-sitter-php',
+    'grammars/tree-sitter-ruby',
+    'grammars/tree-sitter-java'
   ]
 )

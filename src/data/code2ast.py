@@ -72,7 +72,7 @@ def get_tokens_dep(T, code):
 
 
 def solve_string_problems(G):
-    strings = [n for n in G if (G.nodes[n]['type'] == 'string' or 'string_literal' in G.nodes[n]['type'])
+    strings = [n for n in G if (G.nodes[n]['type'] == 'string' or ('string_literal' in G.nodes[n]['type']))
                and not G.nodes[n]['is_terminal']]
     for n in strings:
         if n not in G:

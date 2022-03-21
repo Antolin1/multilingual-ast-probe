@@ -98,9 +98,14 @@ if __name__ == '__main__':
     dataset = dataset.shuffle(args.seed)
 
     logger.info('Splitting dataset.')
-    train_dataset = dataset.select(range(0, 20000))
-    test_dataset = dataset.select(range(20000, 24000))
-    val_dataset = dataset.select(range(24000, 26000))
+    if args.lang == 'ruby':
+        train_dataset = dataset.select(range(0, 10000))
+        test_dataset = dataset.select(range(10000, 12000))
+        val_dataset = dataset.select(range(12000, 13000))
+    else:
+        train_dataset = dataset.select(range(0, 20000))
+        test_dataset = dataset.select(range(20000, 24000))
+        val_dataset = dataset.select(range(24000, 26000))
 
     logger.info('Storing dataset.')
     train_dataset.to_json(os.path.join(args.dataset_dir, args.lang, 'train.jsonl'))

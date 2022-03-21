@@ -61,9 +61,19 @@ code_php = """function writeMsg() {
 }"""
 
 code_ruby = """def initialize(n, a)
+# this is a comment
 @name = n
+# this is another comment
 @surname = "smith"
 @age  = a * DOG_YEARS
+
+#!/usr/bin/ruby -w
+# This is a single line comment.
+
+=begin
+This is a multiline comment and con spwan as many lines as you
+like.
+=end
 end"""
 
 code_java = """public void myMethod() {

@@ -10,7 +10,8 @@ from transformers import AutoTokenizer
 from tree_sitter import Parser
 from datasets import load_dataset
 
-from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE, PHP_LANGUAGE
+from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE, \
+    PHP_LANGUAGE, JAVA_LANGUAGE, RUBY_LANGUAGE
 from data.code2ast import code2ast, get_tokens_ast, has_error
 from data.utils import match_tokenized_to_untokenized_roberta
 
@@ -43,7 +44,8 @@ def filter_samples(code, max_length, lang, parser):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for generating the dataset for probing')
     parser.add_argument('--dataset_dir', default='./dataset', help='Path to save the dataset')
-    parser.add_argument('--lang', help='Language.', choices=['javascript', 'python', 'go', 'php'], default='python')
+    parser.add_argument('--lang', help='Language.', choices=['javascript', 'python', 'go', 'php', 'java', 'ruby'],
+                        default='python')
     parser.add_argument('--max_code_length', help='Maximum code length.', default=512)
     parser.add_argument('--download', help='If download the csn', action='store_true')
     parser.add_argument('--seed', help='seed.', type=int, default=123)
@@ -82,6 +84,10 @@ if __name__ == '__main__':
         parser_lang.set_language(GO_LANGUAGE)
     elif args.lang == 'php':
         parser_lang.set_language(PHP_LANGUAGE)
+    elif args.lang == 'java':
+        parser_lang.set_language(JAVA_LANGUAGE)
+    elif args.lang == 'ruby':
+        parser_lang.set_language(RUBY_LANGUAGE)
 
     # filter dataset
     logger.info('Filtering dataset.')

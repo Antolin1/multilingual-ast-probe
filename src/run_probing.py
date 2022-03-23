@@ -13,7 +13,7 @@ from tree_sitter import Parser
 from tqdm import tqdm
 
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE, \
-    GO_LANGUAGE
+    GO_LANGUAGE, JAVA_LANGUAGE, PHP_LANGUAGE, RUBY_LANGUAGE
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.utils import match_tokenized_to_untokenized_roberta, \
     remove_comments_and_docstrings_java_js, remove_comments_and_docstrings_python
@@ -45,6 +45,12 @@ def run_probing_train(args: argparse.Namespace):
         parser.set_language(JS_LANGUAGE)
     elif args.lang == 'go':
         parser.set_language(GO_LANGUAGE)
+    elif args.lang == 'java':
+        parser.set_language(JAVA_LANGUAGE)
+    elif args.lang == 'php':
+        parser.set_language(PHP_LANGUAGE)
+    elif args.lang == 'ruby':
+        parser.set_language(RUBY_LANGUAGE)
 
     logger.info('Loading tokenizer')
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
@@ -390,6 +396,12 @@ def run_probing_test(args):
         parser.set_language(JS_LANGUAGE)
     elif args.lang == 'go':
         parser.set_language(GO_LANGUAGE)
+    elif args.lang == 'java':
+        parser.set_language(JAVA_LANGUAGE)
+    elif args.lang == 'php':
+        parser.set_language(PHP_LANGUAGE)
+    elif args.lang == 'ruby':
+        parser.set_language(RUBY_LANGUAGE)
 
     logger.info('Loading tokenizer')
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -466,6 +478,12 @@ def run_probing_direct_transfer_train(args):
         parser.set_language(JS_LANGUAGE)
     elif args.lang == 'go':
         parser.set_language(GO_LANGUAGE)
+    elif args.lang == 'java':
+        parser.set_language(JAVA_LANGUAGE)
+    elif args.lang == 'php':
+        parser.set_language(PHP_LANGUAGE)
+    elif args.lang == 'ruby':
+        parser.set_language(RUBY_LANGUAGE)
 
     logger.info('Loading tokenizer')
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)

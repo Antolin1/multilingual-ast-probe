@@ -33,6 +33,8 @@ PY_LANGUAGE = Language('grammars/languages.so', 'python')
 JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
 GO_LANGUAGE = Language('grammars/languages.so', 'go')
 PHP_LANGUAGE = Language('grammars/languages.so', 'php')
+JAVA_LANGUAGE = Language('grammars/languages.so', 'java')
+RUBY_LANGUAGE = Language('grammars/languages.so', 'ruby')
 
 PY_PARSER = Parser()
 PY_PARSER.set_language(PY_LANGUAGE)
@@ -42,6 +44,10 @@ GO_PARSER = Parser()
 GO_PARSER.set_language(GO_LANGUAGE)
 PHP_PARSER = Parser()
 PHP_PARSER.set_language(PHP_LANGUAGE)
+JAVA_PARSER = Parser()
+JAVA_PARSER.set_language(JAVA_LANGUAGE)
+RUBY_PARSER = Parser()
+RUBY_PARSER.set_language(RUBY_LANGUAGE)
 
 
 def download_codesearchnet_dataset(dataset_dir):

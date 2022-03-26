@@ -29,12 +29,12 @@ def get_layer_model(lang, folder):
         if folder == 'codet5':
             return 7
         if folder == 'codeberta':
-            return 5
+            return 4
         if folder == 'roberta':
-            return 8
+            return 5
     if lang == 'go':
         if folder == 'codebert':
-            return 4
+            return 5
         if folder == 'graphcodebert':
             return 5
         if folder == 'codet5':
@@ -42,7 +42,7 @@ def get_layer_model(lang, folder):
         if folder == 'codeberta':
             return 4
         if folder == 'roberta':
-            return 8
+            return 5
     if lang == 'javascript':
         if folder == 'codebert':
             return 5

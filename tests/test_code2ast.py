@@ -158,10 +158,13 @@ class Code2ast(unittest.TestCase):
     def test_code2ast_python(self):
         plt.figure()
         plt.title('test_code2ast_python')
-        G, _ = code2ast(code, parser)
+        G, pre_code = code2ast(code, parser)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
         self.assertEqual(31, len(G))
+        tokens = get_tokens_ast(G, pre_code)
+        print(tokens)
+        self.assertTrue('"string"' in tokens)
 
     def test_dependency(self):
         plt.figure()
@@ -191,9 +194,13 @@ class Code2ast(unittest.TestCase):
         plt.title('test_js I')
         parser = Parser()
         parser.set_language(JS_LANGUAGE)
-        G, _ = code2ast(code_js, parser, 'javascript')
+        G, pre_code = code2ast(code_js, parser, 'javascript')
+        print(pre_code)
         nx.draw(G, labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
+        tokens = get_tokens_ast(G, pre_code)
+        print(tokens)
+        self.assertTrue('"string"' in tokens)
 
     def test_str_ast(self):
         code = """def split_phylogeny(p, level="s"):

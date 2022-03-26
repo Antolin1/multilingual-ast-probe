@@ -44,7 +44,7 @@ def main():
                              'codet5': 'CodeT5',
                              'graphcodebert': 'GraphCodeBERT',
                              'roberta': 'RoBERTa'})
-    for lang in ['python', 'go', 'javascript']:
+    for lang in ['python', 'javascript', 'go']:
         myPlot = (
                 ggplot(df_renamed[(df_renamed['lang'] == lang) & (df_renamed['rq4'] == False)])
                 + aes(x="layer", y="f1", color='model')
@@ -61,7 +61,7 @@ def main():
         )
         myPlot.save(f"myplot_{lang}.pdf", dpi=600)
 
-    for lang in ['python', 'go', 'javascript']:
+    for lang in ['python', 'javascript', 'go']:
         for model in ['codebert', 'graphcodebert', 'codet5', 'codeberta', 'roberta', 'codebert-baseline']:
             df_filtered = df[(df['lang'] == lang) & (df['model'] == model)]
             row = df.iloc[df_filtered['f1'].idxmax()]

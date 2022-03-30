@@ -63,7 +63,7 @@ def main():
 
     for lang in ['python', 'javascript', 'go']:
         for model in ['codebert', 'graphcodebert', 'codet5', 'codeberta', 'roberta', 'codebert-baseline']:
-            df_filtered = df[(df['lang'] == lang) & (df['model'] == model)]
+            df_filtered = df[(df['lang'] == lang) & (df['model'] == model) & (df['rq4'] == False)]
             row = df.iloc[df_filtered['f1'].idxmax()]
             print(model, lang, row['layer'], row['precision'], row['recall'], row['f1'])
             if model == 'codebert-baseline':

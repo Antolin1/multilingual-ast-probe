@@ -8,16 +8,17 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 from tree_sitter import Parser
 from tqdm import tqdm
 
 from data import convert_sample_to_features, PY_LANGUAGE, collator_fn, JS_LANGUAGE, \
-    GO_LANGUAGE, JAVA_LANGUAGE, PHP_LANGUAGE, RUBY_LANGUAGE
+    GO_LANGUAGE, JAVA_LANGUAGE, PHP_LANGUAGE, RUBY_LANGUAGE, \
+    PY_PARSER, GO_PARSER, JS_PARSER, PHP_PARSER, JAVA_PARSER, RUBY_PARSER, LANGUAGES
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.utils import match_tokenized_to_untokenized_roberta, \
     remove_comments_and_docstrings_java_js, remove_comments_and_docstrings_python
-from data.data_loading import get_non_terminals_labels, convert_to_ids
+from data.data_loading import get_non_terminals_labels, convert_to_ids, convert_to_ids_multilingual
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
     extend_complex_nodes, get_precision_recall_f1, add_unary, get_recall_non_terminal
 
@@ -154,8 +155,9 @@ def run_probing_train(args: argparse.Namespace):
                 u_real=us.to(args.device),
                 length_batch=batch_len_tokens.to(args.device))
 
-            reg = args.orthogonal_reg * (torch.norm(torch.matmul(torch.transpose(probe_model.proj, 0, 1), probe_model.proj)
-                                                    - torch.eye(args.rank).to(args.device)) ** 2)
+            reg = args.orthogonal_reg * (
+                    torch.norm(torch.matmul(torch.transpose(probe_model.proj, 0, 1), probe_model.proj)
+                               - torch.eye(args.rank).to(args.device)) ** 2)
             loss += reg
             loss.backward()
             optimizer.step()
@@ -632,6 +634,179 @@ def run_probing_direct_transfer_train(args):
     logger.info('Evaluating probing on test set.')
     eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
                                                                      ids_to_labels_c, ids_to_labels_u, args)
+    metrics['test_precision'] = round(eval_precision, 4)
+    metrics['test_recall'] = round(eval_recall, 4)
+    metrics['test_f1'] = round(eval_f1_score, 4)
+    logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
+                f'| test F1 score: {round(eval_f1_score, 4)}')
+
+    logger.info('-' * 100)
+    logger.info('Saving metrics.')
+    with open(os.path.join(args.output_path, 'metrics.log'), 'wb') as f:
+        pickle.dump(metrics, f)
+
+
+def run_probing_all_languages(args):
+    logger.info('-' * 100)
+    logger.info('Running probing hold one out.')
+    logger.info('-' * 100)
+
+    parsers = {
+        'python': PY_PARSER,
+        'javascript': JS_PARSER,
+        'go': GO_PARSER,
+        'php': PHP_PARSER,
+        'ruby': RUBY_PARSER,
+        'java': JAVA_PARSER
+    }
+
+    logger.info('Loading tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+
+    logger.info('Loading dataset from local file.')
+    data_files = {}
+    for lang in LANGUAGES:
+        data_files[f'train_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'train.jsonl')
+        data_files[f'valid_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'valid.jsonl')
+        data_files[f'test_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'test.jsonl')
+
+    data_sets = {x: load_dataset('json', data_files=data_files, split=x) for x, y in data_files.items()}
+    data_sets = {x: y.map(lambda e: convert_sample_to_features(e['original_string'], parsers[x.split('_')[1]],
+                                                               x.split('_')[1]))
+                 for x, y in data_sets.items()}
+
+    labels_c = []
+    labels_u = []
+    for lang in LANGUAGES:
+        labels_file_path = os.path.join(args.dataset_name_or_path, lang, 'labels.pkl')
+        with open(labels_file_path, 'rb') as f:
+            data = pickle.load(f)
+            labels_to_ids_c = data['labels_to_ids_c']
+            labels_to_ids_u = data['labels_to_ids_u']
+            labels_c += [x + '--' + lang for x in labels_to_ids_c.keys()]
+            labels_u += [x + '--' + lang for x in labels_to_ids_u.keys()]
+
+    # conversion to global labels
+    labels_to_ids_c_global = {x: y for x, y in enumerate(labels_c)}
+    ids_to_labels_c_global = {y: x for x, y in labels_to_ids_c_global.items()}
+    labels_to_ids_u_global = {x: y for x, y in enumerate(labels_u)}
+    ids_to_labels_u_global = {y: x for x, y in labels_to_ids_u_global.items()}
+
+    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['c'], 'c', labels_to_ids_c, x.split('_')[1]))
+                 for x, y in data_sets.items()}
+    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['u'], 'u', labels_to_ids_c, x.split('_')[1]))
+                 for x, y in data_sets.items()}
+
+    train_datasets = [y for x, y in data_sets.items() if 'train_' in x]
+    valid_datasets = [y for x, y in data_sets.items() if 'valid_' in x]
+    test_datasets = [y for x, y in data_sets.items() if 'test_' in x]
+
+    train_set = concatenate_datasets(train_datasets)
+    valid_set = concatenate_datasets(valid_datasets)
+    test_set = concatenate_datasets(test_datasets)
+
+    train_dataloader = DataLoader(dataset=train_set,
+                                  batch_size=args.batch_size,
+                                  shuffle=True,
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  num_workers=8)
+    valid_dataloader = DataLoader(dataset=valid_set,
+                                  batch_size=args.batch_size,
+                                  shuffle=False,
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  num_workers=8)
+
+    logger.info('Loading models.')
+    if args.model_type == 't5':
+        lmodel = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+    else:
+        lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+        if '-baseline' in args.run_name:
+            lmodel = generate_baseline(lmodel)
+    lmodel = lmodel.to(args.device)
+
+    probe_model = ParserProbe(
+        probe_rank=args.rank,
+        hidden_dim=args.hidden,
+        number_labels_c=len(labels_to_ids_c_global),
+        number_labels_u=len(labels_to_ids_u_global)).to(args.device)
+
+    optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
+    criterion = ParserLoss(loss='rank')
+
+    probe_model.train()
+    lmodel.eval()
+    best_eval_loss = float('inf')
+    metrics = {'training_loss': [], 'validation_loss': [], 'test_precision': None, 'test_recall': None, 'test_f1': None}
+    patience_count = 0
+    for epoch in range(1, args.epochs + 1):
+        training_loss = 0.0
+        for step, batch in enumerate(tqdm(train_dataloader,
+                                          desc='[training batch]',
+                                          bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
+            all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+
+            embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
+                                   args.model_type)
+            embds = align_function(embds.to(args.device), alignment.to(args.device))
+
+            d_pred, scores_c, scores_u = probe_model(embds.to(args.device))
+            loss = criterion(
+                d_pred=d_pred.to(args.device),
+                scores_c=scores_c.to(args.device),
+                scores_u=scores_u.to(args.device),
+                d_real=ds.to(args.device),
+                c_real=cs.to(args.device),
+                u_real=us.to(args.device),
+                length_batch=batch_len_tokens.to(args.device))
+
+            reg = args.orthogonal_reg * (
+                    torch.norm(torch.matmul(torch.transpose(probe_model.proj, 0, 1), probe_model.proj)
+                               - torch.eye(args.rank).to(args.device)) ** 2)
+            loss += reg
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            training_loss += loss.item()
+
+        training_loss = training_loss / len(train_dataloader)
+        eval_loss, _, _, _ = run_probing_eval(valid_dataloader, probe_model, lmodel, criterion, args)
+        scheduler.step(eval_loss)
+        logger.info(f'[epoch {epoch}] train loss: {round(training_loss, 4)}, validation loss: {round(eval_loss, 4)}')
+        metrics['training_loss'].append(round(training_loss, 4))
+        metrics['validation_loss'].append(round(eval_loss, 4))
+
+        if eval_loss < best_eval_loss:
+            logger.info('-' * 100)
+            logger.info('Saving model checkpoint')
+            logger.info('-' * 100)
+            output_path = os.path.join(args.output_path, f'pytorch_model.bin')
+            torch.save(probe_model.state_dict(), output_path)
+            logger.info(f'Probe model saved: {output_path}')
+            patience_count = 0
+            best_eval_loss = eval_loss
+        else:
+            patience_count += 1
+        if patience_count == args.patience:
+            logger.info('Stopping training loop (out of patience).')
+            break
+
+    logger.info('Loading test set.')
+    test_dataloader = DataLoader(dataset=test_set,
+                                 batch_size=args.batch_size,
+                                 shuffle=False,
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 num_workers=8)
+
+    logger.info('Loading best model.')
+    checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
+    probe_model.load_state_dict(checkpoint)
+
+    logger.info('Evaluating probing on test set.')
+    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                     ids_to_labels_c_global, ids_to_labels_u_global,
+                                                                     args)
     metrics['test_precision'] = round(eval_precision, 4)
     metrics['test_recall'] = round(eval_recall, 4)
     metrics['test_f1'] = round(eval_f1_score, 4)

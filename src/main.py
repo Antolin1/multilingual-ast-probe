@@ -10,21 +10,27 @@ from transformers import HfArgumentParser
 from prettytable import PrettyTable
 
 from args import ProgramArguments
-from run_probing import run_probing_train, run_probing_test, run_probing_direct_transfer_train
+from run_probing import run_probing_train, run_probing_test, run_probing_direct_transfer_train, \
+    run_probing_all_languages
+
 from run_visualization import run_visualization
 
 
 def main(args):
-    args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
-
     if args.do_train:
+        args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
         run_probing_train(args=args)
     elif args.do_test:
+        args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
         run_probing_test(args=args)
     elif args.do_visualization:
+        args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
         run_visualization(args=args)
     elif args.do_train_direct_transfer:
+        args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
         run_probing_direct_transfer_train(args=args)
+    elif args.do_train_all_languages:
+        run_probing_all_languages(args=args)
     else:
         raise ValueError('--do_train or --do_test should be provided.')
 

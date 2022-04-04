@@ -96,12 +96,17 @@ if __name__ == '__main__':
 
     logger.info('Shuffling dataset.')
     dataset = dataset.shuffle(args.seed)
+    print(len(dataset))
 
     logger.info('Splitting dataset.')
     if args.lang == 'ruby':
         train_dataset = dataset.select(range(0, 10000))
         test_dataset = dataset.select(range(10000, 12000))
         val_dataset = dataset.select(range(12000, 13000))
+    elif args.lang == 'php':  # todo: a lot of code snippets don't pass the filter
+        train_dataset = dataset.select(range(0, 2000))
+        test_dataset = dataset.select(range(2000, 2300))
+        val_dataset = dataset.select(range(2300, 2400))
     else:
         train_dataset = dataset.select(range(0, 20000))
         test_dataset = dataset.select(range(20000, 24000))

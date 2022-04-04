@@ -98,3 +98,4 @@ class ProgramArguments:
     do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_visualization: bool = field(default=False, metadata={'help': 'Run visualizations.'})
     do_train_direct_transfer: bool = field(default=False, metadata={'help': 'Run probe training direct transfer.'})
+    do_train_all_languages: bool = field(default=False, metadata={'help': 'Run multingual probe training with all langs.'})

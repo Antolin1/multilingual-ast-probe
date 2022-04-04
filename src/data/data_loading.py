@@ -182,6 +182,13 @@ def convert_to_ids(c, column_name, labels_to_ids):
     return {column_name: labels_ids}
 
 
+def convert_to_ids_multilingual(c, column_name, labels_to_ids, lang):
+    labels_ids = []
+    for label in c:
+        labels_ids.append(labels_to_ids[label + '--' + lang])
+    return {column_name: labels_ids}
+
+
 def compute_distinct_labels(dataset_path, args):
     lang = args.lang
     if lang == 'python':
@@ -199,7 +206,7 @@ def compute_distinct_labels(dataset_path, args):
     idd = 0
     with open(f'{dataset_path}/{lang}/dataset.jsonl', 'r') as json_file:
         json_list = list(json_file)
-        for data_point in tqdm(json_list,desc='Category extraction'):
+        for data_point in tqdm(json_list, desc='Category extraction'):
             data = json.loads(data_point)
             G, pre_code = code2ast(data['original_string'], parser)
             G_not_enr = nx.DiGraph(G)

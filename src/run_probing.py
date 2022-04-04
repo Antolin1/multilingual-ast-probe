@@ -687,14 +687,14 @@ def run_probing_all_languages(args):
             labels_u += [x + '--' + lang for x in labels_to_ids_u.keys()]
 
     # conversion to global labels
-    labels_to_ids_c_global = {x: y for x, y in enumerate(labels_c)}
+    labels_to_ids_c_global = {x: y for y, x in enumerate(labels_c)}
     ids_to_labels_c_global = {y: x for x, y in labels_to_ids_c_global.items()}
-    labels_to_ids_u_global = {x: y for x, y in enumerate(labels_u)}
+    labels_to_ids_u_global = {x: y for y, x in enumerate(labels_u)}
     ids_to_labels_u_global = {y: x for x, y in labels_to_ids_u_global.items()}
 
-    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['c'], 'c', labels_to_ids_c, x.split('_')[1]))
+    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['c'], 'c', labels_to_ids_c_global, x.split('_')[1]))
                  for x, y in data_sets.items()}
-    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['u'], 'u', labels_to_ids_c, x.split('_')[1]))
+    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['u'], 'u', labels_to_ids_u_global, x.split('_')[1]))
                  for x, y in data_sets.items()}
 
     train_datasets = [y for x, y in data_sets.items() if 'train_' in x]

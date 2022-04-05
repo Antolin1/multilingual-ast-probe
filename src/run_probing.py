@@ -293,6 +293,7 @@ def compute_hits_d(input, target, mask):
 
 
 def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
+    # todo: filter categories using the language
     probe_model.eval()
     precisions, recalls, f1_scores = [], [], []
     with torch.no_grad():

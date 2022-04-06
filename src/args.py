@@ -97,5 +97,6 @@ class ProgramArguments:
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_visualization: bool = field(default=False, metadata={'help': 'Run visualizations.'})
-    do_train_direct_transfer: bool = field(default=False, metadata={'help': 'Run probe training direct transfer.'})
+    do_train_from_given_projection: bool = field(default=False, metadata={'help': 'Run probe training using a pretrained projection.'})
     do_train_all_languages: bool = field(default=False, metadata={'help': 'Run multingual probe training with all langs.'})
+    do_hold_one_out_training: bool = field(default=False, metadata={'help': 'Run multingual probe training with all langs less one.'})

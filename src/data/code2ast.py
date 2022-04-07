@@ -110,6 +110,8 @@ def code2ast(code, parser, lang='python'):
                    start=tree.root_node.start_byte,
                    end=tree.root_node.end_byte)
         get_graph_from_tree(tree.root_node, G, 0)
+        if lang == 'go':
+            remove_new_line_tokens(G)
     elif lang == 'php':
         if not code.startswith('<?php'):
             code = '<?php\n' + code
@@ -147,7 +149,7 @@ def code2ast(code, parser, lang='python'):
                    end=tree.root_node.end_byte)
         get_graph_from_tree(tree.root_node, G, 0)
 
-        #remove comments and parse again, not the best way to do that
+        # remove comments and parse again, not the best way to do that
         code = remove_comments_ast(G, code)
         tree = parser.parse(bytes(code, "utf8"))
         G = nx.DiGraph()
@@ -161,6 +163,11 @@ def code2ast(code, parser, lang='python'):
     return G, code
 
 
+def remove_new_line_tokens(G):
+    to_remove = [n for n in G if G.nodes[n]['type'] == '\n']
+    G.remove_nodes_from(to_remove)
+
+
 def remove_comments_ast(G, code):
     start_end_comments = [(G.nodes[n]['start'], G.nodes[n]['end']) for n in G if G.nodes[n]['type'] == 'comment']
     code_bytes = bytes(code, "utf8")
@@ -171,7 +178,7 @@ def remove_comments_ast(G, code):
             if e > j >= s:
                 to_add = False
         if to_add:
-            new_bytes.append(code_bytes[j:j+1])
+            new_bytes.append(code_bytes[j:j + 1])
     new_bytes = b''.join(new_bytes)
     return new_bytes.decode("utf-8")
 

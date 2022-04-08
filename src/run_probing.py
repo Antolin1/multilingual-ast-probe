@@ -609,9 +609,9 @@ def run_probing_all_languages(args):
     ids_to_labels_u_global = {y: x for x, y in labels_to_ids_u_global.items()}
 
     #save labels
-    with open(os.path.join(args.output_path, 'goblal_labels_c.pkl'), 'wb') as f:
+    with open(os.path.join(args.output_path, 'global_labels_c.pkl'), 'wb') as f:
         pickle.dump(labels_to_ids_c_global, f)
-    with open(os.path.join(args.output_path, 'goblal_labels_u.pkl'), 'wb') as f:
+    with open(os.path.join(args.output_path, 'global_labels_u.pkl'), 'wb') as f:
         pickle.dump(labels_to_ids_u_global, f)
 
     data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['c'], 'c', labels_to_ids_c_global, x.split('_')[1]))

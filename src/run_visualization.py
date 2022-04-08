@@ -2,7 +2,7 @@ from data.utils import match_tokenized_to_untokenized_roberta
 from data.code2ast import code2ast, get_tokens_ast
 from data.binary_tree import ast2binary, tree_to_distance, distance_to_tree, \
     extend_complex_nodes, add_unary, remove_empty_nodes, get_precision_recall_f1, \
-    get_recall_non_terminal
+    get_recall_non_terminal, SEPARATOR
 import torch
 from probe.utils import get_embeddings, align_function
 import networkx as nx
@@ -21,7 +21,7 @@ import pickle
 logger = logging.getLogger(__name__)
 
 
-#todo: add the dictionaries for the classification
+# todo: add the dictionaries for the classification
 def run_visualization(args):
     code_samples = []
     if args.lang == 'python':
@@ -59,7 +59,7 @@ def run_visualization(args):
     elif args.lang == 'go':
         parser.set_language(GO_LANGUAGE)
 
-    #load the labels
+    # load the labels
     labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
     with open(labels_file_path, 'rb') as f:
         data = pickle.load(f)
@@ -79,7 +79,10 @@ def run_visualization(args):
 
     __run_visualization_code_samples(lmodel, tokenizer, final_probe_model, code_samples, parser,
                                      ids_to_labels_c, ids_to_labels_u, args)
-    __run_visualization_vectors(final_probe_model, ids_to_labels_c, ids_to_labels_u, args)
+    vectors_c = final_probe_model.vectors_c.detach().cpu().numpy().T
+    vectors_u = final_probe_model.vectors_u.detach().cpu().numpy().T
+    __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, args)
+
 
 def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_samples,
                                      parser, ids_to_labels_c, ids_to_labels_u, args):
@@ -133,10 +136,10 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
         prec_score, recall_score, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
-        #_, recall_block, _ = get_precision_recall_f1(ground_truth_tree, pred_tree, filter_non_terminal='block')
+        # _, recall_block, _ = get_precision_recall_f1(ground_truth_tree, pred_tree, filter_non_terminal='block')
 
         logger.info(f'For code {c}, prec = {prec_score}, recall = {recall_score}, f1 = {f1_score}.')
-        #logger.info(f'For code {c}, recall block = {recall_block}.')
+        # logger.info(f'For code {c}, recall block = {recall_block}.')
 
         recall_score = get_recall_non_terminal(ground_truth_tree, pred_tree)
         for k, s in recall_score.items():
@@ -152,7 +155,7 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         plt.show()
         plt.savefig(f'fig_{c}_{args.lang}.png')
 
-        labels_axis = [tokens[i] + '-' + tokens[i+1] for i in range(0, len(tokens) - 1)]
+        labels_axis = [tokens[i] + '-' + tokens[i + 1] for i in range(0, len(tokens) - 1)]
         figure, axis = plt.subplots(2, figsize=(15, 15))
         axis[0].bar(labels_axis, ds_current)
         axis[0].set_title("True dist")
@@ -167,22 +170,30 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         plt.savefig(f'fig_{c}_{args.lang}_syn_dis.png')
 
 
-
-
-def __run_visualization_vectors(probe_model, ids_to_labels_c, ids_to_labels_u, args):
-    vectors_c = probe_model.vectors_c.detach().cpu().numpy().T
-    vectors_u = probe_model.vectors_u.detach().cpu().numpy().T
-
+def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, args):
     v_c_2d = TSNE(n_components=2, learning_rate='auto',
-                      init='random', random_state=args.seed).fit_transform(vectors_c)
+                  init='random', random_state=args.seed).fit_transform(vectors_c)
     v_u_2d = TSNE(n_components=2, learning_rate='auto',
                   init='random', random_state=args.seed).fit_transform(vectors_u)
 
     figure, axis = plt.subplots(2, figsize=(15, 15))
-    axis[0].scatter(v_c_2d[:, 0], v_c_2d[:, 1])
     axis[0].set_title("Vectors constituency")
     for ix, label in ids_to_labels_c.items():
-        axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
+        #if SEPARATOR in label:
+        #    continue
+        color = 'blue'
+        if 'if_' in label \
+                or 'else' in label \
+                or 'elif' in label:
+            color = 'red'
+            #axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
+        if 'while' in label \
+                or 'for' in label \
+                or 'repeat' in label:
+            color = 'green'
+            #axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
+        axis[0].scatter(v_c_2d[ix, 0], v_c_2d[ix, 1], color=color)
+        #axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
 
     axis[1].scatter(v_u_2d[:, 0], v_u_2d[:, 1])
     axis[1].set_title("Vectors unary")
@@ -191,3 +202,23 @@ def __run_visualization_vectors(probe_model, ids_to_labels_c, ids_to_labels_u, a
 
     plt.show()
     plt.savefig(f'vectors.png')
+
+
+def run_visualization_multilingual(args):
+    model_bin = os.path.join(args.output_path, f'pytorch_model.bin')
+    # load the labels
+    labels_file_path_c = os.path.join(args.output_path, 'global_labels_c.pkl')
+    labels_file_path_u = os.path.join(args.output_path, 'global_labels_u.pkl')
+    with open(labels_file_path_c, 'rb') as f:
+        goblal_labels_c = pickle.load(f)
+    goblal_labels_c = {y: x for x, y in goblal_labels_c.items()}
+    with open(labels_file_path_u, 'rb') as f:
+        goblal_labels_u = pickle.load(f)
+    goblal_labels_u = {y: x for x, y in goblal_labels_u.items()}
+
+    check_point = torch.load(model_bin, map_location=torch.device(args.device))
+
+    vectors_c = check_point['vectors_c'].detach().cpu().numpy().T
+    vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
+
+    __run_visualization_vectors(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, args)

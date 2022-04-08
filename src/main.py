@@ -13,7 +13,7 @@ from args import ProgramArguments
 from run_probing import run_probing_train, run_probing_test, run_probing_from_given_projection, \
     run_probing_all_languages, run_hold_one_out_training
 
-from run_visualization import run_visualization
+from run_visualization import run_visualization, run_visualization_multilingual
 
 
 def main(args):
@@ -33,6 +33,8 @@ def main(args):
         run_probing_all_languages(args=args)
     elif args.do_hold_one_out_training:
         run_hold_one_out_training(args=args)
+    elif args.do_visualization_multilingual:
+        run_visualization_multilingual(args=args)
     else:
         raise ValueError('--do_train or --do_test should be provided.')
 

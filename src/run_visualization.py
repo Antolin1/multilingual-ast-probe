@@ -20,6 +20,7 @@ import logging
 import pickle
 import numpy as np
 from tqdm import tqdm
+from yellowbrick.cluster import KElbowVisualizer
 
 logger = logging.getLogger(__name__)
 
@@ -232,20 +233,19 @@ def __apply_kmeans(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, max_c
     vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)[:, np.newaxis]
     vectors_u_norm = vectors_u / np.linalg.norm(vectors_u, axis=1)[:, np.newaxis]
 
-    sum_of_squared_distances = []
-    for c in tqdm(list(range(1, max_clusters + 1))):
-        kmeans_c = KMeans(n_clusters=c, random_state=args.seed).fit(vectors_c_norm)
-        sum_of_squared_distances.append(kmeans_c.inertia_)
-
     plt.figure(10)
-    plt.plot(range(1, max_clusters + 1), sum_of_squared_distances, 'bx-')
-    plt.xlabel('k')
-    plt.ylabel('Sum_of_squared_distances')
-    plt.show()
-    plt.savefig(f'k_means.png')
+    # Instantiate the clustering model and visualizer
+    model = KMeans(random_state=args.seed)
+    visualizer = KElbowVisualizer(model, k=(4, 80))
+
+    visualizer.fit(vectors_c_norm)  # Fit the data to the visualizer
+    visualizer.show(outpath='k_means.png')
+
+    optimal = visualizer.elbow_value_
+    kmeans_c = KMeans(n_clusters=optimal, random_state=args.seed).fit(vectors_c_norm)
 
     labels = kmeans_c.labels_
-    for i in range(max_clusters + 1):
+    for i in range(optimal + 1):
         logger.info(f'Cluster {i}:')
         cont = 0
         for ix, l in enumerate(labels):

@@ -60,3 +60,4 @@ palettable==3.3.0
 patsy==0.5.2
 plotnine==0.8.0
 statsmodels==0.13.2
+yellowbrick

@@ -8,6 +8,7 @@ from probe.utils import get_embeddings, align_function
 import networkx as nx
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from data import PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE
 from probe import ParserProbe
@@ -174,11 +175,15 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         plt.savefig(f'fig_{c}_{args.lang}_syn_dis.png')
 
 
-def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, args):
-    v_c_2d = TSNE(n_components=2, learning_rate='auto',
-                  init='random', random_state=args.seed).fit_transform(vectors_c)
-    v_u_2d = TSNE(n_components=2, learning_rate='auto',
-                  init='random', random_state=args.seed).fit_transform(vectors_u)
+def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, args, method='PCA'):
+    if method == 'TSNE':
+        v_c_2d = TSNE(n_components=2, learning_rate='auto',
+                      init='random', random_state=args.seed).fit_transform(vectors_c)
+        v_u_2d = TSNE(n_components=2, learning_rate='auto',
+                      init='random', random_state=args.seed).fit_transform(vectors_u)
+    else:
+        v_c_2d = PCA(n_components=2).fit_transform(vectors_c)
+        v_u_2d = PCA(n_components=2).fit_transform(vectors_u)
 
     figure, axis = plt.subplots(2, figsize=(15, 15))
     axis[0].set_title("Vectors constituency")

@@ -19,6 +19,7 @@ import glob
 import logging
 import pickle
 import numpy as np
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -224,15 +225,26 @@ def run_visualization_multilingual(args):
     vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
 
     __run_visualization_vectors(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, args)
-    __apply_kmeans(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, 10, args)
+    __apply_kmeans(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, 50, args)
 
 
-def __apply_kmeans(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, clusters, args):
-    vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)[:,np.newaxis]
-    vectors_u_norm = vectors_u / np.linalg.norm(vectors_u, axis=1)[:,np.newaxis]
-    kmeans_c = KMeans(n_clusters=clusters, random_state=args.seed).fit(vectors_c_norm)
+def __apply_kmeans(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, max_clusters, args):
+    vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)[:, np.newaxis]
+    vectors_u_norm = vectors_u / np.linalg.norm(vectors_u, axis=1)[:, np.newaxis]
+
+    sum_of_squared_distances = []
+    for c in tqdm(list(range(1, max_clusters + 1))):
+        kmeans_c = KMeans(n_clusters=c, random_state=args.seed).fit(vectors_c_norm)
+        sum_of_squared_distances.append(kmeans_c.inertia_)
+
+    plt.plot(range(1, max_clusters + 1), sum_of_squared_distances, 'bx-')
+    plt.xlabel('k')
+    plt.ylabel('Sum_of_squared_distances')
+    plt.show()
+    plt.savefig(f'k_means.png')
+
     labels = kmeans_c.labels_
-    for i in range(clusters):
+    for i in range(max_clusters + 1):
         logger.info(f'Cluster {i}:')
         cont = 0
         for ix, l in enumerate(labels):

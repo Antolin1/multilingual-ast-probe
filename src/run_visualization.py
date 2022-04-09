@@ -183,7 +183,7 @@ def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_la
                       init='random', random_state=args.seed).fit_transform(vectors_u)
     else:
         vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)[:, np.newaxis]
-        vectors_u_norm = vectors_c / np.linalg.norm(vectors_u, axis=1)[:, np.newaxis]
+        vectors_u_norm = vectors_u / np.linalg.norm(vectors_u, axis=1)[:, np.newaxis]
         v_c_2d = PCA(n_components=2).fit_transform(vectors_c_norm)
         v_u_2d = PCA(n_components=2).fit_transform(vectors_u_norm)
 

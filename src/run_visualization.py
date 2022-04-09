@@ -226,31 +226,31 @@ def run_visualization_multilingual(args):
     vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
 
     __run_visualization_vectors(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, args)
-    __apply_kmeans(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, 50, args)
+    __apply_kmeans(vectors_c, goblal_labels_c, 4, 80, 'elbow_c.png', args)
+    __apply_kmeans(vectors_u, goblal_labels_u, 4, 30, 'elbow_u.png', args)
 
 
-def __apply_kmeans(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, max_clusters, args):
-    vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)[:, np.newaxis]
-    vectors_u_norm = vectors_u / np.linalg.norm(vectors_u, axis=1)[:, np.newaxis]
+def __apply_kmeans(vectors, ids_to_labels, min_clusters, max_clusters, plot_name, args):
+    vectors_norm = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
 
     plt.figure(10)
     # Instantiate the clustering model and visualizer
     model = KMeans(random_state=args.seed)
-    visualizer = KElbowVisualizer(model, k=(4, 80))
+    visualizer = KElbowVisualizer(model, k=(min_clusters, max_clusters))
 
-    visualizer.fit(vectors_c_norm)  # Fit the data to the visualizer
-    visualizer.show(outpath='k_means.png')
+    visualizer.fit(vectors_norm)  # Fit the data to the visualizer
+    visualizer.show(outpath=plot_name)
 
     optimal = visualizer.elbow_value_
-    kmeans_c = KMeans(n_clusters=optimal, random_state=args.seed).fit(vectors_c_norm)
+    kmeans_final = KMeans(n_clusters=optimal, random_state=args.seed).fit(vectors_norm)
 
-    labels = kmeans_c.labels_
-    for i in range(optimal + 1):
+    labels = kmeans_final.labels_
+    for i in range(optimal):
         logger.info(f'Cluster {i}:')
         cont = 0
         for ix, l in enumerate(labels):
-            if l == i:
-                logger.info(ids_to_labels_c[ix])
+            if l == i and SEPARATOR not in ids_to_labels[ix]:
+                logger.info(ids_to_labels[ix])
                 cont += 1
             if cont == 10:
                 break

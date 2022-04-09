@@ -237,6 +237,7 @@ def __apply_kmeans(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, max_c
         kmeans_c = KMeans(n_clusters=c, random_state=args.seed).fit(vectors_c_norm)
         sum_of_squared_distances.append(kmeans_c.inertia_)
 
+    plt.figure(10)
     plt.plot(range(1, max_clusters + 1), sum_of_squared_distances, 'bx-')
     plt.xlabel('k')
     plt.ylabel('Sum_of_squared_distances')

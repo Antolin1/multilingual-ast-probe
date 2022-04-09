@@ -228,8 +228,8 @@ def run_visualization_multilingual(args):
 
 
 def __apply_kmeans(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, clusters, args):
-    vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)
-    vectors_u_norm = vectors_u / np.linalg.norm(vectors_c, axis=1)
+    vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)[:,np.newaxis]
+    vectors_u_norm = vectors_u / np.linalg.norm(vectors_u, axis=1)[:,np.newaxis]
     kmeans_c = KMeans(n_clusters=clusters, random_state=args.seed).fit(vectors_c_norm)
     labels = kmeans_c.labels_
     for i in range(clusters):

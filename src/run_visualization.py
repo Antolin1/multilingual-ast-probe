@@ -8,6 +8,7 @@ from probe.utils import get_embeddings, align_function
 import networkx as nx
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
+from sklearn.cluster import KMeans
 from data import PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE
 from probe import ParserProbe
 import os
@@ -17,6 +18,7 @@ from tree_sitter import Parser
 import glob
 import logging
 import pickle
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -179,21 +181,21 @@ def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_la
     figure, axis = plt.subplots(2, figsize=(15, 15))
     axis[0].set_title("Vectors constituency")
     for ix, label in ids_to_labels_c.items():
-        #if SEPARATOR in label:
+        # if SEPARATOR in label:
         #    continue
         color = 'blue'
         if 'if_' in label \
                 or 'else' in label \
                 or 'elif' in label:
             color = 'red'
-            #axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
+            # axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
         if 'while' in label \
                 or 'for' in label \
                 or 'repeat' in label:
             color = 'green'
-            #axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
+            # axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
         axis[0].scatter(v_c_2d[ix, 0], v_c_2d[ix, 1], color=color)
-        #axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
+        # axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
 
     axis[1].scatter(v_u_2d[:, 0], v_u_2d[:, 1])
     axis[1].set_title("Vectors unary")
@@ -222,3 +224,20 @@ def run_visualization_multilingual(args):
     vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
 
     __run_visualization_vectors(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, args)
+    __apply_kmeans(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, 10, args)
+
+
+def __apply_kmeans(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, clusters, args):
+    vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)
+    vectors_u_norm = vectors_u / np.linalg.norm(vectors_c, axis=1)
+    kmeans_c = KMeans(n_clusters=clusters, random_state=args.seed).fit(vectors_c_norm)
+    labels = kmeans_c.labels_
+    for i in range(clusters):
+        logger.info(f'Cluster {i}:')
+        cont = 0
+        for ix, l in enumerate(labels):
+            if l == i:
+                logger.info(ids_to_labels_c[ix])
+                cont += 1
+            if cont == 10:
+                break

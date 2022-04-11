@@ -92,7 +92,8 @@ if __name__ == '__main__':
     # filter dataset
     logger.info('Filtering dataset.')
     dataset = dataset.filter(
-        lambda e: filter_samples(e['original_string'], args.max_code_length, args.lang, parser_lang), num_proc=6)
+        lambda e: filter_samples(e['original_string'], args.max_code_length, args.lang, parser_lang), num_proc=8,
+        load_from_cache_file=False)
 
     logger.info('Shuffling dataset.')
     dataset = dataset.shuffle(args.seed)

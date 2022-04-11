@@ -69,7 +69,7 @@ class ProgramArguments:
     )
 
     rank: Optional[int] = field(
-        default=128,
+        default=64,
         metadata={'help': 'Maximum rank of the probe.'}
     )
 

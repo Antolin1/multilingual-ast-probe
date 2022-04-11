@@ -7,6 +7,10 @@ dataset.zip
 dataset.jsonl
 dataset/
 runs_test
+runs_direct_transfer
+runs_hold_one_out
+runs_monolingual
+runs_multilingual
 
 #folders
 grammars

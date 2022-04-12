@@ -10,7 +10,7 @@ def main(args):
         if args.baseline:
             folder = lang + '_baseline'
             layer = 0
-        os.system(f"CUDA_VISIBLE_DEVICES=3 python src/main.py --do_train --run_base_path {run_dir} --run_name {folder} "
+        os.system(f"CUDA_VISIBLE_DEVICES=2 python src/main.py --do_train --run_base_path {run_dir} --run_name {folder} "
                   f"--lang {lang} --layer {layer}")
 
 

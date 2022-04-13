@@ -4,7 +4,7 @@ import os
 
 def main(args):
     run_dir = 'runs_monolingual'
-    for lang in ['python', 'javascript', 'go', 'php', 'ruby', 'java', 'csharp']:
+    for lang in ['python', 'javascript', 'go', 'php', 'ruby', 'java', 'csharp', 'c']:
         folder = lang
         layer = 5
         if args.baseline:

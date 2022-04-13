@@ -159,6 +159,17 @@ def code2ast(code, parser, lang='python'):
                    start=tree.root_node.start_byte,
                    end=tree.root_node.end_byte)
         get_graph_from_tree(tree.root_node, G, 0)
+    elif lang == 'c':
+        code = remove_comments_php(code) #the same function is ok for c
+        tree = parser.parse(bytes(code, "utf8"))
+
+        G = nx.DiGraph()
+        # add root
+        G.add_node(0, type=tree.root_node.type,
+                   is_terminal=False,
+                   start=tree.root_node.start_byte,
+                   end=tree.root_node.end_byte)
+        get_graph_from_tree(tree.root_node, G, 0)
     else:
         tree = parser.parse(bytes(code, "utf8"))
         G = nx.DiGraph()

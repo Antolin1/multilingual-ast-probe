@@ -12,6 +12,7 @@ git clone https://github.com/tree-sitter/tree-sitter-php.git
 git clone https://github.com/tree-sitter/tree-sitter-ruby.git
 git clone https://github.com/tree-sitter/tree-sitter-java.git
 git clone https://github.com/tree-sitter/tree-sitter-c-sharp.git
+git clone https://github.com/tree-sitter/tree-sitter-c.git
 ```
 
 Build grammars:
@@ -35,9 +36,14 @@ python -m unittest discover
 Dataset generation:
 
 ```sh
-python src/dataset_generator.py --download --lang python
+python src/dataset_generator.py --download_csn --lang python
 python src/dataset_generator.py --lang javascript
 python src/dataset_generator.py --lang go
+python src/dataset_generator.py --lang php
+python src/dataset_generator.py --lang java
+python src/dataset_generator.py --lang ruby
+python src/dataset_generator.py --download_cxg --lang csharp
+python src/dataset_generator.py --lang c
 ```
 
 Train probing:

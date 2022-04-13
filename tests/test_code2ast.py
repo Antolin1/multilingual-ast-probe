@@ -80,6 +80,8 @@ code_java = """public void myMethod() {
     String mystr = "mystr";
 }"""
 
+code_csharp = "public override string ToString(){return this.GetType().Name + \"(compressionMode=\" + compressionMode + \", chunkSize=\" + chunkSize + \")\";}\n"
+
 
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
@@ -88,6 +90,7 @@ PHP_LANGUAGE = Language('grammars/languages.so', 'php')
 RUBY_LANGUAGE = Language('grammars/languages.so', 'ruby')
 JAVA_LANGUAGE = Language('grammars/languages.so', 'java')
 CSHARP_LANGUAGE = Language('grammars/languages.so', 'c_sharp')
+C_LANGUAGE = Language('grammars/languages.so', 'c')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
@@ -107,6 +110,20 @@ class Code2ast(unittest.TestCase):
         tokens = get_tokens_ast(G, pre_code)
         print(tokens)
         self.assertTrue('"mystr"' in tokens)
+
+    def test_code2ast_csharp(self):
+        plt.figure()
+        plt.title('test_code2ast_csharp')
+        parser = Parser()
+        parser.set_language(CSHARP_LANGUAGE)
+        G, pre_code = code2ast(code_csharp, parser, lang='csharp')
+        print(pre_code)
+        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
+        plt.show()
+        print(G.nodes(data=True))
+        tokens = get_tokens_ast(G, pre_code)
+        print(tokens)
+        self.assertTrue('"(compressionMode="' in tokens)
 
     def test_code2ast_php(self):
         plt.figure()

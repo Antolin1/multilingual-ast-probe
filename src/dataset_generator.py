@@ -11,7 +11,8 @@ from tree_sitter import Parser
 from datasets import load_dataset
 
 from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE, \
-    PHP_LANGUAGE, JAVA_LANGUAGE, RUBY_LANGUAGE, download_codexglue_csharp, CSHARP_LANGUAGE
+    PHP_LANGUAGE, JAVA_LANGUAGE, RUBY_LANGUAGE, download_codexglue_csharp, CSHARP_LANGUAGE, \
+    download_codexglue_c, C_LANGUAGE
 from data.code2ast import code2ast, get_tokens_ast, has_error
 from data.utils import match_tokenized_to_untokenized_roberta
 
@@ -44,7 +45,8 @@ def filter_samples(code, max_length, lang, parser):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for generating the dataset for probing')
     parser.add_argument('--dataset_dir', default='./dataset', help='Path to save the dataset')
-    parser.add_argument('--lang', help='Language.', choices=['javascript', 'python', 'go', 'php', 'java', 'ruby', 'csharp'],
+    parser.add_argument('--lang', help='Language.', choices=['javascript', 'python', 'go', 'php',
+                                                             'java', 'ruby', 'csharp', 'c'],
                         default='python')
     parser.add_argument('--max_code_length', help='Maximum code length.', default=512)
     parser.add_argument('--download_csn', help='If download the csn', action='store_true')
@@ -74,6 +76,7 @@ if __name__ == '__main__':
 
     if args.download_cxg:
         download_codexglue_csharp(dataset_dir=args.dataset_dir)
+        download_codexglue_c(dataset_dir=args.dataset_dir)
 
     dataset_path = os.path.join(args.dataset_dir, args.lang, 'dataset.jsonl')
     logger.info('Loading dataset.')
@@ -95,6 +98,8 @@ if __name__ == '__main__':
         parser_lang.set_language(RUBY_LANGUAGE)
     elif args.lang == 'csharp':
         parser_lang.set_language(CSHARP_LANGUAGE)
+    elif args.lang == 'c':
+        parser_lang.set_language(C_LANGUAGE)
 
     # filter dataset
     logger.info('Filtering dataset.')
@@ -119,6 +124,10 @@ if __name__ == '__main__':
         train_dataset = dataset.select(range(0, 8000))
         test_dataset = dataset.select(range(8000, 9000))
         val_dataset = dataset.select(range(9000, 9500))
+    elif args.lang == 'c':
+        train_dataset = dataset.select(range(0, 7000))
+        test_dataset = dataset.select(range(7000, 8000))
+        val_dataset = dataset.select(range(8000, 8100))
     else:
         train_dataset = dataset.select(range(0, 20000))
         test_dataset = dataset.select(range(20000, 24000))

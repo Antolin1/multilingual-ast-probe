@@ -10,6 +10,7 @@ from collections import Counter
 from tqdm import tqdm
 from tree_sitter import Language, Parser
 import networkx as nx
+import gdown
 
 from .binary_tree import ast2binary, tree_to_distance
 from .utils import download_url, unzip_file
@@ -36,6 +37,7 @@ PHP_LANGUAGE = Language('grammars/languages.so', 'php')
 JAVA_LANGUAGE = Language('grammars/languages.so', 'java')
 RUBY_LANGUAGE = Language('grammars/languages.so', 'ruby')
 CSHARP_LANGUAGE = Language('grammars/languages.so', 'c_sharp')
+C_LANGUAGE = Language('grammars/languages.so', 'c')
 
 PY_PARSER = Parser()
 PY_PARSER.set_language(PY_LANGUAGE)
@@ -51,6 +53,26 @@ RUBY_PARSER = Parser()
 RUBY_PARSER.set_language(RUBY_LANGUAGE)
 CSHARP_PARSER = Parser()
 CSHARP_PARSER.set_language(CSHARP_LANGUAGE)
+C_PARSER = Parser()
+C_PARSER.set_language(C_LANGUAGE)
+
+
+def download_codexglue_c(dataset_dir):
+    url = 'https://drive.google.com/uc?id=1x6hoF7G-tSYxg8AFybggypLZgMGDNHfF'
+    name_file = 'function.json'
+    gdown.download(url, name_file, quiet=False)
+
+    with open(name_file) as functions:
+        js_all = json.load(functions)
+    filename = os.path.join(dataset_dir, 'c', 'dataset.jsonl')
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, 'w') as outfile:
+        for j, entry in enumerate(js_all):
+            new_entry = {'original_string': entry['func']}
+            json.dump(new_entry, outfile)
+            if j < len(js_all) - 1:
+                outfile.write('\n')
+    os.remove(name_file)
 
 
 def download_codexglue_csharp(dataset_dir):

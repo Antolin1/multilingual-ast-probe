@@ -11,7 +11,7 @@ from tree_sitter import Parser
 from datasets import load_dataset
 
 from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE, \
-    PHP_LANGUAGE, JAVA_LANGUAGE, RUBY_LANGUAGE
+    PHP_LANGUAGE, JAVA_LANGUAGE, RUBY_LANGUAGE, download_codexglue_csharp, CSHARP_LANGUAGE
 from data.code2ast import code2ast, get_tokens_ast, has_error
 from data.utils import match_tokenized_to_untokenized_roberta
 
@@ -44,10 +44,11 @@ def filter_samples(code, max_length, lang, parser):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for generating the dataset for probing')
     parser.add_argument('--dataset_dir', default='./dataset', help='Path to save the dataset')
-    parser.add_argument('--lang', help='Language.', choices=['javascript', 'python', 'go', 'php', 'java', 'ruby'],
+    parser.add_argument('--lang', help='Language.', choices=['javascript', 'python', 'go', 'php', 'java', 'ruby', 'csharp'],
                         default='python')
     parser.add_argument('--max_code_length', help='Maximum code length.', default=512)
-    parser.add_argument('--download', help='If download the csn', action='store_true')
+    parser.add_argument('--download_csn', help='If download the csn', action='store_true')
+    parser.add_argument('--download_cxg', help='If download the cxg csharp', action='store_true')
     parser.add_argument('--seed', help='seed.', type=int, default=123)
     args = parser.parse_args()
 
@@ -68,8 +69,12 @@ if __name__ == '__main__':
         torch.cuda.manual_seed_all(args.seed)
 
     # download dataset
-    if args.download:
+    if args.download_csn:
         download_codesearchnet_dataset(dataset_dir=args.dataset_dir)
+
+    if args.download_cxg:
+        download_codexglue_csharp(dataset_dir=args.dataset_dir)
+
     dataset_path = os.path.join(args.dataset_dir, args.lang, 'dataset.jsonl')
     logger.info('Loading dataset.')
     dataset = load_dataset('json', data_files=dataset_path, split='train')
@@ -88,6 +93,8 @@ if __name__ == '__main__':
         parser_lang.set_language(JAVA_LANGUAGE)
     elif args.lang == 'ruby':
         parser_lang.set_language(RUBY_LANGUAGE)
+    elif args.lang == 'csharp':
+        parser_lang.set_language(CSHARP_LANGUAGE)
 
     # filter dataset
     logger.info('Filtering dataset.')
@@ -108,6 +115,10 @@ if __name__ == '__main__':
         train_dataset = dataset.select(range(0, 2000))
         test_dataset = dataset.select(range(2000, 2300))
         val_dataset = dataset.select(range(2300, 2400))
+    elif args.lang == 'csharp':
+        train_dataset = dataset.select(range(0, 8000))
+        test_dataset = dataset.select(range(8000, 9000))
+        val_dataset = dataset.select(range(9000, 9500))
     else:
         train_dataset = dataset.select(range(0, 20000))
         test_dataset = dataset.select(range(20000, 24000))

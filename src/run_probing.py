@@ -12,7 +12,7 @@ from datasets import load_dataset, concatenate_datasets
 from tqdm import tqdm
 
 from data import convert_sample_to_features, collator_fn, \
-    PY_PARSER, GO_PARSER, JS_PARSER, PHP_PARSER, JAVA_PARSER, RUBY_PARSER, LANGUAGES
+    PY_PARSER, GO_PARSER, JS_PARSER, PHP_PARSER, JAVA_PARSER, RUBY_PARSER, LANGUAGES, CSHARP_PARSER
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.data_loading import get_non_terminals_labels, convert_to_ids, convert_to_ids_multilingual
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
@@ -27,7 +27,8 @@ parsers = {
         'go': GO_PARSER,
         'php': PHP_PARSER,
         'ruby': RUBY_PARSER,
-        'java': JAVA_PARSER
+        'java': JAVA_PARSER,
+        'csharp': CSHARP_PARSER
     }
 
 

@@ -175,11 +175,20 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         plt.savefig(f'fig_{c}_{args.lang}_syn_dis.png')
 
 
-def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, args, method='PCA'):
+COLORS = {'java': 'r',
+          'javascript': 'b',
+          'go': 'g',
+          'python': 'c',
+          'php' : 'm',
+          'ruby' : 'y'
+          }
+
+
+def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, args, method='TSNE'):
     if method == 'TSNE':
-        v_c_2d = TSNE(n_components=2, learning_rate='auto',
+        v_c_2d = TSNE(n_components=2, learning_rate='auto', perplexity=5,
                       init='random', random_state=args.seed).fit_transform(vectors_c)
-        v_u_2d = TSNE(n_components=2, learning_rate='auto',
+        v_u_2d = TSNE(n_components=2, learning_rate='auto', perplexity=5,
                       init='random', random_state=args.seed).fit_transform(vectors_u)
     else:
         vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)[:, np.newaxis]
@@ -190,21 +199,8 @@ def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_la
     figure, axis = plt.subplots(2, figsize=(15, 15))
     axis[0].set_title("Vectors constituency")
     for ix, label in ids_to_labels_c.items():
-        # if SEPARATOR in label:
-        #    continue
-        color = 'blue'
-        if 'if_' in label \
-                or 'else' in label \
-                or 'elif' in label:
-            color = 'red'
-            # axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
-        if 'while' in label \
-                or 'for' in label \
-                or 'repeat' in label:
-            color = 'green'
-            # axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
-        axis[0].scatter(v_c_2d[ix, 0], v_c_2d[ix, 1], color=color)
-        # axis[0].annotate(label, (v_c_2d[ix, 0], v_c_2d[ix, 1]))
+        l = label.split('--')[1]
+        axis[0].scatter(v_c_2d[ix, 0], v_c_2d[ix, 1], color=COLORS[l])
 
     axis[1].scatter(v_u_2d[:, 0], v_u_2d[:, 1])
     axis[1].set_title("Vectors unary")

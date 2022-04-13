@@ -35,6 +35,7 @@ GO_LANGUAGE = Language('grammars/languages.so', 'go')
 PHP_LANGUAGE = Language('grammars/languages.so', 'php')
 JAVA_LANGUAGE = Language('grammars/languages.so', 'java')
 RUBY_LANGUAGE = Language('grammars/languages.so', 'ruby')
+CSHARP_LANGUAGE = Language('grammars/languages.so', 'c_sharp')
 
 PY_PARSER = Parser()
 PY_PARSER.set_language(PY_LANGUAGE)
@@ -48,6 +49,35 @@ JAVA_PARSER = Parser()
 JAVA_PARSER.set_language(JAVA_LANGUAGE)
 RUBY_PARSER = Parser()
 RUBY_PARSER.set_language(RUBY_LANGUAGE)
+CSHARP_PARSER = Parser()
+CSHARP_PARSER.set_language(CSHARP_LANGUAGE)
+
+
+def download_codexglue_csharp(dataset_dir):
+    links = [
+        'https://raw.githubusercontent.com/microsoft/CodeXGLUE/main/Code-Code/code-to-code-trans/data/test.java-cs.txt.cs',
+        'https://raw.githubusercontent.com/microsoft/CodeXGLUE/main/Code-Code/code-to-code-trans/data/train.java-cs.txt.cs',
+        'https://raw.githubusercontent.com/microsoft/CodeXGLUE/main/Code-Code/code-to-code-trans/data/valid.java-cs.txt.cs']
+    names_files = ['test.cs', 'train.cs', 'valid.cs']
+
+    for l, name in zip(links, names_files):
+        download_url(l, name)
+
+    data = []
+    for name in names_files:
+        with open(name) as fp:
+            lines = fp.readlines()
+            data += [{'original_string': l} for l in lines]
+    filename = os.path.join(dataset_dir, 'csharp', 'dataset.jsonl')
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, 'w') as outfile:
+        for j, entry in enumerate(data):
+            json.dump(entry, outfile)
+            if j < len(data) - 1:
+                outfile.write('\n')
+
+    for name in names_files:
+        os.remove(name)
 
 
 def download_codesearchnet_dataset(dataset_dir):

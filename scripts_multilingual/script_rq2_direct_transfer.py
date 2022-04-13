@@ -3,8 +3,8 @@ import os
 
 def main():
     run_dir = 'runs_direct_transfer'
-    for i in ['python', 'javascript', 'go', 'php', 'ruby', 'java']:
-        for j in ['python', 'javascript', 'go', 'php', 'ruby', 'java']:
+    for i in ['python', 'javascript', 'go', 'php', 'ruby', 'java', 'csharp']:
+        for j in ['python', 'javascript', 'go', 'php', 'ruby', 'java', 'csharp']:
             if i == j:
                 continue
             print(f'{i} -> {j} direct transfer')

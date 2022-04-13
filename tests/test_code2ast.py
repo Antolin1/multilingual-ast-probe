@@ -87,6 +87,7 @@ GO_LANGUAGE = Language('grammars/languages.so', 'go')
 PHP_LANGUAGE = Language('grammars/languages.so', 'php')
 RUBY_LANGUAGE = Language('grammars/languages.so', 'ruby')
 JAVA_LANGUAGE = Language('grammars/languages.so', 'java')
+CSHARP_LANGUAGE = Language('grammars/languages.so', 'c_sharp')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 

@@ -11,6 +11,7 @@ Language.build_library(
     'grammars/tree-sitter-go',
     'grammars/tree-sitter-php',
     'grammars/tree-sitter-ruby',
-    'grammars/tree-sitter-java'
+    'grammars/tree-sitter-java',
+    'grammars/tree-sitter-c-sharp'
   ]
 )

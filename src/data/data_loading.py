@@ -29,7 +29,8 @@ LANGUAGES = (
     'ruby',
     'javascript',
     'go',
-    'php'
+    'c',
+    'csharp'
 )
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 JS_LANGUAGE = Language('grammars/languages.so', 'javascript')

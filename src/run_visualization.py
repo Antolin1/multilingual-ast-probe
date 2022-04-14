@@ -203,7 +203,7 @@ def __run_visualization_vectors(vectors, ids_to_labels, type_labels, args, metho
         axis.scatter(v_2d[ix, 0], v_2d[ix, 1], color=COLORS[l], label=l)
 
     for ix, label in ids_to_labels.items():
-        axis[1].annotate(label, (v_2d[ix, 0], v_2d[ix, 1]))
+        axis.annotate(label, (v_2d[ix, 0], v_2d[ix, 1]))
     plt.show()
     plt.savefig(f'vectors_{type_labels}.png')
 

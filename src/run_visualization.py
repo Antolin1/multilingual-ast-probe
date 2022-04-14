@@ -20,7 +20,6 @@ import glob
 import logging
 import pickle
 import numpy as np
-from tqdm import tqdm
 from yellowbrick.cluster import KElbowVisualizer
 
 logger = logging.getLogger(__name__)
@@ -199,10 +198,14 @@ def __run_visualization_vectors(vectors, ids_to_labels, type_labels, args, metho
     figure, axis = plt.subplots(1, figsize=(20, 20))
     axis.set_title(f"Vectors {type_labels}")
     for ix, label in ids_to_labels.items():
+        if SEPARATOR in label:
+            continue
         l = label.split('--')[1]
         axis.scatter(v_2d[ix, 0], v_2d[ix, 1], color=COLORS[l], label=l)
 
     for ix, label in ids_to_labels.items():
+        if SEPARATOR in label:
+            continue
         axis.annotate(label, (v_2d[ix, 0], v_2d[ix, 1]))
     plt.show()
     plt.savefig(f'vectors_{type_labels}.png')

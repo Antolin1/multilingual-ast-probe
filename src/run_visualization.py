@@ -185,31 +185,22 @@ COLORS = {'java': 'r',
           }
 
 
-def __run_visualization_vectors(vectors_c, vectors_u, ids_to_labels_c, ids_to_labels_u, args, method='TSNE'):
+def __run_visualization_vectors(vectors, ids_to_labels, type_labels, args, method='TSNE'):
     if method == 'TSNE':
-        v_c_2d = TSNE(n_components=2, learning_rate='auto', perplexity=5,
-                      init='random', random_state=args.seed).fit_transform(vectors_c)
-        v_u_2d = TSNE(n_components=2, learning_rate='auto', perplexity=5,
-                      init='random', random_state=args.seed).fit_transform(vectors_u)
+        v_2d = TSNE(n_components=2, learning_rate='auto',
+                    init='random', random_state=args.seed).fit_transform(vectors)
     else:
-        vectors_c_norm = vectors_c / np.linalg.norm(vectors_c, axis=1)[:, np.newaxis]
-        vectors_u_norm = vectors_u / np.linalg.norm(vectors_u, axis=1)[:, np.newaxis]
-        v_c_2d = PCA(n_components=2).fit_transform(vectors_c_norm)
-        v_u_2d = PCA(n_components=2).fit_transform(vectors_u_norm)
+        vectors_norm = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+        v_2d = PCA(n_components=2).fit_transform(vectors_norm)
 
-    figure, axis = plt.subplots(2, figsize=(15, 15))
-    axis[0].set_title("Vectors constituency")
-    for ix, label in ids_to_labels_c.items():
+    figure, axis = plt.subplots(1, figsize=(15, 15))
+    axis[0].set_title(f"Vectors {type_labels}")
+    for ix, label in ids_to_labels.items():
         l = label.split('--')[1]
-        axis[0].scatter(v_c_2d[ix, 0], v_c_2d[ix, 1], color=COLORS[l])
-
-    axis[1].scatter(v_u_2d[:, 0], v_u_2d[:, 1])
-    axis[1].set_title("Vectors unary")
-    for ix, label in ids_to_labels_u.items():
-        axis[1].annotate(label, (v_u_2d[ix, 0], v_u_2d[ix, 1]))
-
+        axis[0].scatter(v_2d[ix, 0], v_2d[ix, 1], color=COLORS[l], label=l)
+    axis[0].legend()
     plt.show()
-    plt.savefig(f'vectors.png')
+    plt.savefig(f'vectors_{type_labels}.png')
 
 
 def run_visualization_multilingual(args):
@@ -229,9 +220,10 @@ def run_visualization_multilingual(args):
     vectors_c = check_point['vectors_c'].detach().cpu().numpy().T
     vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
 
-    __run_visualization_vectors(vectors_c, vectors_u, goblal_labels_c, goblal_labels_u, args)
-    __apply_kmeans(vectors_c, goblal_labels_c, 4, 80, 'elbow_c.png', args)
-    __apply_kmeans(vectors_u, goblal_labels_u, 4, 30, 'elbow_u.png', args)
+    __run_visualization_vectors(vectors_c, goblal_labels_c, 'c', args, method='TSNE')
+    __run_visualization_vectors(vectors_u, goblal_labels_u, 'u', args, method='TSNE')
+    #__apply_kmeans(vectors_c, goblal_labels_c, 4, 80, 'elbow_c.png', args)
+    #__apply_kmeans(vectors_u, goblal_labels_u, 4, 30, 'elbow_u.png', args)
 
 
 def __apply_kmeans(vectors, ids_to_labels, min_clusters, max_clusters, plot_name, args):

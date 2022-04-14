@@ -12,7 +12,7 @@ from scipy import stats
 from sklearn.manifold import TSNE
 from sklearn.metrics import silhouette_score
 
-LANGS = ['python', 'javascript', 'go', 'ruby', 'php', 'java']
+LANGS = ['python', 'javascript', 'go', 'ruby', 'c', 'java', 'csharp']
 
 
 def report_angle(args):
@@ -159,10 +159,10 @@ def projection_direct_transfer(args, dic_results, label='c'):
         plt.scatter(v_c_source[:, 0], v_c_source[:, 1], color='blue')
         plt.scatter(v_c_target[:, 0], v_c_target[:, 1], color='red')
 
-        for ix, l in dic_vocab_source[case].items():
-            plt.annotate(l, (v_c_source[ix, 0], v_c_source[ix, 1]))
-        for ix, l in dic_vocab_target[case].items():
-            plt.annotate(l, (v_c_target[ix, 0], v_c_target[ix, 1]))
+#        for ix, l in dic_vocab_source[case].items():
+#            plt.annotate(l, (v_c_source[ix, 0], v_c_source[ix, 1]))
+#        for ix, l in dic_vocab_target[case].items():
+#            plt.annotate(l, (v_c_target[ix, 0], v_c_target[ix, 1]))
         plt.show()
         plt.savefig(f'plots/{case}_scatter_{label}.png')
 

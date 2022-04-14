@@ -4,7 +4,7 @@ import os
 def main():
     run_dir = 'runs_direct_transfer'
     for i in ['python', 'javascript', 'go', 'php', 'ruby', 'java', 'csharp']:
-        for j in ['python', 'javascript', 'go', 'php', 'ruby', 'java', 'csharp']:
+        for j in ['c']:
             if i == j:
                 continue
             print(f'{i} -> {j} direct transfer')

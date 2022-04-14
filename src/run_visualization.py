@@ -179,8 +179,9 @@ COLORS = {'java': 'r',
           'javascript': 'b',
           'go': 'g',
           'python': 'c',
-          'php' : 'm',
-          'ruby' : 'y'
+          'c': 'm',
+          'ruby': 'y',
+          'csharp': 'k'
           }
 
 

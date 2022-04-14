@@ -622,7 +622,7 @@ def run_probing_all_languages(args):
         data_files[f'valid_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'valid.jsonl')
         data_files[f'test_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'test.jsonl')
 
-    data_sets = {x: load_dataset('json', data_files=data_files, split=x) for x, y in data_files.items()}
+    data_sets = {x: load_dataset('json', data_files=y) for x, y in data_files.items()}
     data_sets = {x: y.map(lambda e: convert_sample_to_features(e['original_string'], parsers[x.split('_')[1]],
                                                                x.split('_')[1]))
                  for x, y in data_sets.items()}
@@ -655,9 +655,9 @@ def run_probing_all_languages(args):
     data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['u'], 'u', labels_to_ids_u_global, x.split('_')[1]))
                  for x, y in data_sets.items()}
 
-    train_datasets = [y for x, y in data_sets.items() if 'train_' in x]
-    valid_datasets = [y for x, y in data_sets.items() if 'valid_' in x]
-    test_datasets = [y for x, y in data_sets.items() if 'test_' in x]
+    train_datasets = [y['train'] for x, y in data_sets.items() if 'train_' in x]
+    valid_datasets = [y['train'] for x, y in data_sets.items() if 'valid_' in x]
+    test_datasets = [y['train'] for x, y in data_sets.items() if 'test_' in x]
 
     train_set = concatenate_datasets(train_datasets)
     valid_set = concatenate_datasets(valid_datasets)

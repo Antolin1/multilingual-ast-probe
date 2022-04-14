@@ -243,7 +243,6 @@ def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
         for step, batch in enumerate(tqdm(test_dataloader,
                                           desc='[test batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
-            all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
 
             if not masking:
                 all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch

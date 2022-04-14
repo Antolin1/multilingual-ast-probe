@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from .utils import match_tokenized_to_untokenized_roberta
-from data_loading import get_mask_multilingual
+from .data_loading import get_mask_multilingual
 
 
 def collator_fn(batch, tokenizer):

@@ -187,18 +187,23 @@ COLORS = {'java': 'r',
 
 def __run_visualization_vectors(vectors, ids_to_labels, type_labels, args, method='TSNE'):
     if method == 'TSNE':
-        v_2d = TSNE(n_components=2, learning_rate='auto',
+        perplexity = 30.0
+        if type_labels == 'u':
+            perplexity = 5.0
+        v_2d = TSNE(n_components=2, learning_rate='auto', perplexity=perplexity,
                     init='random', random_state=args.seed).fit_transform(vectors)
     else:
         vectors_norm = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
         v_2d = PCA(n_components=2).fit_transform(vectors_norm)
 
-    figure, axis = plt.subplots(1, figsize=(15, 15))
-    axis[0].set_title(f"Vectors {type_labels}")
+    figure, axis = plt.subplots(1, figsize=(20, 20))
+    axis.set_title(f"Vectors {type_labels}")
     for ix, label in ids_to_labels.items():
         l = label.split('--')[1]
-        axis[0].scatter(v_2d[ix, 0], v_2d[ix, 1], color=COLORS[l], label=l)
-    axis[0].legend()
+        axis.scatter(v_2d[ix, 0], v_2d[ix, 1], color=COLORS[l], label=l)
+
+    for ix, label in ids_to_labels.items():
+        axis[1].annotate(label, (v_2d[ix, 0], v_2d[ix, 1]))
     plt.show()
     plt.savefig(f'vectors_{type_labels}.png')
 

@@ -12,7 +12,8 @@ from datasets import load_dataset, concatenate_datasets
 from tqdm import tqdm
 
 from data import convert_sample_to_features, collator_fn, \
-    PY_PARSER, GO_PARSER, JS_PARSER, PHP_PARSER, JAVA_PARSER, RUBY_PARSER, LANGUAGES, CSHARP_PARSER, C_PARSER
+    PY_PARSER, GO_PARSER, JS_PARSER, PHP_PARSER, JAVA_PARSER, \
+    RUBY_PARSER, LANGUAGES, CSHARP_PARSER, C_PARSER, collator_with_mask
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 from data.data_loading import get_non_terminals_labels, convert_to_ids, convert_to_ids_multilingual
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
@@ -22,15 +23,15 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logger = logging.getLogger(__name__)
 
 parsers = {
-        'python': PY_PARSER,
-        'javascript': JS_PARSER,
-        'go': GO_PARSER,
-        'php': PHP_PARSER,
-        'ruby': RUBY_PARSER,
-        'java': JAVA_PARSER,
-        'csharp': CSHARP_PARSER,
-        'c': C_PARSER
-    }
+    'python': PY_PARSER,
+    'javascript': JS_PARSER,
+    'go': GO_PARSER,
+    'php': PHP_PARSER,
+    'ruby': RUBY_PARSER,
+    'java': JAVA_PARSER,
+    'csharp': CSHARP_PARSER,
+    'c': C_PARSER
+}
 
 
 def generate_baseline(model):
@@ -53,6 +54,7 @@ def get_lmodel(args):
 
 
 def run_train_general(probe_model, lmodel, train_dataloader, valid_dataloader, metrics, pretrained, args):
+    masking = args.do_train_all_languages or args.do_hold_one_out_training
     if pretrained:
         optimizer = torch.optim.Adam([probe_model.vectors_c, probe_model.vectors_u], lr=args.lr)
     else:
@@ -69,7 +71,14 @@ def run_train_general(probe_model, lmodel, train_dataloader, valid_dataloader, m
         for step, batch in enumerate(tqdm(train_dataloader,
                                           desc='[training batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
-            all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+            if not masking:
+                all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+                masks_c = None
+                masks_u = None
+            else:
+                all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment, masks_c, masks_u = batch
+                masks_c = masks_c.to(args.device)
+                masks_u = masks_u.to(args.device)
 
             embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
                                    args.model_type)
@@ -83,7 +92,8 @@ def run_train_general(probe_model, lmodel, train_dataloader, valid_dataloader, m
                 d_real=ds.to(args.device),
                 c_real=cs.to(args.device),
                 u_real=us.to(args.device),
-                length_batch=batch_len_tokens.to(args.device))
+                length_batch=batch_len_tokens.to(args.device),
+                masks_c=masks_c, masks_u=masks_u)
 
             if not pretrained:
                 reg = args.orthogonal_reg * (
@@ -221,6 +231,7 @@ def run_probing_train(args: argparse.Namespace):
 
 def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
     probe_model.eval()
+    masking = args.do_train_all_languages or args.do_hold_one_out_training
     eval_loss = 0.0
     total_hits_c = 0
     total_c = 0
@@ -233,6 +244,16 @@ def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
                                           desc='[test batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
             all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+
+            if not masking:
+                all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+                masks_c = None
+                masks_u = None
+            else:
+                all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment, masks_c, masks_u = batch
+                masks_c = masks_c.to(args.device)
+                masks_u = masks_u.to(args.device)
+
             ds = ds.to(args.device)
             cs = cs.to(args.device)
             us = us.to(args.device)
@@ -249,7 +270,8 @@ def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
                 d_real=ds.to(args.device),
                 c_real=cs.to(args.device),
                 u_real=us.to(args.device),
-                length_batch=batch_len_tokens.to(args.device))
+                length_batch=batch_len_tokens.to(args.device),
+                masks_c=masks_c, masks_u=masks_u)
             eval_loss += loss.item()
 
             # compute the classes c and u
@@ -301,6 +323,7 @@ def compute_hits_d(input, target, mask):
 
 def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
     # todo: filter categories using the language
+    masking = args.do_train_all_languages or args.do_hold_one_out_training
     probe_model.eval()
     precisions = [] if (not args.do_train_all_languages) and (not args.do_hold_one_out_training) else defaultdict(list)
     recalls = [] if (not args.do_train_all_languages) and (not args.do_hold_one_out_training) else defaultdict(list)
@@ -309,13 +332,25 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
         for step, batch in enumerate(tqdm(test_dataloader,
                                           desc='[test batch]',
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
-            all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+            if not masking:
+                all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = batch
+                masks_c = None
+                masks_u = None
+            else:
+                all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment, masks_c, masks_u = batch
+                masks_c = masks_c.to(args.device)
+                masks_u = masks_u.to(args.device)
 
             embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
                                    args.model_type)
             embds = align_function(embds.to(args.device), alignment.to(args.device))
 
             d_pred, scores_c, scores_u = probe_model(embds.to(args.device))
+
+            if masking:
+                scores_c += masks_c.unsqueeze(1)
+                scores_u += masks_u.unsqueeze(1)
+
             scores_c = torch.argmax(scores_c, dim=2)
             scores_u = torch.argmax(scores_u, dim=2)
 
@@ -610,7 +645,7 @@ def run_probing_all_languages(args):
     labels_to_ids_u_global = {x: y for y, x in enumerate(labels_u)}
     ids_to_labels_u_global = {y: x for x, y in labels_to_ids_u_global.items()}
 
-    #save labels
+    # save labels
     with open(os.path.join(args.output_path, 'global_labels_c.pkl'), 'wb') as f:
         pickle.dump(labels_to_ids_c_global, f)
     with open(os.path.join(args.output_path, 'global_labels_u.pkl'), 'wb') as f:
@@ -632,12 +667,16 @@ def run_probing_all_languages(args):
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,
                                   shuffle=True,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
+                                                                              ids_to_labels_c_global,
+                                                                              ids_to_labels_u_global),
                                   num_workers=8)
     valid_dataloader = DataLoader(dataset=valid_set,
                                   batch_size=args.batch_size,
                                   shuffle=False,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
+                                                                              ids_to_labels_c_global,
+                                                                              ids_to_labels_u_global),
                                   num_workers=8)
 
     lmodel = get_lmodel(args)
@@ -655,7 +694,9 @@ def run_probing_all_languages(args):
     test_dataloader = DataLoader(dataset=test_set,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
+                                                                              ids_to_labels_c_global,
+                                                                              ids_to_labels_u_global),
                                  num_workers=8)
 
     logger.info('Loading best model.')

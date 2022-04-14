@@ -7,6 +7,7 @@ import random
 import logging
 from collections import Counter
 
+import torch
 from tqdm import tqdm
 from tree_sitter import Language, Parser
 import networkx as nx
@@ -239,6 +240,17 @@ def convert_to_ids_multilingual(c, column_name, labels_to_ids, lang):
     for label in c:
         labels_ids.append(labels_to_ids[label + '--' + lang])
     return {column_name: labels_ids}
+
+
+def get_mask_multilingual(ids_to_labels, lang):
+    result = []
+    for i, _ in enumerate(ids_to_labels.keys()):
+        label = ids_to_labels[i]
+        if label.endswith('--' + lang):
+            result.append(0)
+        else:
+            result.append(-float("Inf"))
+    return result
 
 
 def compute_distinct_labels(dataset_path, args):

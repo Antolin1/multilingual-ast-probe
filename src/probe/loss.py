@@ -85,7 +85,8 @@ class ParserLoss(nn.Module):
         self.loss = loss
         self.pretrained = pretrained
 
-    def forward(self, d_pred, scores_c, scores_u, d_real, c_real, u_real, length_batch):
+    def forward(self, d_pred, scores_c, scores_u, d_real, c_real, u_real, length_batch,
+                masks_c=None, masks_u=None):
         total_sents = torch.sum(length_batch != 0).float()
         labels_1s = (d_real != -1).float()
         d_pred_masked = d_pred * labels_1s  # b x seq-1
@@ -101,6 +102,10 @@ class ParserLoss(nn.Module):
             max_len_d = torch.max(lens_d)
             mask = torch.arange(max_len_d, device=max_len_d.device)[None, :] < lens_d[:, None]
             loss_d = rankloss(d_pred, d_real, mask, exp=False)
+        if masks_c is not None:
+            scores_c += torch.unsqueeze(masks_c, dim=1)
+        if masks_u is not None:
+            scores_u += torch.unsqueeze(masks_u, dim=1)
         loss_c = self.cs(scores_c.view(-1, scores_c.shape[2]), c_real.view(-1))
         loss_u = self.cs(scores_u.view(-1, scores_u.shape[2]), u_real.view(-1))
         if self.pretrained:

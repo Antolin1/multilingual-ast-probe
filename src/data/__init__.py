@@ -3,7 +3,7 @@ from .data_loading import download_codesearchnet_dataset, create_splits,\
     PY_PARSER, JS_PARSER, GO_PARSER, GO_LANGUAGE, \
     PHP_LANGUAGE, RUBY_LANGUAGE, JAVA_LANGUAGE, CSHARP_LANGUAGE, JAVA_PARSER, RUBY_PARSER, PHP_PARSER, LANGUAGES, \
     download_codexglue_csharp, CSHARP_PARSER, download_codexglue_c, C_LANGUAGE, C_PARSER
-from .collator import collator_fn
+from .collator import collator_fn, collator_with_mask
 from .utils import \
     download_url, \
     unzip_file, \

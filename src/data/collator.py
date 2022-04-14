@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from .utils import match_tokenized_to_untokenized_roberta
+from data_loading import get_mask_multilingual
 
 
 def collator_fn(batch, tokenizer):
@@ -50,3 +51,20 @@ def collator_fn(batch, tokenizer):
     alignment = torch.tensor(alignment)
     
     return all_inputs, all_attentions, ds, cs, us, torch.tensor(batch_len_tokens), alignment
+
+
+def collator_with_mask(batch, tokenizer, ids_to_labels_c, ids_to_labels_u):
+    all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = collator_fn(batch, tokenizer)
+    masks_c = []
+    for c in cs:
+        first_id = c[0]
+        lang = ids_to_labels_c[first_id.item()].split('--')[1]
+        masks_c.append(get_mask_multilingual(ids_to_labels_c, lang))
+
+    masks_u = []
+    for u in us:
+        first_id = u[0]
+        lang = ids_to_labels_u[first_id.item()].split('--')[1]
+        masks_u.append(get_mask_multilingual(ids_to_labels_u, lang))
+    return (all_inputs, all_attentions, ds, cs, us, batch_len_tokens,
+            alignment, torch.tensor(masks_c), torch.tensor(masks_u))

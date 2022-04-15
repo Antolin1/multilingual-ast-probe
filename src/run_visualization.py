@@ -269,7 +269,7 @@ def __perform_knn(vectors, ids_to_labels):
     l2id = {y: x for x, y in ids_to_labels.items()}
     for cand in ['for_statement--java',
                  'unary_expression--go',
-                 'array--javascript']:
+                 'array--javascript', '<empty>--ruby']:
         id_cand = l2id[cand]
         _, i = kd_tree.query([vectors[id_cand]], k=10)
         i = i[0]

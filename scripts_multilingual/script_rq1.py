@@ -4,7 +4,7 @@ import os
 
 def main(args):
     run_dir = 'runs_monolingual'
-    for lang in ['python', 'javascript', 'go', 'php', 'ruby', 'java', 'csharp', 'c']:
+    for lang in ['python', 'javascript', 'go', 'ruby', 'java', 'csharp', 'c']:
         folder = lang
         layer = 5
         if args.baseline:
@@ -15,7 +15,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Script for generating the dataset for probing')
+    parser = argparse.ArgumentParser(description='Script for probing monolingual')
     parser.add_argument('--baseline', help='To run the baseline', action='store_true')
     args = parser.parse_args()
     main(args)

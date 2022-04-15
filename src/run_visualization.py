@@ -21,6 +21,7 @@ import logging
 import pickle
 import numpy as np
 from yellowbrick.cluster import KElbowVisualizer
+from scipy.spatial import KDTree
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +161,7 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         plt.savefig(f'fig_{c}_{args.lang}.png')
 
         labels_axis = [tokens[i] + '-' + tokens[i + 1] for i in range(0, len(tokens) - 1)]
-        figure, axis = plt.subplots(2, figsize=(15, 15))
+        figure, axis = plt.subplots(2, figsize=(40, 40))
         axis[0].bar(labels_axis, ds_current)
         axis[0].set_title("True dist")
         for ix, label in enumerate(scores_c_labels):
@@ -189,6 +190,7 @@ def __run_visualization_vectors(vectors, ids_to_labels, type_labels, args, metho
         perplexity = 30.0
         if type_labels == 'u':
             perplexity = 5.0
+        vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
         v_2d = TSNE(n_components=2, learning_rate='auto', perplexity=perplexity,
                     init='random', random_state=args.seed).fit_transform(vectors)
     else:
@@ -228,10 +230,11 @@ def run_visualization_multilingual(args):
     vectors_c = check_point['vectors_c'].detach().cpu().numpy().T
     vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
 
+    __perform_knn(vectors_c, goblal_labels_c)
     __run_visualization_vectors(vectors_c, goblal_labels_c, 'c', args, method='TSNE')
     __run_visualization_vectors(vectors_u, goblal_labels_u, 'u', args, method='TSNE')
-    #__apply_kmeans(vectors_c, goblal_labels_c, 4, 80, 'elbow_c.png', args)
-    #__apply_kmeans(vectors_u, goblal_labels_u, 4, 30, 'elbow_u.png', args)
+    # __apply_kmeans(vectors_c, goblal_labels_c, 4, 80, 'elbow_c.png', args)
+    # __apply_kmeans(vectors_u, goblal_labels_u, 4, 30, 'elbow_u.png', args)
 
 
 def __apply_kmeans(vectors, ids_to_labels, min_clusters, max_clusters, plot_name, args):
@@ -258,3 +261,17 @@ def __apply_kmeans(vectors, ids_to_labels, min_clusters, max_clusters, plot_name
                 cont += 1
             if cont == 10:
                 break
+
+
+def __perform_knn(vectors, ids_to_labels):
+    vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    kd_tree = KDTree(vectors)
+    l2id = {y: x for x, y in ids_to_labels.items()}
+    for cand in ['for_statement--java',
+                 'unary_expression--go',
+                 'array--javascript']:
+        id_cand = l2id[cand]
+        _, i = kd_tree.query([vectors[id_cand]], k=10)
+        i = i[0]
+        for j, idx in enumerate(i):
+            print(f'Neig k={j} for {cand} is {ids_to_labels[idx]}')

@@ -144,25 +144,29 @@ def projection_direct_transfer(args, dic_results, label='c'):
         target_vectors = dic_vectors_target[case]
         n_vectors_source = source_vectors.shape[0]
         n_vectors_target = target_vectors.shape[0]
-        sh_score = silhouette_score(np.concatenate((source_vectors, target_vectors), axis=0),
-                                    np.concatenate((np.zeros(n_vectors_source), np.ones(n_vectors_target))))
+        vectors = np.concatenate((source_vectors, target_vectors), axis=0)
+        vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+        sh_score = silhouette_score(vectors,
+                                    np.concatenate((np.zeros(n_vectors_source),
+                                    np.ones(n_vectors_target))))
         print(case, sh_score)
         dic_sh_score[case] = sh_score
 
+        vectors = np.concatenate((source_vectors, target_vectors), axis=0)
+        vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
         v_c_2d = TSNE(n_components=2, learning_rate='auto',
-                      init='random', random_state=args.seed).fit_transform(np.concatenate((source_vectors,
-                                                                                          target_vectors), axis=0))
+                      init='random', random_state=args.seed).fit_transform(vectors)
         v_c_source = v_c_2d[0:n_vectors_source, :]
         v_c_target = v_c_2d[n_vectors_source:, :]
 
-        plt.figure(i)
+        plt.figure(i, figsize=(20, 20))
         plt.scatter(v_c_source[:, 0], v_c_source[:, 1], color='blue')
         plt.scatter(v_c_target[:, 0], v_c_target[:, 1], color='red')
 
-#        for ix, l in dic_vocab_source[case].items():
-#            plt.annotate(l, (v_c_source[ix, 0], v_c_source[ix, 1]))
-#        for ix, l in dic_vocab_target[case].items():
-#            plt.annotate(l, (v_c_target[ix, 0], v_c_target[ix, 1]))
+        for ix, l in dic_vocab_source[case].items():
+            plt.annotate(l, (v_c_source[ix, 0], v_c_source[ix, 1]))
+        for ix, l in dic_vocab_target[case].items():
+            plt.annotate(l, (v_c_target[ix, 0], v_c_target[ix, 1]))
         plt.show()
         plt.savefig(f'plots/{case}_scatter_{label}.png')
 

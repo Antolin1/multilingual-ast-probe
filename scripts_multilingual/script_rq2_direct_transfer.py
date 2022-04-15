@@ -3,7 +3,7 @@ import os
 
 def main():
     run_dir = 'runs_direct_transfer'
-    for i in ['python', 'javascript', 'go', 'php', 'ruby', 'java', 'csharp']:
+    for i in ['python', 'javascript', 'go', 'ruby', 'java', 'csharp', 'c']:
         for j in ['c']:
             if i == j:
                 continue

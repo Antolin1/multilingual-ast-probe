@@ -3,11 +3,11 @@ import os
 
 def main():
     run_dir = 'runs_hold_one_out'
-    for i in ['python', 'javascript', 'go', 'php', 'ruby', 'java']:
+    for i in ['python', 'javascript', 'go', 'ruby', 'java', 'c', 'csharp']:
         os.system(
                 f"CUDA_VISIBLE_DEVICES=2 python src/main.py --do_hold_one_out_training --run_base_path {run_dir} "
                 f"--run_name all_less_{i} --lang {i}")
-    for j in ['python', 'javascript', 'go', 'php', 'ruby', 'java']:
+    for j in ['python', 'javascript', 'go', 'ruby', 'java', 'c', 'csharp']:
         os.system(
             f"CUDA_VISIBLE_DEVICES=2 python src/main.py --do_train_from_given_projection --run_base_path {run_dir} "
             f"--run_name hold_one_out_{j} "

@@ -230,6 +230,7 @@ def run_visualization_multilingual(args):
     vectors_c = check_point['vectors_c'].detach().cpu().numpy().T
     vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
 
+    __perform_analog(vectors_c, goblal_labels_c)
     __perform_knn(vectors_c, goblal_labels_c)
     __run_visualization_vectors(vectors_c, goblal_labels_c, 'c', args, method='TSNE')
     __run_visualization_vectors(vectors_u, goblal_labels_u, 'u', args, method='TSNE')
@@ -275,3 +276,27 @@ def __perform_knn(vectors, ids_to_labels):
         i = i[0]
         for j, idx in enumerate(i):
             print(f'Neig k={j} for {cand} is {ids_to_labels[idx]}')
+
+
+def __perform_analog(vectors, ids_to_labels):
+    l2id = {y: x for x, y in ids_to_labels.items()}
+
+    vectors_unit = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    kd_tree = KDTree(vectors_unit)
+
+    source_lang = 'java'
+    target_lan = 'csharp'
+
+    list_nonterminals_source = [l.split('--')[0] for l in l2id.keys()
+                              if SEPARATOR not in l and
+                              l.endswith(f'--{source_lang}')]
+
+    for nonterminal in list_nonterminals_source:
+        y_diff_langs = vectors[l2id[f'if_statement--{target_lan}']] - vectors[l2id[f'if_statement--{source_lang}']]
+        y = y_diff_langs + vectors[l2id[f'{nonterminal}--{source_lang}']]
+        y = y / np.linalg.norm(y)
+        _, i = kd_tree.query([y], k=3)
+        i = i[0]
+        for j, idx in enumerate(i):
+            if ids_to_labels[idx].endswith(f'--{target_lan}'):
+                print(f'Neig k={j} for analogy {nonterminal}--{source_lang} is {ids_to_labels[idx]}')

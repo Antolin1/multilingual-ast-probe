@@ -146,11 +146,14 @@ def projection_direct_transfer(args, dic_results, label='c'):
         n_vectors_target = target_vectors.shape[0]
         vectors = np.concatenate((source_vectors, target_vectors), axis=0)
         vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
-        sh_score = silhouette_score(vectors,
-                                    np.concatenate((np.zeros(n_vectors_source),
-                                    np.ones(n_vectors_target))))
-        print(case, sh_score)
-        dic_sh_score[case] = sh_score
+        dis_norm = np.linalg.norm(np.mean(source_vectors/np.linalg.norm(source_vectors, axis=1)[:, np.newaxis], axis=0)-
+                    np.mean(target_vectors/np.linalg.norm(target_vectors, axis=1)[:, np.newaxis], axis=0))
+        #sh_score = silhouette_score(vectors,
+        #                            np.concatenate((np.zeros(n_vectors_source),
+        #                            np.ones(n_vectors_target))))
+        #dis_norm = dis_norm
+        print(case, dis_norm)
+        dic_sh_score[case] = dis_norm
 
         vectors = np.concatenate((source_vectors, target_vectors), axis=0)
         vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]

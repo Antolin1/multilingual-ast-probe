@@ -88,8 +88,8 @@ def report_direct_transfer(args, dic_rad, dic_performances):
                 pass
                 # angle.append(0)
                 # f1.append(dic_performances[i])
-        print(f'For {j} the coef is {stats.spearmanr(f1, angle)}')
-        correlations.append(stats.spearmanr(f1, angle).correlation)
+        print(f'For {j} the coef is {stats.pearsonr(f1, angle)}')
+        correlations.append(stats.pearsonr(f1, angle)[0])
     print(f'Mean correlations: {np.mean(correlations)}')
     return dic_results
 
@@ -198,8 +198,8 @@ def projection_direct_transfer(args, dic_results, label='c'):
                 pass
                 # angle.append(0)
                 # f1.append(dic_performances[i])
-        print(f'For {j} the coef is {stats.spearmanr(f1, sh)}')
-        correlations.append(stats.spearmanr(f1, sh).correlation)
+        print(f'For {j} the coef is {stats.pearsonr(f1, sh)}')
+        correlations.append(stats.pearsonr(f1, sh)[0])
     print(f'Mean correlations: {np.mean(correlations)}')
 
 

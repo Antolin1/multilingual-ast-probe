@@ -231,9 +231,10 @@ def run_visualization_multilingual(args):
     vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
 
     __perform_analog(vectors_c, goblal_labels_c)
-    __perform_knn(vectors_c, goblal_labels_c)
+    #__perform_knn(vectors_c, goblal_labels_c)
     __run_visualization_vectors(vectors_c, goblal_labels_c, 'c', args, method='TSNE')
     __run_visualization_vectors(vectors_u, goblal_labels_u, 'u', args, method='TSNE')
+    __visualize_after_displacement(vectors_c, goblal_labels_c, args, target='csharp')
     # __apply_kmeans(vectors_c, goblal_labels_c, 4, 80, 'elbow_c.png', args)
     # __apply_kmeans(vectors_u, goblal_labels_u, 4, 30, 'elbow_u.png', args)
 
@@ -284,15 +285,18 @@ def __perform_analog(vectors, ids_to_labels):
     vectors_unit = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
     kd_tree = KDTree(vectors_unit)
 
-    source_lang = 'java'
-    target_lan = 'csharp'
+    source_lang = 'csharp'
+    target_lan = 'c'
 
     list_nonterminals_source = [l.split('--')[0] for l in l2id.keys()
-                              if SEPARATOR not in l and
-                              l.endswith(f'--{source_lang}')]
+                                if SEPARATOR not in l and
+                                l.endswith(f'--{source_lang}')]
 
     for nonterminal in list_nonterminals_source:
-        y_diff_langs = vectors[l2id[f'if_statement--{target_lan}']] - vectors[l2id[f'if_statement--{source_lang}']]
+        # y_diff_langs = vectors[l2id[f'if_statement--{target_lan}']] - vectors[l2id[f'if_statement--{source_lang}']]
+        y_source_mean = np.mean(np.stack([vectors[l2id[x]] for x in l2id if x.endswith(f'--{source_lang}')]), axis=0)
+        y_target_mean = np.mean(np.stack([vectors[l2id[x]] for x in l2id if x.endswith(f'--{target_lan}')]), axis=0)
+        y_diff_langs = y_target_mean - y_source_mean
         y = y_diff_langs + vectors[l2id[f'{nonterminal}--{source_lang}']]
         y = y / np.linalg.norm(y)
         _, i = kd_tree.query([y], k=3)
@@ -300,3 +304,45 @@ def __perform_analog(vectors, ids_to_labels):
         for j, idx in enumerate(i):
             if ids_to_labels[idx].endswith(f'--{target_lan}'):
                 print(f'Neig k={j} for analogy {nonterminal}--{source_lang} is {ids_to_labels[idx]}')
+
+
+def __visualize_after_displacement(vectors, ids_to_labels, args, target='java'):
+    new_vectors = []
+    l2id = {y: x for x, y in ids_to_labels.items()}
+    y_target_mean = np.mean(np.stack([vectors[l2id[x]] for x in l2id if x.endswith(f'--{target}')]),
+                            axis=0)
+    for i, _ in enumerate(ids_to_labels):
+        l = ids_to_labels[i]
+        if l.endswith(f'--{target}'):
+            new_vectors.append(vectors[i])
+        else:
+            lang = l.split('--')[1]
+            y_source_mean = np.mean(np.stack([vectors[l2id[x]] for x in l2id if x.endswith(f'--{lang}')]),
+                                    axis=0)
+            y_diff_langs = y_target_mean - y_source_mean
+            y = y_diff_langs + vectors[i]
+            new_vectors.append(y)
+
+    __apply_kmeans(np.stack(new_vectors), ids_to_labels,
+                   4, 80, f'elbow_displacement_{target}.png', args)
+
+    vectors = np.stack(new_vectors) / np.linalg.norm(np.stack(new_vectors), axis=1)[:, np.newaxis]
+    v_2d = TSNE(n_components=2, learning_rate='auto',
+                init='random', random_state=args.seed).fit_transform(vectors)
+
+    figure, axis = plt.subplots(1, figsize=(20, 20))
+    axis.set_title(f"Vectors displaced to {target}")
+    for ix, label in ids_to_labels.items():
+        if SEPARATOR in label:
+            continue
+        l = label.split('--')[1]
+        axis.scatter(v_2d[ix, 0], v_2d[ix, 1], color=COLORS[l], label=l)
+
+    for ix, label in ids_to_labels.items():
+        if SEPARATOR in label:
+            continue
+        nt = label.split('--')[0]
+        axis.annotate(nt, (v_2d[ix, 0], v_2d[ix, 1]))
+    plt.show()
+    plt.savefig(f'vectors_displaced_{target}.png')
+

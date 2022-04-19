@@ -34,10 +34,11 @@ parsers = {
 }
 
 
-def generate_baseline(model):
+def generate_baseline(model, type_baseline='not_full'):
     config = model.config
     baseline = RobertaModel(config)
-    baseline.embeddings = model.embeddings
+    if type_baseline == 'not_full':
+        baseline.embeddings = model.embeddings
     return baseline
 
 
@@ -49,6 +50,8 @@ def get_lmodel(args):
         lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
         if '-baseline' in args.run_name:
             lmodel = generate_baseline(lmodel)
+        elif '-baseline-full' in args.run_name:
+            lmodel = generate_baseline(lmodel, 'full')
     lmodel = lmodel.to(args.device)
     return lmodel
 

@@ -62,3 +62,6 @@ plotnine==0.8.0
 statsmodels==0.13.2
 yellowbrick
 gdown
+umap-learn
+opentsne
+plotly

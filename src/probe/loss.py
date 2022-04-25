@@ -79,11 +79,12 @@ class L1DepthLoss(nn.Module):
 
 
 class ParserLoss(nn.Module):
-    def __init__(self, loss='l1', pretrained=False):
+    def __init__(self, loss='l1', pretrained=False, just_proj=False):
         super(ParserLoss, self).__init__()
         self.cs = nn.CrossEntropyLoss(ignore_index=-1)
         self.loss = loss
         self.pretrained = pretrained
+        self.just_proj = just_proj
 
     def forward(self, d_pred, scores_c, scores_u, d_real, c_real, u_real, length_batch,
                 masks_c=None, masks_u=None):
@@ -102,6 +103,8 @@ class ParserLoss(nn.Module):
             max_len_d = torch.max(lens_d)
             mask = torch.arange(max_len_d, device=max_len_d.device)[None, :] < lens_d[:, None]
             loss_d = rankloss(d_pred, d_real, mask, exp=False)
+        if self.just_proj:
+            return loss_d
         if masks_c is not None:
             scores_c += torch.unsqueeze(masks_c, dim=1)
         if masks_u is not None:

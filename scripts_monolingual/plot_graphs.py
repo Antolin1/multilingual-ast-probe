@@ -6,7 +6,7 @@ import pickle
 import pandas as pd
 from plotnine import ggplot, aes, geom_line, \
     scale_x_continuous, labs, scale_color_discrete, \
-    theme, element_text
+    theme, element_text, xlab, ylab, element_blank
 
 
 def main():
@@ -57,7 +57,8 @@ def main():
                                                'RoBERTa',
                                                'CodeBERTa',
                                                'CodeBERTrand'])
-                + theme(text=element_text(size=16))
+                + theme(text=element_text(size=16), legend_title=element_blank())
+                + xlab("\nLayer") + ylab("F1\n")
         )
         myPlot.save(f"myplot_{lang}.pdf", dpi=600)
 
@@ -82,7 +83,8 @@ def main():
                                                'RoBERTa',
                                                'CodeBERTa',
                                                'CodeBERTrand'])
-                + theme(text=element_text(size=16))
+                + theme(text=element_text(size=16), legend_title=element_blank())
+                + xlab("\nLayer") + ylab("F1\n")
         )
         myPlot.save(f"myplot_rank_{lang}.pdf", dpi=600)
 

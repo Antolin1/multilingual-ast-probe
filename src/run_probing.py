@@ -63,7 +63,7 @@ def run_train_general(probe_model, lmodel, train_dataloader, valid_dataloader, m
     else:
         optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
-    criterion = ParserLoss(loss='rank', pretrained=pretrained)
+    criterion = ParserLoss(loss='rank', pretrained=pretrained, just_proj=args.just_proj)
 
     probe_model.train()
     lmodel.eval()
@@ -217,14 +217,15 @@ def run_probing_train(args: argparse.Namespace):
     checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
     probe_model.load_state_dict(checkpoint)
 
-    logger.info('Evaluating probing on test set.')
-    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                     ids_to_labels_c, ids_to_labels_u, args)
-    metrics['test_precision'] = round(eval_precision, 4)
-    metrics['test_recall'] = round(eval_recall, 4)
-    metrics['test_f1'] = round(eval_f1_score, 4)
-    logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
-                f'| test F1 score: {round(eval_f1_score, 4)}')
+    if not args.just_proj:
+        logger.info('Evaluating probing on test set.')
+        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                         ids_to_labels_c, ids_to_labels_u, args)
+        metrics['test_precision'] = round(eval_precision, 4)
+        metrics['test_recall'] = round(eval_recall, 4)
+        metrics['test_f1'] = round(eval_f1_score, 4)
+        logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
+                    f'| test F1 score: {round(eval_f1_score, 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
@@ -595,14 +596,15 @@ def run_probing_from_given_projection(args):
     checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
     probe_model.load_state_dict(checkpoint)
 
-    logger.info('Evaluating probing on test set.')
-    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                     ids_to_labels_c, ids_to_labels_u, args)
-    metrics['test_precision'] = round(eval_precision, 4)
-    metrics['test_recall'] = round(eval_recall, 4)
-    metrics['test_f1'] = round(eval_f1_score, 4)
-    logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
-                f'| test F1 score: {round(eval_f1_score, 4)}')
+    if not args.just_proj:
+        logger.info('Evaluating probing on test set.')
+        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                         ids_to_labels_c, ids_to_labels_u, args)
+        metrics['test_precision'] = round(eval_precision, 4)
+        metrics['test_recall'] = round(eval_recall, 4)
+        metrics['test_f1'] = round(eval_f1_score, 4)
+        logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
+                    f'| test F1 score: {round(eval_f1_score, 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
@@ -706,16 +708,17 @@ def run_probing_all_languages(args):
     probe_model.load_state_dict(checkpoint)
 
     logger.info('Evaluating probing on test set.')
-    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                     ids_to_labels_c_global, ids_to_labels_u_global,
-                                                                     args)
-    for lang in eval_precision.keys():
-        metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
-        metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
-        metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
-        logger.info(
-            f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
-            f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
+    if not args.just_proj:
+        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                         ids_to_labels_c_global, ids_to_labels_u_global,
+                                                                         args)
+        for lang in eval_precision.keys():
+            metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
+            metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
+            metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
+            logger.info(
+                f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
+                f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
@@ -820,17 +823,18 @@ def run_hold_one_out_training(args):
     checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
     probe_model.load_state_dict(checkpoint)
 
-    logger.info('Evaluating probing on test set.')
-    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                     ids_to_labels_c_global, ids_to_labels_u_global,
-                                                                     args)
-    for lang in eval_precision.keys():
-        metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
-        metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
-        metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
-        logger.info(
-            f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
-            f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
+    if not args.just_proj:
+        logger.info('Evaluating probing on test set.')
+        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                         ids_to_labels_c_global, ids_to_labels_u_global,
+                                                                         args)
+        for lang in eval_precision.keys():
+            metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
+            metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
+            metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
+            logger.info(
+                f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
+                f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')

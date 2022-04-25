@@ -93,6 +93,7 @@ class ProgramArguments:
         metadata={'help': 'Max tokens considered.'}
     )
 
+    just_proj: bool = field(default=False, metadata={'help': 'To train just d.'})
     download_csn: bool = field(default=False, metadata={'help': 'Download CodeSearchNet dataset.'})
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})

@@ -1,27 +1,36 @@
-from data.utils import match_tokenized_to_untokenized_roberta
-from data.code2ast import code2ast, get_tokens_ast
+import glob
+import logging
+import os
+import pickle
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import torch
+from datasets import load_dataset, concatenate_datasets
+from openTSNE import TSNE
+from scipy.spatial import KDTree
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer, T5EncoderModel
+from tree_sitter import Parser
+from yellowbrick.cluster import KElbowVisualizer
+import plotly.express as px
+
+from data import PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE
+from data import convert_sample_to_features, LANGUAGES, collator_with_mask
 from data.binary_tree import ast2binary, tree_to_distance, distance_to_tree, \
     extend_complex_nodes, add_unary, remove_empty_nodes, get_precision_recall_f1, \
     get_recall_non_terminal, SEPARATOR
-import torch
-from probe.utils import get_embeddings, align_function
-import networkx as nx
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
-from data import PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE
+from data.code2ast import code2ast, get_tokens_ast
+from data.data_loading import convert_to_ids_multilingual
+from data.utils import match_tokenized_to_untokenized_roberta
 from probe import ParserProbe
-import os
-from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
+from probe.utils import get_embeddings, align_function
 from run_probing import generate_baseline
-from tree_sitter import Parser
-import glob
-import logging
-import pickle
-import numpy as np
-from yellowbrick.cluster import KElbowVisualizer
-from scipy.spatial import KDTree
+from run_probing import get_lmodel, parsers
 
 logger = logging.getLogger(__name__)
 
@@ -230,13 +239,12 @@ def run_visualization_multilingual(args):
     vectors_c = check_point['vectors_c'].detach().cpu().numpy().T
     vectors_u = check_point['vectors_u'].detach().cpu().numpy().T
 
-    __perform_analog(vectors_c, goblal_labels_c)
-    #__perform_knn(vectors_c, goblal_labels_c)
-    __run_visualization_vectors(vectors_c, goblal_labels_c, 'c', args, method='TSNE')
-    __run_visualization_vectors(vectors_u, goblal_labels_u, 'u', args, method='TSNE')
-    __visualize_after_displacement(vectors_c, goblal_labels_c, args, target='csharp')
-    # __apply_kmeans(vectors_c, goblal_labels_c, 4, 80, 'elbow_c.png', args)
-    # __apply_kmeans(vectors_u, goblal_labels_u, 4, 30, 'elbow_u.png', args)
+    __visualize_dataset_after_projection(args)
+
+    # __perform_analog(vectors_c, goblal_labels_c)
+    # __run_visualization_vectors(vectors_c, goblal_labels_c, 'c', args, method='TSNE')
+    # __run_visualization_vectors(vectors_u, goblal_labels_u, 'u', args, method='TSNE')
+    # __visualize_after_displacement(vectors_c, goblal_labels_c, args, target='csharp')
 
 
 def __apply_kmeans(vectors, ids_to_labels, min_clusters, max_clusters, plot_name, args):
@@ -346,3 +354,162 @@ def __visualize_after_displacement(vectors, ids_to_labels, args, target='java'):
     plt.show()
     plt.savefig(f'vectors_displaced_{target}.png')
 
+
+def __visualize_dataset_after_projection(args):
+    logger.info('Loading tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+
+    # load dictionaries
+    labels_file_path_c = os.path.join(args.output_path, 'global_labels_c.pkl')
+    labels_file_path_u = os.path.join(args.output_path, 'global_labels_u.pkl')
+    with open(labels_file_path_c, 'rb') as f:
+        labels_to_ids_c_global = pickle.load(f)
+    ids_to_labels_c_global = {y: x for x, y in labels_to_ids_c_global.items()}
+    with open(labels_file_path_u, 'rb') as f:
+        labels_to_ids_u_global = pickle.load(f)
+    ids_to_labels_u_global = {y: x for x, y in labels_to_ids_u_global.items()}
+
+    # load models
+    lmodel = get_lmodel(args)
+    probe_model = ParserProbe(
+        probe_rank=args.rank,
+        hidden_dim=args.hidden,
+        number_labels_c=len(labels_to_ids_c_global),
+        number_labels_u=len(labels_to_ids_u_global)).to(args.device)
+    logger.info('Loading best model.')
+    checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
+    probe_model.load_state_dict(checkpoint)
+
+    # load datasets
+    data_files = {}
+    for lang in LANGUAGES:
+        data_files[f'train_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'train.jsonl')
+        data_files[f'valid_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'valid.jsonl')
+        data_files[f'test_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'test.jsonl')
+
+    data_sets = {x: load_dataset('json', data_files=y) for x, y in data_files.items()}
+    data_sets = {x: y.map(lambda e: convert_sample_to_features(e['original_string'], parsers[x.split('_')[1]],
+                                                               x.split('_')[1]))
+                 for x, y in data_sets.items()}
+
+    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['c'], 'c', labels_to_ids_c_global, x.split('_')[1]))
+                 for x, y in data_sets.items()}
+    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['u'], 'u', labels_to_ids_u_global, x.split('_')[1]))
+                 for x, y in data_sets.items()}
+
+    train_datasets = [y['train'] for x, y in data_sets.items() if 'train_' in x]
+    valid_datasets = [y['train'] for x, y in data_sets.items() if 'valid_' in x]
+    test_datasets = [y['train'] for x, y in data_sets.items() if 'test_' in x]
+
+    # train_set = concatenate_datasets(train_datasets)
+    # valid_set = concatenate_datasets(valid_datasets)
+    test_set = concatenate_datasets(test_datasets)
+
+    test_dataloader = DataLoader(dataset=test_set,
+                                 batch_size=args.batch_size,
+                                 shuffle=False,
+                                 collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
+                                                                             ids_to_labels_c_global,
+                                                                             ids_to_labels_u_global),
+                                 num_workers=8)
+
+    lmodel.eval()
+    probe_model.eval()
+    projections = []
+    all_cs = []
+    for step, batch in enumerate(tqdm(test_dataloader,
+                                      desc='[test batch]',
+                                      bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}')):
+
+        all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment, masks_c, masks_u = batch
+
+        embds = get_embeddings(all_inputs.to(args.device), all_attentions.to(args.device), lmodel, args.layer,
+                               args.model_type)
+        embds = align_function(embds.to(args.device), alignment.to(args.device))
+
+        projection = probe_model.apply_projection(embds.to(args.device))
+        for i, len_tokens in enumerate(batch_len_tokens):
+            len_tokens = len_tokens.item()
+            # lxd
+            projection_i = projection[i, 0:len_tokens - 1].detach().cpu().numpy()
+            projections.append(projection_i)
+            cs_current = cs[i, 0:len_tokens - 1].detach().cpu().numpy()
+            all_cs.append(cs_current)
+    projections = np.concatenate(projections, axis=0)
+    all_cs = np.concatenate(all_cs, axis=0)
+
+    mask = [('<empty>' not in ids_to_labels_c_global[c]
+             and SEPARATOR not in ids_to_labels_c_global[c])
+            for c in all_cs]
+    projections = projections[mask]
+    all_cs = all_cs[mask]
+
+    values, counts = np.unique(all_cs, return_counts=True)
+    indices = counts.argsort()[-100:][::-1]
+    for a, b in zip(values[indices], counts[indices]):
+        print(ids_to_labels_c_global[a], b)
+
+
+    # projections = projections[np.isin(all_cs, considered_labels)]
+    # all_cs = all_cs[np.isin(all_cs, considered_labels)]
+
+    print(projections.shape)
+    print(all_cs.shape)
+
+    # idx = np.random.choice(np.arange(len(projections)), 1000000, replace=False)
+    # projections = projections[idx]
+    # all_cs = all_cs[idx]
+    # langs = langs[idx]
+
+    vectors = projections / np.linalg.norm(np.stack(projections), axis=1)[:, np.newaxis]
+    try:
+        v_2d = np.load(os.path.join(args.output_path, 'tsne_embeddings.np.npy'))
+        all_cs = np.load(os.path.join(args.output_path, 'all_cs.np.npy'))
+    except:
+        logger.info('Cannot load embeddings, recomputing')
+        tsne_obj = TSNE(n_components=2, n_jobs=12, random_state=args.seed, verbose=True).fit(vectors)
+        v_2d = tsne_obj.transform(vectors)
+        np.save(os.path.join(args.output_path, 'tsne_embeddings.np'), v_2d)
+        np.save(os.path.join(args.output_path, 'all_cs.np'), all_cs)
+
+    langs = np.array([ids_to_labels_c_global[c].split('--')[1] for c in all_cs])
+    all_cs = np.array([ids_to_labels_c_global[c].split('--')[0] for c in all_cs])
+
+    figure, axis = plt.subplots(1, figsize=(20, 20))
+    markers = {
+        'java': '.',
+        'javascript': ',',
+        'go': 'o',
+        'python': 'v',
+        'c': '^',
+        'ruby': '<',
+        'csharp': '>'
+    }
+    for g in np.unique(all_cs):
+        i = np.where(all_cs == g)
+        ls = langs[i]
+        ms = [markers[j] for j in ls]
+        if 'argument' in g:
+            axis.scatter(v_2d[i, 0], v_2d[i, 1], color='black', alpha=0.3)
+        elif 'call' in g:
+            axis.scatter(v_2d[i, 0], v_2d[i, 1], color='red', alpha=0.3)
+        elif 'return' in g:
+            axis.scatter(v_2d[i, 0], v_2d[i, 1], color='tab:gray', alpha=0.3)
+        elif 'method_invocation' in g:
+            axis.scatter(v_2d[i, 0], v_2d[i, 1], color='c', alpha=0.3)
+        elif 'block' in g:
+            axis.scatter(v_2d[i, 0], v_2d[i, 1], color='m', alpha=0.3)
+        elif 'binary' in g:
+            axis.scatter(v_2d[i, 0], v_2d[i, 1], color='tab:olive', alpha=0.3)
+        elif 'member_expression' == g:
+            axis.scatter(v_2d[i, 0], v_2d[i, 1], color='g', alpha=0.3)
+    # axis.legend()
+    # axis.scatter(v_2d[:, 0], v_2d[:, 1])
+    plt.show()
+    plt.savefig(f'test_projected.png')
+
+    fig = px.scatter(x=v_2d[:, 0], y=v_2d[:, 1], color=all_cs)
+    fig.update_layout(showlegend=False)
+    fig.write_html('first_figure.html', auto_open=False)
+    # print(projections.shape)
+    # print(all_cs.shape)

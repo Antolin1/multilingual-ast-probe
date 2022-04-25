@@ -109,3 +109,17 @@ class ParserProbe(Probe):
         shift = transformed[:, 1:, :]
         diffs = shift - transformed[:, :-1, :]
         return (diffs ** 2).sum(dim=2), torch.matmul(diffs, self.vectors_c), torch.matmul(transformed, self.vectors_u)
+
+    def apply_projection(self, batch):
+        """
+            Args:
+                batch: a batch of word representations of the shape
+                        (batch_size, max_seq_len, representation_dim)
+
+            Returns:
+                diffs: (batch_size, max_seq_len - 1, projected_dim)
+            """
+        transformed = torch.matmul(batch, self.proj)
+        shift = transformed[:, 1:, :]
+        diffs = shift - transformed[:, :-1, :]
+        return diffs

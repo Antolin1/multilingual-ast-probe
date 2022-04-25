@@ -126,6 +126,8 @@ def projection_direct_transfer(args, dic_results, label='c'):
         dic_vectors_source[name] = vectors_source
 
         target = name.split('_transfer_')[1]
+        if '_baseline' in target:
+            target = target.split('_')[0]
         with open(os.path.join(args.dataset_path, source, 'labels.pkl'), 'rb') as f:
             data = pickle.load(f)
             if label == 'c':

@@ -1,15 +1,12 @@
 import unittest
-from tree_sitter import Language, Parser
-from src.data.code2ast import (code2ast, enrich_ast_with_deps,
-                               get_dependency_tree, get_matrix_and_tokens_dep,
-                               get_tree_from_distances, get_uas,
-                               remplace_non_terminals,
-                               remove_useless_non_terminals,
-                               get_matrix_tokens_ast, get_depths_tokens_ast, get_tokens_ast)
-from src.data.utils import (remove_comments_and_docstrings_python,
-                            remove_comments_and_docstrings_java_js)
-import networkx as nx
+
 import matplotlib.pyplot as plt
+import networkx as nx
+from tree_sitter import Language, Parser
+
+from src.data.code2ast import code2ast, get_tokens_ast
+from src.data.utils import remove_comments_and_docstrings_python, \
+    remove_comments_and_docstrings_java_js
 
 
 def node_match_type_atts(n1, n2):
@@ -166,29 +163,6 @@ class Code2ast(unittest.TestCase):
         print(tokens)
         self.assertTrue('"string"' in tokens)
 
-    def test_dependency(self):
-        plt.figure()
-        plt.title('test_dependency')
-        G, code_pre = code2ast(code, parser)
-        enrich_ast_with_deps(G)
-        T = get_dependency_tree(G)
-        nx.draw(nx.Graph(T), labels=nx.get_node_attributes(T, 'type'), with_labels=True)
-        plt.show()
-        self.assertEqual(len(T), len(get_tokens_ast(G, code_pre)))
-
-    def test_inverse(self):
-        plt.figure()
-        plt.title('test_inverse')
-        G, pre_code = code2ast(code, parser)
-        enrich_ast_with_deps(G)
-        T = get_dependency_tree(G)
-        matrix, code_tokens = get_matrix_and_tokens_dep(T, pre_code)
-        T2 = get_tree_from_distances(matrix, code_tokens)
-        nx.draw(T2, labels=nx.get_node_attributes(T2, 'type'), with_labels=True)
-        plt.show()
-        self.assertEqual(len(T), len(T2))
-        self.assertTrue(nx.is_isomorphic(T2, nx.Graph(T)))
-
     def test_js(self):
         plt.figure()
         plt.title('test_js I')
@@ -215,40 +189,4 @@ class Code2ast(unittest.TestCase):
         plt.figure()
         plt.title('test_str_ast')
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
-        plt.show()
-
-    def test_replace_functions_and_labels(self):
-        code = """def my_func(a,b):
-            if a > b:
-                c = 0 + 1
-                return a + b - c
-            return b/a"""
-
-        def comparison_operator_head(G, n):
-            l = ['<', '>', '==', '<>',
-                 '!=', '<=', '>=', 'in', 'is']
-            nodes = [m for _, m in G.out_edges(n) if G.nodes[m]['type'] in l]
-            return nodes[0]
-
-        def binary_operator_head(G, n):
-            l = ['+', '-', '/', '*',
-                 '**', '@', '%', '//',
-                 '<<', '>>', '^', '&', '|']
-            nodes = [m for _, m in G.out_edges(n) if G.nodes[m]['type'] in l]
-            return nodes[0]
-
-        conf = {'comparison_operator': comparison_operator_head,
-                'binary_operator': binary_operator_head}
-        G, _ = code2ast(code, parser)
-        g = remplace_non_terminals(remove_useless_non_terminals(G), conf)
-        plt.figure()
-        plt.title('test_replace_functions_and_labels I')
-        nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
-        plt.show()
-        plt.figure()
-        plt.title('test_replace_functions_and_labels II')
-        to_plot = nx.Graph(g)
-        pos = nx.spring_layout(to_plot)
-        nx.draw(to_plot, pos, labels=nx.get_node_attributes(to_plot, 'type'), with_labels=True)
-        nx.draw_networkx_edge_labels(to_plot, pos, edge_labels=nx.get_edge_attributes(to_plot, 'label'))
         plt.show()

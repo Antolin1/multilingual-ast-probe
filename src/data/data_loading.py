@@ -1,20 +1,18 @@
+import json
+import logging
 import os
+import pathlib
+import random
 import re
 import shutil
-import pathlib
-import json
-import random
-import logging
 from collections import Counter
 
 from tqdm import tqdm
 from tree_sitter import Language, Parser
-import networkx as nx
 
 from .binary_tree import ast2binary, tree_to_distance
+from .code2ast import code2ast, get_tokens_ast
 from .utils import download_url, unzip_file
-from .code2ast import code2ast, enrich_ast_with_deps, get_dependency_tree, get_matrix_and_tokens_dep, label_dep_tree, \
-    get_tuples_from_labeled_dep_tree, get_tokens_ast
 
 logger = logging.getLogger(__name__)
 
@@ -180,37 +178,3 @@ def convert_to_ids(c, column_name, labels_to_ids):
     for label in c:
         labels_ids.append(labels_to_ids[label])
     return {column_name: labels_ids}
-
-
-def compute_distinct_labels(dataset_path, args):
-    lang = args.lang
-    if lang == 'python':
-        parser = PY_PARSER
-    elif lang == 'javascript':
-        parser = JS_PARSER
-    elif lang == 'go':
-        parser = GO_PARSER
-    else:
-        parser = None
-    if os.path.isfile(f'{dataset_path}/{lang}/categories.json'):
-        logger.info('Categories already computed')
-        return
-    categories = {}
-    idd = 0
-    with open(f'{dataset_path}/{lang}/dataset.jsonl', 'r') as json_file:
-        json_list = list(json_file)
-        for data_point in tqdm(json_list,desc='Category extraction'):
-            data = json.loads(data_point)
-            G, pre_code = code2ast(data['original_string'], parser)
-            G_not_enr = nx.DiGraph(G)
-            enrich_ast_with_deps(G)
-            T = get_dependency_tree(G)
-            label_dep_tree(G_not_enr, T)
-            for _, _, cat in get_tuples_from_labeled_dep_tree(T, pre_code)[0]:
-                if not cat in categories:
-                    categories[cat] = idd
-                    idd += 1
-                    print(categories)
-    logger.info('Saving categories')
-    with open(f'{dataset_path}/{lang}/categories.json', 'r') as f:
-        json.dump(categories, f)

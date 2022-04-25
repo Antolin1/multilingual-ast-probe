@@ -21,7 +21,7 @@ import pickle
 logger = logging.getLogger(__name__)
 
 
-#todo: add the dictionaries for the classification
+# todo: add the dictionaries for the classification
 def run_visualization(args):
     code_samples = []
     if args.lang == 'python':
@@ -59,7 +59,7 @@ def run_visualization(args):
     elif args.lang == 'go':
         parser.set_language(GO_LANGUAGE)
 
-    #load the labels
+    # load the labels
     labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
     with open(labels_file_path, 'rb') as f:
         data = pickle.load(f)
@@ -80,6 +80,7 @@ def run_visualization(args):
     __run_visualization_code_samples(lmodel, tokenizer, final_probe_model, code_samples, parser,
                                      ids_to_labels_c, ids_to_labels_u, args)
     __run_visualization_vectors(final_probe_model, ids_to_labels_c, ids_to_labels_u, args)
+
 
 def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_samples,
                                      parser, ids_to_labels_c, ids_to_labels_u, args):
@@ -133,10 +134,10 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
         prec_score, recall_score, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
-        #_, recall_block, _ = get_precision_recall_f1(ground_truth_tree, pred_tree, filter_non_terminal='block')
+        # _, recall_block, _ = get_precision_recall_f1(ground_truth_tree, pred_tree, filter_non_terminal='block')
 
         logger.info(f'For code {c}, prec = {prec_score}, recall = {recall_score}, f1 = {f1_score}.')
-        #logger.info(f'For code {c}, recall block = {recall_block}.')
+        # logger.info(f'For code {c}, recall block = {recall_block}.')
 
         recall_score = get_recall_non_terminal(ground_truth_tree, pred_tree)
         for k, s in recall_score.items():
@@ -152,7 +153,7 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         plt.show()
         plt.savefig(f'fig_{c}_{args.lang}.png')
 
-        labels_axis = [tokens[i] + '-' + tokens[i+1] for i in range(0, len(tokens) - 1)]
+        labels_axis = [tokens[i] + '-' + tokens[i + 1] for i in range(0, len(tokens) - 1)]
         figure, axis = plt.subplots(2, figsize=(15, 15))
         axis[0].bar(labels_axis, ds_current)
         axis[0].set_title("True dist")
@@ -167,14 +168,12 @@ def __run_visualization_code_samples(lmodel, tokenizer, probe_model, code_sample
         plt.savefig(f'fig_{c}_{args.lang}_syn_dis.png')
 
 
-
-
 def __run_visualization_vectors(probe_model, ids_to_labels_c, ids_to_labels_u, args):
     vectors_c = probe_model.vectors_c.detach().cpu().numpy().T
     vectors_u = probe_model.vectors_u.detach().cpu().numpy().T
 
     v_c_2d = TSNE(n_components=2, learning_rate='auto',
-                      init='random', random_state=args.seed).fit_transform(vectors_c)
+                  init='random', random_state=args.seed).fit_transform(vectors_c)
     v_u_2d = TSNE(n_components=2, learning_rate='auto',
                   init='random', random_state=args.seed).fit_transform(vectors_u)
 

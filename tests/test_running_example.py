@@ -1,16 +1,19 @@
 import unittest
 
-from tree_sitter import Language, Parser
-from src.data.code2ast import code2ast
-from src.data.binary_tree import ast2binary, tree_to_distance
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
+from tree_sitter import Language, Parser
+
+from src.data.binary_tree import ast2binary, tree_to_distance
+from src.data.code2ast import code2ast
 
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
+
 class RunningExample(unittest.TestCase):
+
     def test_running_example(self):
         code = """
         for element in l:

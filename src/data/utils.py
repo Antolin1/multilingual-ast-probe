@@ -1,11 +1,11 @@
-import io
-import tokenize
-import requests
-import zipfile
 import gzip
+import io
 import re
+import tokenize
+import zipfile
 from typing import Optional
 
+import requests
 from tqdm import tqdm
 
 

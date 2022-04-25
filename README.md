@@ -12,7 +12,7 @@ cd AstProbing
 2. Create a virtual environment and install `requirements.txt`.
 
 ```sh
-virtualenv --python=/usr/bin/python3 env_ast_probe
+python3 -m venv <env_ast_probe>
 source env_ast_probe/bin/activate
 pip install -r requirements.txt
 ```

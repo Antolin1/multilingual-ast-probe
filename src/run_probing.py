@@ -65,9 +65,9 @@ def run_probing_train(args: argparse.Namespace):
     test_set = load_dataset('json', data_files=data_files, split='test')
 
     # get d and c for each sample
-    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang), load_from_cache_file=False)
-    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang), load_from_cache_file=False)
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang), load_from_cache_file=False)
+    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
 
     # get class labels-ids mapping for c and u
     labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
@@ -90,13 +90,13 @@ def run_probing_train(args: argparse.Namespace):
             labels_to_ids_u = data['labels_to_ids_u']
             ids_to_labels_u = data['ids_to_labels_u']
 
-    train_set = train_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c), load_from_cache_file=False)
-    valid_set = valid_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c), load_from_cache_file=False)
-    test_set = test_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c), load_from_cache_file=False)
+    train_set = train_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
+    valid_set = valid_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
+    test_set = test_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
 
-    train_set = train_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u), load_from_cache_file=False)
-    valid_set = valid_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u), load_from_cache_file=False)
-    test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u), load_from_cache_file=False)
+    train_set = train_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
+    valid_set = valid_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
+    test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
 
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,

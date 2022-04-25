@@ -64,7 +64,7 @@ The script `dataset_generator.py` will download the CodeSearchNet dataset, filte
 * The code snippet can be parsed by tree-sitter.
 * The code snippet does not contain syntactical errors.
 
-2. Train probing.
+2. Train the AST-probe.
 
 ```sh
 python src/main.py --do_train --run_name <folder_run_name>
@@ -100,5 +100,5 @@ python src/main.py --do_train --run_name codebert_python_5_128
                    --layer 5 --rank 128
 ```
 
-This command trains the 128 dimensional probe using the output embeddings of the 5th layer of CodeBERT using the Python dataset.
+This command trains a 128-dimensional probe over the output embeddings of the 5th layer of CodeBERT using the Python dataset.
 After running this command, the folder `runs/codebert_python_5_128` is created.

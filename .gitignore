@@ -146,3 +146,12 @@ dmypy.json
 src/dataset
 src/dataset.zip
 runs
+/first_figure.html
+/first_figure_.html
+/first_figure_baseline.html
+/first_figure_langs.html
+/first_figure_langs_baseline.html
+/runs_direct_transfer/
+/runs_hold_one_out/
+/runs_monolingual/
+/runs_multilingual/

@@ -1,23 +1,23 @@
-import os
 import argparse
 import logging
+import os
 import pickle
 from collections import defaultdict
 
-import torch
 import numpy as np
-from torch.utils.data import DataLoader
-from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
+import torch
 from datasets import load_dataset, concatenate_datasets
+from torch.utils.data import DataLoader
 from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
 
 from data import convert_sample_to_features, collator_fn, \
     PY_PARSER, GO_PARSER, JS_PARSER, PHP_PARSER, JAVA_PARSER, \
     RUBY_PARSER, LANGUAGES, CSHARP_PARSER, C_PARSER, collator_with_mask
-from probe import ParserProbe, ParserLoss, get_embeddings, align_function
-from data.data_loading import get_non_terminals_labels, convert_to_ids, convert_to_ids_multilingual
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
     extend_complex_nodes, get_precision_recall_f1, add_unary, get_recall_non_terminal
+from data.data_loading import get_non_terminals_labels, convert_to_ids, convert_to_ids_multilingual
+from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logger = logging.getLogger(__name__)

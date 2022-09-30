@@ -23,20 +23,31 @@ def main(args):
     elif args.do_test:
         args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
         run_probing_test(args=args)
-    elif args.do_visualization:
-        args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
-        run_visualization(args=args)
-    elif args.do_train_from_given_projection:
-        args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
-        run_probing_from_given_projection(args=args)
     elif args.do_train_all_languages:
         run_probing_all_languages(args=args)
-    elif args.do_hold_one_out_training:
-        run_hold_one_out_training(args=args)
-    elif args.do_visualization_multilingual:
-        run_visualization_multilingual(args=args)
+    # elif args.do_hold_one_out_training:
+    #    run_hold_one_out_training(args=args)
+    # elif args.do_visualization_multilingual:
+    #    run_visualization_multilingual(args=args)
+    # elif args.do_visualization:
+    #    args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
+    #    run_visualization(args=args)
+    # elif args.do_train_from_given_projection:
+    #    args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
+    #    run_probing_from_given_projection(args=args)
     else:
         raise ValueError('--do_train or --do_test should be provided.')
+
+
+def setup_logger():
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.INFO)
+    console = logging.StreamHandler()
+    console.setLevel(level=logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
+    console.setFormatter(formatter)
+    logger.addHandler(console)
+    return logger
 
 
 if __name__ == '__main__':
@@ -51,14 +62,7 @@ if __name__ == '__main__':
         torch.manual_seed(args.seed)
         torch.cuda.manual_seed_all(args.seed)
 
-    logger = logging.getLogger()
-    logger.setLevel(level=logging.INFO)
-
-    console = logging.StreamHandler()
-    console.setLevel(level=logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    logger = setup_logger()
 
     if args.run_base_path is not None and args.run_name is not None:
         args.output_path = os.path.join(args.run_base_path, args.run_name)

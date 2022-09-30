@@ -1,24 +1,18 @@
 # AstProbing
 
-Install tree-sitter grammars:
+Generate venv and install dependencies:
 
 ```sh
-mkdir grammars
-cd grammars
-git clone https://github.com/tree-sitter/tree-sitter-python.git
-git clone https://github.com/tree-sitter/tree-sitter-javascript.git
-git clone https://github.com/tree-sitter/tree-sitter-go.git
-git clone https://github.com/tree-sitter/tree-sitter-php.git
-git clone https://github.com/tree-sitter/tree-sitter-ruby.git
-git clone https://github.com/tree-sitter/tree-sitter-java.git
-git clone https://github.com/tree-sitter/tree-sitter-c-sharp.git
-git clone https://github.com/tree-sitter/tree-sitter-c.git
+python3 -m venv <env_ast_probe>
+source env_ast_probe/bin/activate
+pip install -r requirements.txt
 ```
 
-Build grammars:
+
+Install tree-sitter grammars and build them:
 
 ```sh
-python src/data/build_grammars.py
+./script_grammars.sh
 ```
 
 Add project directory to Python path:

@@ -1,20 +1,17 @@
-import logging
 import argparse
-import random
 import os
+import random
 
-import numpy as np
 import networkx as nx
+import numpy as np
 import torch
-from transformers import AutoTokenizer
-from tree_sitter import Parser
 from datasets import load_dataset
+from transformers import AutoTokenizer
 
-from data import download_codesearchnet_dataset, PY_LANGUAGE, JS_LANGUAGE, GO_LANGUAGE, \
-    PHP_LANGUAGE, JAVA_LANGUAGE, RUBY_LANGUAGE, download_codexglue_csharp, CSHARP_LANGUAGE, \
-    download_codexglue_c, C_LANGUAGE
-from data.code2ast import code2ast, get_tokens_ast, has_error
+from data import download_codesearchnet_dataset, download_codexglue_csharp, download_codexglue_c, PARSER_OBJECT_BY_NAME
+from data.code2ast import code2ast, has_error
 from data.utils import match_tokenized_to_untokenized_roberta
+from main import setup_logger
 
 tokenizer_roberta = AutoTokenizer.from_pretrained('roberta-base')
 tokenizer_t5 = AutoTokenizer.from_pretrained('Salesforce/codet5-base')
@@ -54,14 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', help='seed.', type=int, default=123)
     args = parser.parse_args()
 
-    logger = logging.getLogger()
-    logger.setLevel(level=logging.INFO)
-
-    console = logging.StreamHandler()
-    console.setLevel(level=logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    logger = setup_logger()
 
     # seed everything
     if args.seed > 0:
@@ -83,57 +73,27 @@ if __name__ == '__main__':
     dataset = load_dataset('json', data_files=dataset_path, split='train')
 
     # select the parser
-    parser_lang = Parser()
-    if args.lang == 'python':
-        parser_lang.set_language(PY_LANGUAGE)
-    elif args.lang == 'javascript':
-        parser_lang.set_language(JS_LANGUAGE)
-    elif args.lang == 'go':
-        parser_lang.set_language(GO_LANGUAGE)
-    elif args.lang == 'php':
-        parser_lang.set_language(PHP_LANGUAGE)
-    elif args.lang == 'java':
-        parser_lang.set_language(JAVA_LANGUAGE)
-    elif args.lang == 'ruby':
-        parser_lang.set_language(RUBY_LANGUAGE)
-    elif args.lang == 'csharp':
-        parser_lang.set_language(CSHARP_LANGUAGE)
-    elif args.lang == 'c':
-        parser_lang.set_language(C_LANGUAGE)
+    parser_lang = PARSER_OBJECT_BY_NAME[args.lang]
 
     # filter dataset
     logger.info('Filtering dataset.')
     dataset = dataset.filter(
         lambda e: filter_samples(e['original_string'], args.max_code_length, args.lang, parser_lang), num_proc=8,
         load_from_cache_file=False)
+    dataset = dataset.shuffle(seed=args.seed)
+    dataset = dataset.select(range(0, min(20000, len(dataset))))
+    logger.info(f'Dataset points {len(dataset)}')
 
-    logger.info('Shuffling dataset.')
-    dataset = dataset.shuffle(args.seed)
-    print(len(dataset))
-
-    logger.info('Splitting dataset.')
-    if args.lang == 'ruby':
-        train_dataset = dataset.select(range(0, 10000))
-        test_dataset = dataset.select(range(10000, 12000))
-        val_dataset = dataset.select(range(12000, 13000))
-    elif args.lang == 'php':  # todo: a lot of code snippets don't pass the filter
-        train_dataset = dataset.select(range(0, 2000))
-        test_dataset = dataset.select(range(2000, 2300))
-        val_dataset = dataset.select(range(2300, 2400))
-    elif args.lang == 'csharp':
-        train_dataset = dataset.select(range(0, 8000))
-        test_dataset = dataset.select(range(8000, 9000))
-        val_dataset = dataset.select(range(9000, 9500))
-    elif args.lang == 'c':
-        train_dataset = dataset.select(range(0, 7000))
-        test_dataset = dataset.select(range(7000, 8000))
-        val_dataset = dataset.select(range(8000, 8100))
-    else:
-        train_dataset = dataset.select(range(0, 20000))
-        test_dataset = dataset.select(range(20000, 24000))
-        val_dataset = dataset.select(range(24000, 26000))
+    logger.info('Splitting dataset 70/20/10.')
+    ds_split_train_test = dataset.train_test_split(test_size=0.20, seed=args.seed, shuffle=True)
+    train_ds, test_ds = ds_split_train_test["train"], ds_split_train_test["test"]
+    ds_split_train_val = train_ds.train_test_split(test_size=0.1 / 0.8, seed=args.seed, shuffle=True)
+    train_ds, val_ds = ds_split_train_val["train"], ds_split_train_val["test"]
 
     logger.info('Storing dataset.')
-    train_dataset.to_json(os.path.join(args.dataset_dir, args.lang, 'train.jsonl'))
-    test_dataset.to_json(os.path.join(args.dataset_dir, args.lang, 'test.jsonl'))
-    val_dataset.to_json(os.path.join(args.dataset_dir, args.lang, 'valid.jsonl'))
+    logger.info(f'Train datapoints {len(train_ds)}')
+    logger.info(f'Test datapoints {len(test_ds)}')
+    logger.info(f'Val datapoints {len(val_ds)}')
+    train_ds.to_json(os.path.join(args.dataset_dir, args.lang, 'train.jsonl'))
+    test_ds.to_json(os.path.join(args.dataset_dir, args.lang, 'test.jsonl'))
+    val_ds.to_json(os.path.join(args.dataset_dir, args.lang, 'valid.jsonl'))

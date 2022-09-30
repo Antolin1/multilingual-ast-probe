@@ -1,22 +1,19 @@
+import json
+import logging
 import os
+import pathlib
+import random
 import re
 import shutil
-import pathlib
-import json
-import random
-import logging
 from collections import Counter
 
-import torch
+import gdown
 from tqdm import tqdm
 from tree_sitter import Language, Parser
-import networkx as nx
-import gdown
 
 from .binary_tree import ast2binary, tree_to_distance
+from .code2ast import code2ast, get_tokens_ast
 from .utils import download_url, unzip_file
-from .code2ast import code2ast, enrich_ast_with_deps, get_dependency_tree, get_matrix_and_tokens_dep, label_dep_tree, \
-    get_tuples_from_labeled_dep_tree, get_tokens_ast
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +27,19 @@ LANGUAGES = (
     'javascript',
     'go',
     'c',
-    'csharp'
+    'csharp',
+    'php'
 )
+
+LANGUAGES_CSN = (
+    'python',
+    'java',
+    'ruby',
+    'javascript',
+    'go',
+    'php'
+)
+
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
 GO_LANGUAGE = Language('grammars/languages.so', 'go')
@@ -57,6 +65,28 @@ CSHARP_PARSER = Parser()
 CSHARP_PARSER.set_language(CSHARP_LANGUAGE)
 C_PARSER = Parser()
 C_PARSER.set_language(C_LANGUAGE)
+
+LANG_OBJECT_BY_NAME = {
+    'python': PY_LANGUAGE,
+    'java': JAVA_LANGUAGE,
+    'ruby': RUBY_LANGUAGE,
+    'javascript': JS_LANGUAGE,
+    'go': GO_LANGUAGE,
+    'c': C_LANGUAGE,
+    'csharp': CSHARP_LANGUAGE,
+    'php': PHP_LANGUAGE
+}
+
+PARSER_OBJECT_BY_NAME = {
+    'python': PY_PARSER,
+    'java': JAVA_PARSER,
+    'ruby': RUBY_PARSER,
+    'javascript': JS_PARSER,
+    'go': GO_PARSER,
+    'c': C_PARSER,
+    'csharp': CSHARP_PARSER,
+    'php': PHP_PARSER
+}
 
 
 def download_codexglue_c(dataset_dir):
@@ -120,7 +150,7 @@ def download_codesearchnet_dataset(dataset_dir):
     unzip_file(zip_file_path, './')
 
     os.chdir(dataset_dir)
-    for lang in LANGUAGES:
+    for lang in LANGUAGES_CSN:
         logger.info(f'Creating {lang} dataset.')
         try:
             os.remove(os.path.join(lang, 'codebase.txt'))
@@ -138,7 +168,7 @@ def download_codesearchnet_dataset(dataset_dir):
         if os.path.exists(os.path.join(lang, 'final/jsonl/valid')):
             shutil.rmtree(os.path.join(lang, 'final/jsonl/valid'))
 
-    for lang in LANGUAGES:
+    for lang in LANGUAGES_CSN:
         logger.info(f'Cleaning {lang} dataset.')
         data = {}
         # gzip all .gz files and add them to `data` with their url as key
@@ -252,37 +282,3 @@ def get_mask_multilingual(ids_to_labels, lang):
         else:
             result.append(-float("Inf"))
     return result
-
-
-def compute_distinct_labels(dataset_path, args):
-    lang = args.lang
-    if lang == 'python':
-        parser = PY_PARSER
-    elif lang == 'javascript':
-        parser = JS_PARSER
-    elif lang == 'go':
-        parser = GO_PARSER
-    else:
-        parser = None
-    if os.path.isfile(f'{dataset_path}/{lang}/categories.json'):
-        logger.info('Categories already computed')
-        return
-    categories = {}
-    idd = 0
-    with open(f'{dataset_path}/{lang}/dataset.jsonl', 'r') as json_file:
-        json_list = list(json_file)
-        for data_point in tqdm(json_list, desc='Category extraction'):
-            data = json.loads(data_point)
-            G, pre_code = code2ast(data['original_string'], parser)
-            G_not_enr = nx.DiGraph(G)
-            enrich_ast_with_deps(G)
-            T = get_dependency_tree(G)
-            label_dep_tree(G_not_enr, T)
-            for _, _, cat in get_tuples_from_labeled_dep_tree(T, pre_code)[0]:
-                if not cat in categories:
-                    categories[cat] = idd
-                    idd += 1
-                    print(categories)
-    logger.info('Saving categories')
-    with open(f'{dataset_path}/{lang}/categories.json', 'r') as f:
-        json.dump(categories, f)

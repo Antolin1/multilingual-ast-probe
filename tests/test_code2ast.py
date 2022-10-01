@@ -1,15 +1,16 @@
 import unittest
+
+import matplotlib.pyplot as plt
+import networkx as nx
 from tree_sitter import Language, Parser
+
 from src.data.code2ast import (code2ast, enrich_ast_with_deps,
                                get_dependency_tree, get_matrix_and_tokens_dep,
-                               get_tree_from_distances, get_uas,
-                               remplace_non_terminals,
+                               get_tree_from_distances, remplace_non_terminals,
                                remove_useless_non_terminals,
-                               get_matrix_tokens_ast, get_depths_tokens_ast, get_tokens_ast)
+                               get_tokens_ast)
 from src.data.utils import (remove_comments_and_docstrings_python,
                             remove_comments_and_docstrings_java_js)
-import networkx as nx
-import matplotlib.pyplot as plt
 
 
 def node_match_type_atts(n1, n2):

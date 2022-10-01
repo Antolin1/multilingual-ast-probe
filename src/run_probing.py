@@ -13,7 +13,7 @@ from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
 
 from data import convert_sample_to_features, collator_fn, \
     PY_PARSER, GO_PARSER, JS_PARSER, PHP_PARSER, JAVA_PARSER, \
-    RUBY_PARSER, LANGUAGES, CSHARP_PARSER, C_PARSER, collator_with_mask
+    RUBY_PARSER, LANGUAGES, CSHARP_PARSER, C_PARSER, collator_with_mask, PARSER_OBJECT_BY_NAME
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
     extend_complex_nodes, get_precision_recall_f1, add_unary, get_recall_non_terminal
 from data.data_loading import get_non_terminals_labels, convert_to_ids, convert_to_ids_multilingual
@@ -22,7 +22,7 @@ from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logger = logging.getLogger(__name__)
 
-parsers = {
+PARSER_OBJECT_BY_NAME = {
     'python': PY_PARSER,
     'javascript': JS_PARSER,
     'go': GO_PARSER,
@@ -137,7 +137,7 @@ def run_probing_train(args: argparse.Namespace):
     logger.info('-' * 100)
 
     # select the parser
-    parser = parsers[args.lang]
+    parser = PARSER_OBJECT_BY_NAME[args.lang]
 
     logger.info('Loading tokenizer')
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
@@ -449,7 +449,7 @@ def run_probing_test(args):
     logger.info('-' * 100)
 
     # select the parser
-    parser = parsers[args.lang]
+    parser = PARSER_OBJECT_BY_NAME[args.lang]
 
     logger.info('Loading tokenizer')
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -505,113 +505,6 @@ def run_probing_test(args):
         logger.info(f'Non-terminal {k} | recall {v}')
 
 
-def run_probing_from_given_projection(args):
-    logger.info('-' * 100)
-    logger.info('Running probing training.')
-    logger.info('-' * 100)
-
-    # select the parser
-    parser = parsers[args.lang]
-
-    logger.info('Loading tokenizer')
-    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
-
-    logger.info('Loading dataset from local file.')
-    data_files = {'train': os.path.join(args.dataset_name_or_path, 'train.jsonl'),
-                  'valid': os.path.join(args.dataset_name_or_path, 'valid.jsonl'),
-                  'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
-
-    train_set = load_dataset('json', data_files=data_files, split='train')
-    valid_set = load_dataset('json', data_files=data_files, split='valid')
-    test_set = load_dataset('json', data_files=data_files, split='test')
-
-    # get d and c for each sample
-    train_set = train_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
-    valid_set = valid_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
-
-    # get class labels-ids mapping for c and u
-    labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
-    if not os.path.exists(labels_file_path):
-        # convert each non-terminal labels to its id
-        labels_to_ids_c = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
-        ids_to_labels_c = {x: y for y, x in labels_to_ids_c.items()}
-        labels_to_ids_u = get_non_terminals_labels(train_set['u'], valid_set['u'], test_set['u'])
-        ids_to_labels_u = {x: y for y, x in labels_to_ids_u.items()}
-        with open(labels_file_path, 'wb') as f:
-            pickle.dump({
-                'labels_to_ids_c': labels_to_ids_c, 'ids_to_labels_c': ids_to_labels_c,
-                'labels_to_ids_u': labels_to_ids_u, 'ids_to_labels_u': ids_to_labels_u
-            }, f)
-    else:
-        with open(labels_file_path, 'rb') as f:
-            data = pickle.load(f)
-            labels_to_ids_c = data['labels_to_ids_c']
-            ids_to_labels_c = data['ids_to_labels_c']
-            labels_to_ids_u = data['labels_to_ids_u']
-            ids_to_labels_u = data['ids_to_labels_u']
-
-    train_set = train_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
-    valid_set = valid_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
-    test_set = test_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
-
-    train_set = train_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
-    valid_set = valid_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
-    test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
-
-    train_dataloader = DataLoader(dataset=train_set,
-                                  batch_size=args.batch_size,
-                                  shuffle=True,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
-                                  num_workers=8)
-    valid_dataloader = DataLoader(dataset=valid_set,
-                                  batch_size=args.batch_size,
-                                  shuffle=False,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
-                                  num_workers=8)
-
-    lmodel = get_lmodel(args)
-
-    probe_model = ParserProbe(
-        probe_rank=args.rank,
-        hidden_dim=args.hidden,
-        number_labels_c=len(labels_to_ids_c),
-        number_labels_u=len(labels_to_ids_u)).to(args.device)
-
-    logger.info('Loading model checkpoint.')
-    checkpoint = torch.load(os.path.join(args.model_source_checkpoint, 'pytorch_model.bin'))
-    probe_model.proj = torch.nn.Parameter(data=checkpoint['proj'])
-
-    metrics = {'training_loss': [], 'validation_loss': [], 'test_precision': None, 'test_recall': None, 'test_f1': None}
-    run_train_general(probe_model, lmodel, train_dataloader, valid_dataloader, metrics, pretrained=True, args=args)
-
-    logger.info('Loading test set.')
-    test_dataloader = DataLoader(dataset=test_set,
-                                 batch_size=args.batch_size,
-                                 shuffle=False,
-                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
-                                 num_workers=8)
-
-    logger.info('Loading best model.')
-    checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
-    probe_model.load_state_dict(checkpoint)
-
-    if not args.just_proj:
-        logger.info('Evaluating probing on test set.')
-        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                         ids_to_labels_c, ids_to_labels_u, args)
-        metrics['test_precision'] = round(eval_precision, 4)
-        metrics['test_recall'] = round(eval_recall, 4)
-        metrics['test_f1'] = round(eval_f1_score, 4)
-        logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
-                    f'| test F1 score: {round(eval_f1_score, 4)}')
-
-    logger.info('-' * 100)
-    logger.info('Saving metrics.')
-    with open(os.path.join(args.output_path, 'metrics.log'), 'wb') as f:
-        pickle.dump(metrics, f)
-
-
 def run_probing_all_languages(args):
     logger.info('-' * 100)
     logger.info('Running probing on all languages.')
@@ -628,20 +521,40 @@ def run_probing_all_languages(args):
         data_files[f'test_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'test.jsonl')
 
     data_sets = {x: load_dataset('json', data_files=y) for x, y in data_files.items()}
-    data_sets = {x: y.map(lambda e: convert_sample_to_features(e['original_string'], parsers[x.split('_')[1]],
-                                                               x.split('_')[1]))
-                 for x, y in data_sets.items()}
+    data_sets = {
+        x: y.map(lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
+                                                      x.split('_')[1]))
+        for x, y in data_sets.items()}
 
     labels_c = []
     labels_u = []
+
     for lang in LANGUAGES:
         labels_file_path = os.path.join(args.dataset_name_or_path, lang, 'labels.pkl')
-        with open(labels_file_path, 'rb') as f:
-            data = pickle.load(f)
-            labels_to_ids_c = data['labels_to_ids_c']
-            labels_to_ids_u = data['labels_to_ids_u']
-            labels_c += [x + '--' + lang for x in labels_to_ids_c.keys()]
-            labels_u += [x + '--' + lang for x in labels_to_ids_u.keys()]
+        train_set = data_sets[f'train_{lang}']['train']
+        valid_set = data_sets[f'valid_{lang}']['train']
+        test_set = data_sets[f'test_{lang}']['train']
+        if not os.path.exists(labels_file_path):
+            # convert each non-terminal labels to its id
+            labels_to_ids_c = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
+            ids_to_labels_c = {x: y for y, x in labels_to_ids_c.items()}
+            labels_to_ids_u = get_non_terminals_labels(train_set['u'], valid_set['u'], test_set['u'])
+            ids_to_labels_u = {x: y for y, x in labels_to_ids_u.items()}
+            with open(labels_file_path, 'wb') as f:
+                pickle.dump({
+                    'labels_to_ids_c': labels_to_ids_c, 'ids_to_labels_c': ids_to_labels_c,
+                    'labels_to_ids_u': labels_to_ids_u, 'ids_to_labels_u': ids_to_labels_u
+                }, f)
+        else:
+            with open(labels_file_path, 'rb') as f:
+                data = pickle.load(f)
+                labels_to_ids_c = data['labels_to_ids_c']
+                ids_to_labels_c = data['ids_to_labels_c']
+                labels_to_ids_u = data['labels_to_ids_u']
+                ids_to_labels_u = data['ids_to_labels_u']
+
+        labels_c += [x + '--' + lang for x in labels_to_ids_c.keys()]
+        labels_u += [x + '--' + lang for x in labels_to_ids_u.keys()]
 
     # conversion to global labels
     labels_to_ids_c_global = {x: y for y, x in enumerate(labels_c)}
@@ -709,122 +622,6 @@ def run_probing_all_languages(args):
 
     logger.info('Evaluating probing on test set.')
     if not args.just_proj:
-        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                         ids_to_labels_c_global, ids_to_labels_u_global,
-                                                                         args)
-        for lang in eval_precision.keys():
-            metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
-            metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
-            metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
-            logger.info(
-                f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
-                f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
-
-    logger.info('-' * 100)
-    logger.info('Saving metrics.')
-    with open(os.path.join(args.output_path, 'metrics.log'), 'wb') as f:
-        pickle.dump(metrics, f)
-
-
-def run_hold_one_out_training(args):
-    logger.info('-' * 100)
-    logger.info('Running hold one out training.')
-    logger.info('-' * 100)
-
-    logger.info('Loading tokenizer')
-    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
-
-    logger.info('Loading dataset from local file.')
-    data_files = {}
-    for lang in LANGUAGES:
-        if args.lang != lang:
-            data_files[f'train_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'train.jsonl')
-            data_files[f'valid_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'valid.jsonl')
-            data_files[f'test_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'test.jsonl')
-
-    data_sets = {x: load_dataset('json', data_files=y) for x, y in data_files.items()}
-    data_sets = {x: y.map(lambda e: convert_sample_to_features(e['original_string'], parsers[x.split('_')[1]],
-                                                               x.split('_')[1]))
-                 for x, y in data_sets.items()}
-
-    labels_c = []
-    labels_u = []
-    for lang in LANGUAGES:
-        if args.lang != lang:
-            labels_file_path = os.path.join(args.dataset_name_or_path, lang, 'labels.pkl')
-            with open(labels_file_path, 'rb') as f:
-                data = pickle.load(f)
-                labels_to_ids_c = data['labels_to_ids_c']
-                labels_to_ids_u = data['labels_to_ids_u']
-                labels_c += [x + '--' + lang for x in labels_to_ids_c.keys()]
-                labels_u += [x + '--' + lang for x in labels_to_ids_u.keys()]
-
-    # conversion to global labels
-    labels_to_ids_c_global = {x: y for y, x in enumerate(labels_c)}
-    ids_to_labels_c_global = {y: x for x, y in labels_to_ids_c_global.items()}
-    labels_to_ids_u_global = {x: y for y, x in enumerate(labels_u)}
-    ids_to_labels_u_global = {y: x for x, y in labels_to_ids_u_global.items()}
-
-    # save labels
-    with open(os.path.join(args.output_path, 'global_labels_c.pkl'), 'wb') as f:
-        pickle.dump(labels_to_ids_c_global, f)
-    with open(os.path.join(args.output_path, 'global_labels_u.pkl'), 'wb') as f:
-        pickle.dump(labels_to_ids_u_global, f)
-
-    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['c'], 'c', labels_to_ids_c_global, x.split('_')[1]))
-                 for x, y in data_sets.items()}
-    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['u'], 'u', labels_to_ids_u_global, x.split('_')[1]))
-                 for x, y in data_sets.items()}
-
-    train_datasets = [y['train'] for x, y in data_sets.items() if 'train_' in x]
-    valid_datasets = [y['train'] for x, y in data_sets.items() if 'valid_' in x]
-    test_datasets = [y['train'] for x, y in data_sets.items() if 'test_' in x]
-
-    train_set = concatenate_datasets(train_datasets)
-    valid_set = concatenate_datasets(valid_datasets)
-    test_set = concatenate_datasets(test_datasets)
-
-    train_dataloader = DataLoader(dataset=train_set,
-                                  batch_size=args.batch_size,
-                                  shuffle=True,
-                                  collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
-                                                                              ids_to_labels_c_global,
-                                                                              ids_to_labels_u_global),
-                                  num_workers=8)
-    valid_dataloader = DataLoader(dataset=valid_set,
-                                  batch_size=args.batch_size,
-                                  shuffle=False,
-                                  collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
-                                                                              ids_to_labels_c_global,
-                                                                              ids_to_labels_u_global),
-                                  num_workers=8)
-
-    lmodel = get_lmodel(args)
-    probe_model = ParserProbe(
-        probe_rank=args.rank,
-        hidden_dim=args.hidden,
-        number_labels_c=len(labels_to_ids_c_global),
-        number_labels_u=len(labels_to_ids_u_global)).to(args.device)
-
-    metrics = {'training_loss': [], 'validation_loss': [], 'test_precision': None, 'test_recall': None, 'test_f1': None}
-
-    run_train_general(probe_model, lmodel, train_dataloader, valid_dataloader, metrics, pretrained=False, args=args)
-
-    logger.info('Loading test set.')
-    test_dataloader = DataLoader(dataset=test_set,
-                                 batch_size=args.batch_size,
-                                 shuffle=False,
-                                 collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
-                                                                             ids_to_labels_c_global,
-                                                                             ids_to_labels_u_global),
-                                 num_workers=8)
-
-    logger.info('Loading best model.')
-    checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
-    probe_model.load_state_dict(checkpoint)
-
-    if not args.just_proj:
-        logger.info('Evaluating probing on test set.')
         eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
                                                                          ids_to_labels_c_global, ids_to_labels_u_global,
                                                                          args)

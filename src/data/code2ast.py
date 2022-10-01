@@ -235,16 +235,6 @@ def get_tokens_ast(T, code):
                    key=lambda n: T.nodes[n]['start'])]
 
 
-def get_matrix_tokens_ast(T, code):
-    num_terminals = len([n for n in T if T.nodes[n]['is_terminal']])
-    distance = nx.floyd_warshall_numpy(nx.Graph(T), sorted([n for n in T if T.nodes[n]['is_terminal']],
-                                                           key=lambda n: T.nodes[n]['start']) + [n for n in T if
-                                                                                                 not T.nodes[n][
-                                                                                                     'is_terminal']])
-    tokens = get_tokens_ast(T, code)
-    return distance[0:num_terminals, 0:num_terminals], tokens
-
-
 def get_root_ast(G):
     for n in G:
         if G.in_degree(n) == 0:
@@ -263,59 +253,6 @@ def get_depths_tokens_ast(T, code):
     for t in terminals:
         depths.append(get_depth_ast(T, t))
     return depths, get_tokens_ast(T, code)
-
-
-# G directed ast without dependency labels
-# T directed dependency tree
-# both must be aligned
-# add label to edges in T with the nonterminals
-# when recover ast, left of [] and [] dont create. right create
-def label_dep_tree(G, T):
-    root = get_root_dep_tree(G)
-    nodes = [n for n in list(G.nodes) if root != n and G.nodes[n]['is_terminal']]
-    types = nx.get_node_attributes(G, 'type')
-    for n in nodes:
-        h = get_head_dep_tree(T, n)
-        if h == root:
-            nodes = nx.shortest_path(nx.Graph(G), source=h, target=n)[1:-1]
-            node_types = [types[m] for m in nodes]
-            node_depths = [get_depth(G, m, root) for m in nodes]
-            special_index = 0
-            edge_data = ComplexEdgeLabels(node_types, node_depths, special_index)
-            # node_types[0] = ('[' + node_types[0][0] + ']', node_types[0][1])
-            # node_types = '|'.join(node_types)
-            T[h][n]['complex_edge'] = edge_data
-            T[h][n]['complex_edge_str'] = str(edge_data)
-        else:
-            h_head = get_head_dep_tree(T, h)
-            spine_head = nx.shortest_path(nx.Graph(G), source=h, target=h_head)[1:-1]
-            spine_n = nx.shortest_path(nx.Graph(G), source=h, target=n)[1:-1]
-            index = None
-            for j, m in enumerate(spine_n):
-                if m in spine_head:
-                    index = spine_head.index(m)
-            if index == None:
-                index = len(spine_n) - 1
-            spine_n_types = [types[m] for m in spine_n]
-            node_depths = [get_depth(G, m, root) for m in spine_n]
-            edge_data = ComplexEdgeLabels(spine_n_types, node_depths, index)
-            T[h][n]['complex_edge'] = edge_data
-            T[h][n]['complex_edge_str'] = str(edge_data)
-            # spine_n[index] = '[' + spine_n[index] + ']'
-            # spine_n = '|'.join(spine_n)
-            # T[h][n]['seq_nonterminal'] = spine_n
-
-
-# given the labeled directed dep tree, it generates the tuples (s,t,label)
-def get_tuples_from_labeled_dep_tree(T, code):
-    pairs = []
-    sorted_nodes = sorted(list(T.nodes),
-                          key=lambda n: T.nodes[n]['start'])
-    for s, t, label in ((*edge, d['complex_edge_str']) for *edge, d in T.edges(data=True)):
-        pairs.append((sorted_nodes.index(s), sorted_nodes.index(t), label))
-    tokens = get_tokens_dep(T, code)
-    return pairs, tokens
-
 
 # aux function
 def get_head_dep_tree(T, n):
@@ -347,54 +284,6 @@ class ComplexEdgeLabels:
         node_append = path[self.special_index]
         to_append = self.non_terminals[self.special_index + 1:]
         return node_append, to_append
-
-
-# function used to test if it is possible to obtain the ast from the labeled dep tree
-def from_label_dep_tree_to_ast(T, lang='python'):
-    T_ast = nx.Graph()
-    root = get_root_dep_tree(T)
-    types = nx.get_node_attributes(T, 'type')
-    if lang == 'python':
-        T_ast.add_node(0, type='module', is_terminal=False)
-        T_ast.add_node(1, type='function_definition', is_terminal=False)
-        T_ast.add_node(2, **T.nodes[root])
-        T_ast.add_edge(0, 1)
-        T_ast.add_edge(1, 2)
-        nodes = [n for n in T.nodes if n != root]
-        nodes.sort(key=lambda n: T.nodes[n]['start'])
-        for n in nodes:
-            h = get_head_dep_tree(T, n)
-            if h == root:
-                path = nx.shortest_path(T_ast, source=2, target=0)[1:-1]
-            else:
-                h_head = get_head_dep_tree(T, h)
-                h_correspondence = get_correspondence(T_ast, T, h)
-                h_head_correspondence = get_correspondence(T_ast, T, h_head)
-                path = nx.shortest_path(T_ast, source=h_correspondence,
-                                        target=h_head_correspondence)[1:-1]
-            edge_data = T[h][n]['complex_edge']
-            node_append, to_append = edge_data.get_node_to_append(path)
-            # print('To append',to_append)
-            # print('To append terminal', T.nodes[n])
-            # print('-'*100)
-            # add non terminals
-            for nt in to_append:
-                m = get_id(T_ast)
-                T_ast.add_node(m, type=nt, is_terminal=False)
-                T_ast.add_edge(m, node_append)
-                node_append = m
-            # add terminal
-            m = get_id(T_ast)
-            T_ast.add_node(m, **T.nodes[n])
-            T_ast.add_edge(m, node_append)
-    return T_ast
-
-
-# aux funtion
-def get_correspondence(T_ast, T, n):
-    for m in T_ast:
-        if T_ast.nodes[m] == T.nodes[n]:
-            return m
 
 
 # build tree from distance matrix,
@@ -436,13 +325,6 @@ def has_terminals(G, n):
     if len(l) == 0:
         return False
     return True
-
-
-def has_non_terminals_graph(G):
-    for n in G:
-        if not G.nodes[n]['is_terminal']:
-            return True
-    return False
 
 
 def remove_useless_non_terminals(G):

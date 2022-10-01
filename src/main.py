@@ -1,19 +1,15 @@
-import os
-import sys
-import random
 import logging
+import os
+import random
+import sys
 
-import torch
 import numpy as np
+import torch
+from prettytable import PrettyTable
 from transformers import HfArgumentParser
 
-from prettytable import PrettyTable
-
 from args import ProgramArguments
-from run_probing import run_probing_train, run_probing_test, run_probing_from_given_projection, \
-    run_probing_all_languages, run_hold_one_out_training
-
-from run_visualization import run_visualization, run_visualization_multilingual
+from run_probing import run_probing_train, run_probing_test, run_probing_all_languages
 
 
 def main(args):
@@ -25,16 +21,6 @@ def main(args):
         run_probing_test(args=args)
     elif args.do_train_all_languages:
         run_probing_all_languages(args=args)
-    # elif args.do_hold_one_out_training:
-    #    run_hold_one_out_training(args=args)
-    # elif args.do_visualization_multilingual:
-    #    run_visualization_multilingual(args=args)
-    # elif args.do_visualization:
-    #    args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
-    #    run_visualization(args=args)
-    # elif args.do_train_from_given_projection:
-    #    args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
-    #    run_probing_from_given_projection(args=args)
     else:
         raise ValueError('--do_train or --do_test should be provided.')
 

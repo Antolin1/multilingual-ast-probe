@@ -1,16 +1,14 @@
 import unittest
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import torch
 from tree_sitter import Language, Parser
-from src.data.code2ast import code2ast, get_tokens_ast, get_token
+
 from src.data.binary_tree import ast2binary, tree_to_distance, \
     distance_to_tree, remove_empty_nodes, extend_complex_nodes, \
     get_multiset_ast, get_precision_recall_f1, add_unary
-import networkx as nx
-import matplotlib.pyplot as plt
-import torch
-import random
-
-
-
+from src.data.code2ast import code2ast, get_tokens_ast, get_token
 
 code = """'''Compute the maximum'''
 def max(a,b):
@@ -24,6 +22,7 @@ PY_LANGUAGE = Language('grammars/languages.so', 'python')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
+
 def rankloss(input, target, mask, exp=False):
     diff = input[:, :, None] - input[:, None, :]
     target_diff = ((target[:, :, None] - target[:, None, :]) > 0).float()
@@ -34,6 +33,7 @@ def rankloss(input, target, mask, exp=False):
         loss = torch.relu(target_diff - diff)
     loss = (loss * mask).sum() / (mask.sum() + 1e-9)
     return loss
+
 
 class TestBinary(unittest.TestCase):
 
@@ -88,19 +88,19 @@ class TestBinary(unittest.TestCase):
                 with_labels=True, labels=nx.get_node_attributes(G, 'type'))
         plt.show()
 
-        #for n in G:
+        # for n in G:
         #    G.nodes[n]['label'] = G.nodes[n]['type']
-        #T = nx.drawing.nx_pydot.to_pydot(G)
-        #T.write_png('example.png')
+        # T = nx.drawing.nx_pydot.to_pydot(G)
+        # T.write_png('example.png')
 
     def test_torch_loss(self):
         seqlen_minus_one = 3
         length_batch = torch.tensor([4, 4])
         norm = length_batch.float() * (length_batch.float() - 1) / 2
         d_real = torch.tensor([[3, 2, 1],
-                  [1, 5, 6]])
+                               [1, 5, 6]])
         d_pred = torch.tensor([[33, 32, 31],
-                  [34, 54, 25]])
+                               [34, 54, 25]])
         d_pred_masked = d_pred.unsqueeze(2).expand(-1, -1, seqlen_minus_one)
         d_real_masked = d_real.unsqueeze(2).expand(-1, -1, seqlen_minus_one)
         d_pred_masked_transposed = d_pred_masked.transpose(1, 2)
@@ -116,30 +116,34 @@ class TestBinary(unittest.TestCase):
         loss_d = torch.sum(loss_d) / 2
         print(loss_d)
 
-        lens = torch.tensor([3,3])
+        lens = torch.tensor([3, 3])
         max_len = 3
         mask = torch.arange(max_len)[None, :] < lens[:, None]
         print(rankloss(d_pred, d_real, mask, exp=False))
 
     def test_random(self):
         d = [12.749075889587402, 12.086353302001953, 3.5092380046844482, 2.8773586750030518, 1.8203082084655762,
-         1.105534553527832, 16.498552322387695, 14.007007598876953, 10.105134963989258, 8.575981140136719,
-         9.284015655517578, 10.76449203491211, 9.185318946838379, 6.908447265625, 2.8699421882629395,
-         1.5084803104400635, 3.9279606342315674, 1.9249317646026611, 1.1106932163238525, 5.392538070678711,
-         1.335496187210083]
-        c = ['module<sep>function_definition', '<empty>', 'parameters', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
-         'block<sep>for_statement', '<empty>', '<empty>', '<empty>', '<empty>', 'block<sep>if_statement', 'comparison_operator',
-         '<empty>', '<empty>', '<empty>', 'block<sep>return_statement', '<empty>', 'return_statement']
-        u = ['<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
-         '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
-         '<empty>', '<empty>']
+             1.105534553527832, 16.498552322387695, 14.007007598876953, 10.105134963989258, 8.575981140136719,
+             9.284015655517578, 10.76449203491211, 9.185318946838379, 6.908447265625, 2.8699421882629395,
+             1.5084803104400635, 3.9279606342315674, 1.9249317646026611, 1.1106932163238525, 5.392538070678711,
+             1.335496187210083]
+        c = ['module<sep>function_definition', '<empty>', 'parameters', '<empty>', '<empty>', '<empty>', '<empty>',
+             '<empty>',
+             'block<sep>for_statement', '<empty>', '<empty>', '<empty>', '<empty>', 'block<sep>if_statement',
+             'comparison_operator',
+             '<empty>', '<empty>', '<empty>', 'block<sep>return_statement', '<empty>', 'return_statement']
+        u = ['<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
+             '<empty>',
+             '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>', '<empty>',
+             '<empty>',
+             '<empty>', '<empty>']
 
         binary_ast_recov = distance_to_tree(d, c, u, [str(i) for i in range(len(u))])
 
         nx.draw(nx.Graph(binary_ast_recov), labels=nx.get_node_attributes(binary_ast_recov, 'type'), with_labels=True)
         plt.show()
 
-        binary_ast_recov_full =  extend_complex_nodes(add_unary(remove_empty_nodes(binary_ast_recov)))
+        binary_ast_recov_full = extend_complex_nodes(add_unary(remove_empty_nodes(binary_ast_recov)))
 
         nx.draw(nx.Graph(binary_ast_recov_full), labels=nx.get_node_attributes(binary_ast_recov_full, 'type'),
                 with_labels=True)
@@ -205,7 +209,8 @@ class TestBinary(unittest.TestCase):
 
         print(get_multiset_ast(binary_ast_recov_full))
         print(get_multiset_ast(G_label_leaves))
-        #print(binary_ast.nodes(data=True))
+        # print(binary_ast.nodes(data=True))
+
 
 if __name__ == '__main__':
     unittest.main()

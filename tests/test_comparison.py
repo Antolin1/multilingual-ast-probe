@@ -1,12 +1,11 @@
 import unittest
 
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
 
-from .test_code2ast import parser, PY_LANGUAGE, \
-    JAVA_LANGUAGE, CSHARP_LANGUAGE
-from src.data.code2ast import code2ast, get_tokens_ast
 from src.data.binary_tree import ast2binary, tree_to_distance
+from src.data.code2ast import code2ast, get_tokens_ast
+from .test_code2ast import parser, JAVA_LANGUAGE, CSHARP_LANGUAGE
 
 code_python = """def max(a,b):
     if a > b:

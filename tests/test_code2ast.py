@@ -81,7 +81,8 @@ code_java = """public void myMethod() {
     String mystr = "mystr";
 }"""
 
-code_csharp = "public override string ToString(){return this.GetType().Name + \"(compressionMode=\" + compressionMode + \", chunkSize=\" + chunkSize + \")\";}\n"
+code_csharp = "public override string ToString(){return this.GetType().Name + \"" \
+              "(compressionMode=\" + compressionMode + \", chunkSize=\" + chunkSize + \")\";}\n"
 
 
 PY_LANGUAGE = Language('grammars/languages.so', 'python')

@@ -9,6 +9,7 @@ from src.data.binary_tree import ast2binary, tree_to_distance, \
     distance_to_tree, remove_empty_nodes, extend_complex_nodes, \
     get_multiset_ast, get_precision_recall_f1, add_unary
 from src.data.code2ast import code2ast, get_tokens_ast, get_token
+from src.probe.loss import rankloss
 
 code = """'''Compute the maximum'''
 def max(a,b):
@@ -21,18 +22,6 @@ def max(a,b):
 PY_LANGUAGE = Language('grammars/languages.so', 'python')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
-
-
-def rankloss(input, target, mask, exp=False):
-    diff = input[:, :, None] - input[:, None, :]
-    target_diff = ((target[:, :, None] - target[:, None, :]) > 0).float()
-    mask = mask[:, :, None] * mask[:, None, :] * target_diff
-    if exp:
-        loss = torch.exp(torch.relu(target_diff - diff)) - 1
-    else:
-        loss = torch.relu(target_diff - diff)
-    loss = (loss * mask).sum() / (mask.sum() + 1e-9)
-    return loss
 
 
 class TestBinary(unittest.TestCase):

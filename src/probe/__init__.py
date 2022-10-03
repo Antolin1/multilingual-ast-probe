@@ -1,3 +1,3 @@
-from .probe import TwoWordPSDProbe, OneWordPSDProbe, ParserProbe
-from .loss import L1DistanceLoss, L1DepthLoss, ParserLoss
+from .probe import ParserProbe
+from .loss import ParserLoss
 from .utils import get_embeddings, align_function

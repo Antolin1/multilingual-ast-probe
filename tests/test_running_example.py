@@ -2,14 +2,12 @@ import unittest
 
 import matplotlib.pyplot as plt
 import networkx as nx
-from tree_sitter import Language, Parser
 
 from src.data.binary_tree import ast2binary, tree_to_distance
 from src.data.code2ast import code2ast
+from src.data.data_loading import PARSER_OBJECT_BY_NAME
 
-PY_LANGUAGE = Language('grammars/languages.so', 'python')
-parser = Parser()
-parser.set_language(PY_LANGUAGE)
+parser = PARSER_OBJECT_BY_NAME['python']
 
 
 class RunningExample(unittest.TestCase):

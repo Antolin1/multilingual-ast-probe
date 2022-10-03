@@ -5,7 +5,7 @@ import networkx as nx
 
 from src.data.binary_tree import ast2binary, tree_to_distance
 from src.data.code2ast import code2ast, get_tokens_ast
-from .test_code2ast import parser, JAVA_LANGUAGE, CSHARP_LANGUAGE
+from src.data.data_loading import PARSER_OBJECT_BY_NAME
 
 code_python = """def max(a,b):
     if a > b:
@@ -37,7 +37,7 @@ def print_beautiful(tokens, c, d):
 
 class Comparison(unittest.TestCase):
     def test_java(self):
-        parser.set_language(JAVA_LANGUAGE)
+        parser = PARSER_OBJECT_BY_NAME['java']
         G, pre_code = code2ast(code_java, parser, lang='java')
         binary_ast = ast2binary(G)
         d, c, _, u = tree_to_distance(binary_ast, 0)
@@ -48,7 +48,7 @@ class Comparison(unittest.TestCase):
         print(get_tokens_ast(G, pre_code))
 
     def test_csharp(self):
-        parser.set_language(CSHARP_LANGUAGE)
+        parser = PARSER_OBJECT_BY_NAME['csharp']
         G, pre_code = code2ast(code_csharp, parser, lang='csharp')
         binary_ast = ast2binary(G)
         d, c, _, u = tree_to_distance(binary_ast, 0)

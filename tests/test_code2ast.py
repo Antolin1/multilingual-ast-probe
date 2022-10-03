@@ -2,9 +2,9 @@ import unittest
 
 import matplotlib.pyplot as plt
 import networkx as nx
-from tree_sitter import Language, Parser
 
 from src.data.code2ast import (code2ast, get_tokens_ast)
+from src.data.data_loading import PARSER_OBJECT_BY_NAME
 from src.data.utils import (remove_comments_and_docstrings_python,
                             remove_comments_and_docstrings_java_js)
 
@@ -80,25 +80,13 @@ code_java = """public void myMethod() {
 code_csharp = "public override string ToString(){return this.GetType().Name + \"" \
               "(compressionMode=\" + compressionMode + \", chunkSize=\" + chunkSize + \")\";}\n"
 
-PY_LANGUAGE = Language('grammars/languages.so', 'python')
-JS_LANGUAGE = Language('grammars/languages.so', 'javascript')
-GO_LANGUAGE = Language('grammars/languages.so', 'go')
-PHP_LANGUAGE = Language('grammars/languages.so', 'php')
-RUBY_LANGUAGE = Language('grammars/languages.so', 'ruby')
-JAVA_LANGUAGE = Language('grammars/languages.so', 'java')
-CSHARP_LANGUAGE = Language('grammars/languages.so', 'c_sharp')
-C_LANGUAGE = Language('grammars/languages.so', 'c')
-parser = Parser()
-parser.set_language(PY_LANGUAGE)
-
 
 class Code2ast(unittest.TestCase):
 
     def test_code2ast_java(self):
         plt.figure()
         plt.title('test_code2ast_java')
-        parser = Parser()
-        parser.set_language(JAVA_LANGUAGE)
+        parser = PARSER_OBJECT_BY_NAME['java']
         G, pre_code = code2ast(code_java, parser, lang='java')
         print(pre_code)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
@@ -111,8 +99,7 @@ class Code2ast(unittest.TestCase):
     def test_code2ast_csharp(self):
         plt.figure()
         plt.title('test_code2ast_csharp')
-        parser = Parser()
-        parser.set_language(CSHARP_LANGUAGE)
+        parser = PARSER_OBJECT_BY_NAME['csharp']
         G, pre_code = code2ast(code_csharp, parser, lang='csharp')
         print(pre_code)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
@@ -125,8 +112,7 @@ class Code2ast(unittest.TestCase):
     def test_code2ast_php(self):
         plt.figure()
         plt.title('test_code2ast_php')
-        parser = Parser()
-        parser.set_language(PHP_LANGUAGE)
+        parser = PARSER_OBJECT_BY_NAME['php']
         G, pre_code = code2ast(code_php, parser, lang='php')
         print(pre_code)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
@@ -139,8 +125,7 @@ class Code2ast(unittest.TestCase):
     def test_code2ast_ruby(self):
         plt.figure()
         plt.title('test_code2ast_ruby')
-        parser = Parser()
-        parser.set_language(RUBY_LANGUAGE)
+        parser = PARSER_OBJECT_BY_NAME['ruby']
         G, pre_code = code2ast(code_ruby, parser, lang='ruby')
         print(pre_code)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
@@ -153,8 +138,7 @@ class Code2ast(unittest.TestCase):
     def test_code2ast_go(self):
         plt.figure()
         plt.title('test_code2ast_go')
-        parser = Parser()
-        parser.set_language(GO_LANGUAGE)
+        parser = PARSER_OBJECT_BY_NAME['go']
         G, pre_code = code2ast(code_go, parser, lang='go')
         print(pre_code)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
@@ -173,6 +157,7 @@ class Code2ast(unittest.TestCase):
     def test_code2ast_python(self):
         plt.figure()
         plt.title('test_code2ast_python')
+        parser = PARSER_OBJECT_BY_NAME['python']
         G, pre_code = code2ast(code, parser)
         nx.draw(nx.Graph(G), labels=nx.get_node_attributes(G, 'type'), with_labels=True)
         plt.show()
@@ -184,8 +169,7 @@ class Code2ast(unittest.TestCase):
     def test_js(self):
         plt.figure()
         plt.title('test_js I')
-        parser = Parser()
-        parser.set_language(JS_LANGUAGE)
+        parser = PARSER_OBJECT_BY_NAME['javascript']
         G, pre_code = code2ast(code_js, parser, 'javascript')
         print(pre_code)
         nx.draw(G, labels=nx.get_node_attributes(G, 'type'), with_labels=True)
@@ -199,6 +183,7 @@ class Code2ast(unittest.TestCase):
     level = level+"__"
     result = p.split(level)
     return result[0]+level+result[1].split(";")[0]"""
+        parser = PARSER_OBJECT_BY_NAME['python']
         G, pre_code = code2ast(code, parser)
         tokens = get_tokens_ast(G, pre_code)
         self.assertTrue('"__"' in tokens)

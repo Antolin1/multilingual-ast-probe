@@ -5,7 +5,7 @@ from .utils import match_tokenized_to_untokenized_roberta
 from .data_loading import get_mask_multilingual
 
 
-def collator_fn(batch, tokenizer):
+def collator_fn(batch, tokenizer, match_tokenized_to_untokenized=match_tokenized_to_untokenized_roberta):
     tokens = [b['code_tokens'] for b in batch]
     cs = [b['c'] for b in batch]
     ds = [b['d'] for b in batch]
@@ -16,7 +16,7 @@ def collator_fn(batch, tokenizer):
     all_attentions = []
     all_mappings = []
     for untokenized_sent in tokens:
-        to_convert, mapping = match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer)
+        to_convert, mapping = match_tokenized_to_untokenized(untokenized_sent, tokenizer)
         inputs = tokenizer.convert_tokens_to_ids([tokenizer.cls_token] + to_convert + [tokenizer.sep_token])
         masks = [1] * len(inputs)
         all_inputs.append(inputs)
@@ -53,8 +53,10 @@ def collator_fn(batch, tokenizer):
     return all_inputs, all_attentions, ds, cs, us, torch.tensor(batch_len_tokens), alignment
 
 
-def collator_with_mask(batch, tokenizer, ids_to_labels_c, ids_to_labels_u):
-    all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = collator_fn(batch, tokenizer)
+def collator_with_mask(batch, tokenizer, ids_to_labels_c, ids_to_labels_u,
+                       match_tokenized_to_untokenized=match_tokenized_to_untokenized_roberta):
+    all_inputs, all_attentions, ds, cs, us, batch_len_tokens, alignment = collator_fn(batch, tokenizer,
+                                                                                      match_tokenized_to_untokenized)
     masks_c = []
     for c in cs:
         first_id = c[0]

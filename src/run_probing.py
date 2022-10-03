@@ -17,6 +17,7 @@ from data import convert_sample_to_features, collator_fn, \
 from data.binary_tree import distance_to_tree, remove_empty_nodes, \
     extend_complex_nodes, get_precision_recall_f1, add_unary, get_recall_non_terminal
 from data.data_loading import get_non_terminals_labels, convert_to_ids, convert_to_ids_multilingual
+from data.utils import MODEL_TYPES_MATCH
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -185,15 +186,17 @@ def run_probing_train(args: argparse.Namespace):
     valid_set = valid_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
     test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
 
+    match_function = MODEL_TYPES_MATCH[args.model_type]
+
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,
                                   shuffle=True,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer, match_function),
                                   num_workers=8)
     valid_dataloader = DataLoader(dataset=valid_set,
                                   batch_size=args.batch_size,
                                   shuffle=False,
-                                  collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                  collate_fn=lambda batch: collator_fn(batch, tokenizer, match_function),
                                   num_workers=8)
 
     lmodel = get_lmodel(args)
@@ -581,19 +584,23 @@ def run_probing_all_languages(args):
     valid_set = concatenate_datasets(valid_datasets)
     test_set = concatenate_datasets(test_datasets)
 
+    match_function = MODEL_TYPES_MATCH[args.model_type]
+
     train_dataloader = DataLoader(dataset=train_set,
                                   batch_size=args.batch_size,
                                   shuffle=True,
                                   collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
                                                                               ids_to_labels_c_global,
-                                                                              ids_to_labels_u_global),
+                                                                              ids_to_labels_u_global,
+                                                                              match_function),
                                   num_workers=8)
     valid_dataloader = DataLoader(dataset=valid_set,
                                   batch_size=args.batch_size,
                                   shuffle=False,
                                   collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
                                                                               ids_to_labels_c_global,
-                                                                              ids_to_labels_u_global),
+                                                                              ids_to_labels_u_global,
+                                                                              match_function),
                                   num_workers=8)
 
     lmodel = get_lmodel(args)

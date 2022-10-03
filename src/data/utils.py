@@ -99,3 +99,24 @@ def match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer):
             cont = cont + len(temp)
     flat_tokenized = [item for sublist in tokenized for item in sublist]
     return flat_tokenized, mapping
+
+
+def match_tokenized_to_untokenized_bert(untokenized_sent, tokenizer):
+    tokenized = []
+    mapping = {}
+    cont = 0
+    for j, t in enumerate(untokenized_sent):
+        temp = [k for k in tokenizer.tokenize(t)]
+        tokenized.append(temp)
+        mapping[j] = [f for f in range(cont, len(temp) + cont)]
+        cont = cont + len(temp)
+    flat_tokenized = [item for sublist in tokenized for item in sublist]
+    return flat_tokenized, mapping
+
+
+MODEL_TYPES_MATCH = {
+    'roberta': match_tokenized_to_untokenized_roberta,
+    't5': match_tokenized_to_untokenized_roberta,
+    'bert': match_tokenized_to_untokenized_bert,
+    'distilbert': match_tokenized_to_untokenized_bert
+}

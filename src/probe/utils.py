@@ -4,7 +4,7 @@ from torch_scatter import scatter_mean
 
 
 def get_embeddings(all_inputs, all_attentions, model, layer, model_type):
-    if model_type == 't5':
+    if model_type == 't5' or model_type == 'distilbert':
         with torch.no_grad():
             embs = model(input_ids=all_inputs, attention_mask=all_attentions)[1][layer][:, 1:, :]
     else:

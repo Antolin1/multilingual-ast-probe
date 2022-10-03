@@ -1,15 +1,14 @@
 import logging
 import os
-import random
 import sys
 
-import numpy as np
 import torch
 from prettytable import PrettyTable
 from transformers import HfArgumentParser
 
 from args import ProgramArguments
 from run_probing import run_probing_train, run_probing_test, run_probing_all_languages
+from utils import set_seed, setup_logger
 
 
 def main(args):
@@ -25,17 +24,6 @@ def main(args):
         raise ValueError('--do_train or --do_test should be provided.')
 
 
-def setup_logger():
-    logger = logging.getLogger()
-    logger.setLevel(level=logging.INFO)
-    console = logging.StreamHandler()
-    console.setLevel(level=logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-    return logger
-
-
 if __name__ == '__main__':
     parser = HfArgumentParser(ProgramArguments)
     args = parser.parse_args()
@@ -43,10 +31,7 @@ if __name__ == '__main__':
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if args.seed > 0:
-        random.seed(args.seed)
-        np.random.seed(args.seed)
-        torch.manual_seed(args.seed)
-        torch.cuda.manual_seed_all(args.seed)
+        set_seed(args.seed)
 
     logger = setup_logger()
 

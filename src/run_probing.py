@@ -19,6 +19,7 @@ from data.binary_tree import distance_to_tree, remove_empty_nodes, \
 from data.data_loading import get_non_terminals_labels, convert_to_ids, convert_to_ids_multilingual
 from data.utils import MODEL_TYPES_MATCH
 from probe import ParserProbe, ParserLoss, get_embeddings, align_function
+from utils import set_seed
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logger = logging.getLogger(__name__)
@@ -33,6 +34,11 @@ PARSER_OBJECT_BY_NAME = {
     'csharp': CSHARP_PARSER,
     'c': C_PARSER
 }
+
+
+def seed_worker(_):
+    worker_seed = torch.initial_seed() % 2 ** 32
+    set_seed(worker_seed)
 
 
 def generate_baseline(model, type_baseline='not_full'):
@@ -192,12 +198,13 @@ def run_probing_train(args: argparse.Namespace):
                                   batch_size=args.batch_size,
                                   shuffle=True,
                                   collate_fn=lambda batch: collator_fn(batch, tokenizer, match_function),
-                                  num_workers=8)
+                                  num_workers=0,
+                                  generator=torch.Generator().manual_seed(args.seed))
     valid_dataloader = DataLoader(dataset=valid_set,
                                   batch_size=args.batch_size,
                                   shuffle=False,
                                   collate_fn=lambda batch: collator_fn(batch, tokenizer, match_function),
-                                  num_workers=8)
+                                  num_workers=0)
 
     lmodel = get_lmodel(args)
     probe_model = ParserProbe(
@@ -593,7 +600,8 @@ def run_probing_all_languages(args):
                                                                               ids_to_labels_c_global,
                                                                               ids_to_labels_u_global,
                                                                               match_function),
-                                  num_workers=8)
+                                  generator=torch.Generator().manual_seed(args.seed),
+                                  num_workers=0)
     valid_dataloader = DataLoader(dataset=valid_set,
                                   batch_size=args.batch_size,
                                   shuffle=False,
@@ -601,7 +609,7 @@ def run_probing_all_languages(args):
                                                                               ids_to_labels_c_global,
                                                                               ids_to_labels_u_global,
                                                                               match_function),
-                                  num_workers=8)
+                                  num_workers=0)
 
     lmodel = get_lmodel(args)
     probe_model = ParserProbe(

@@ -5,7 +5,7 @@ tests.ipynb
 figure.png
 dataset.zip
 dataset.jsonl
-dataset/
+./dataset
 runs_test
 runs_direct_transfer
 runs_hold_one_out
@@ -156,3 +156,4 @@ runs
 /first_figure_baseline.html
 /first_figure_langs.html
 /first_figure_langs_baseline.html
+/dataset/

@@ -9,7 +9,7 @@ from datasets import load_dataset
 from transformers import AutoTokenizer
 
 from data import download_codesearchnet_dataset, download_codexglue_csharp, download_codexglue_c, PARSER_OBJECT_BY_NAME
-from data.code2ast import code2ast, has_error
+from data.code2ast import code2ast, has_error, get_tokens_ast
 from data.utils import match_tokenized_to_untokenized_roberta
 from main import setup_logger
 
@@ -31,9 +31,9 @@ def filter_samples(code, max_length, lang, parser):
         return False
     if has_error(G):
         return False
-
+    code_tokens = get_tokens_ast(G, code_pre)
     for tokenizer in tokenizers:
-        t, _ = match_tokenized_to_untokenized_roberta(untokenized_sent=code_pre, tokenizer=tokenizer)
+        t, _ = match_tokenized_to_untokenized_roberta(untokenized_sent=code_tokens, tokenizer=tokenizer)
         if len(t) + 2 > max_length:
             return False
     return True

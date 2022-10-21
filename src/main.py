@@ -21,7 +21,7 @@ def main(args):
     elif args.do_train_all_languages:
         run_probing_all_languages(args=args)
     else:
-        raise ValueError('--do_train or --do_test should be provided.')
+        raise ValueError('--do_train, --do_test, or do_train_all_languages should be provided.')
 
 
 if __name__ == '__main__':

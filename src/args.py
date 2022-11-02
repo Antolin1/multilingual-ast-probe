@@ -88,17 +88,9 @@ class ProgramArguments:
         metadata={'help': 'Seed for experiments replication.'}
     )
 
-    max_tokens: Optional[int] = field(
-        default=100,
-        metadata={'help': 'Max tokens considered.'}
-    )
-
     just_proj: bool = field(default=False, metadata={'help': 'To train just d.'})
-    download_csn: bool = field(default=False, metadata={'help': 'Download CodeSearchNet dataset.'})
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})
-    do_visualization: bool = field(default=False, metadata={'help': 'Run visualizations.'})
     do_train_from_given_projection: bool = field(default=False, metadata={'help': 'Run probe training using a pretrained projection.'})
     do_train_all_languages: bool = field(default=False, metadata={'help': 'Run multingual probe training with all langs.'})
     do_hold_one_out_training: bool = field(default=False, metadata={'help': 'Run multingual probe training with all langs less one.'})
-    do_visualization_multilingual: bool = field(default=False, metadata={'help': 'Run visualizations multilingual.'})

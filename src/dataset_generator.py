@@ -10,7 +10,7 @@ from transformers import AutoTokenizer
 
 from data import download_codesearchnet_dataset, download_codexglue_csharp, download_codexglue_c, PARSER_OBJECT_BY_NAME
 from data.code2ast import code2ast, has_error, get_tokens_ast
-from data.utils import match_tokenized_to_untokenized_roberta
+from data.utils import match_tokenized_to_untokenized_roberta, match_tokenized_to_untokenized_bert
 from main import setup_logger
 
 tokenizer_roberta = AutoTokenizer.from_pretrained('roberta-base')
@@ -18,8 +18,13 @@ tokenizer_t5 = AutoTokenizer.from_pretrained('Salesforce/codet5-base')
 tokenizer_codebert = AutoTokenizer.from_pretrained('microsoft/codebert-base')
 tokenizer_graphcodebert = AutoTokenizer.from_pretrained('microsoft/graphcodebert-base')
 tokenizer_codeberta = AutoTokenizer.from_pretrained('huggingface/CodeBERTa-small-v1')
+tokenizer_bert = AutoTokenizer.from_pretrained('bert-base-uncased')
+tokenizer_distilbert = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+tokenizer_distilroberta = AutoTokenizer.from_pretrained('distilroberta-base')
 
-tokenizers = [tokenizer_roberta, tokenizer_t5, tokenizer_codebert, tokenizer_graphcodebert, tokenizer_codeberta]
+tokenizers_bpe = [tokenizer_roberta, tokenizer_t5, tokenizer_codebert,
+                  tokenizer_graphcodebert, tokenizer_codeberta, tokenizer_distilroberta]
+tokenizers_wordpiece = [tokenizer_distilbert, tokenizer_bert]
 
 
 def filter_samples(code, max_length, lang, parser):
@@ -32,8 +37,12 @@ def filter_samples(code, max_length, lang, parser):
     if has_error(G):
         return False
     code_tokens = get_tokens_ast(G, code_pre)
-    for tokenizer in tokenizers:
+    for tokenizer in tokenizers_bpe:
         t, _ = match_tokenized_to_untokenized_roberta(untokenized_sent=code_tokens, tokenizer=tokenizer)
+        if len(t) + 2 > max_length:
+            return False
+    for tokenizer in tokenizers_wordpiece:
+        t, _ = match_tokenized_to_untokenized_bert(untokenized_sent=code_tokens, tokenizer=tokenizer)
         if len(t) + 2 > max_length:
             return False
     return True

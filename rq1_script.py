@@ -38,11 +38,13 @@ assert len(model_types) == len(models)
 def get_model_folder_type(split):
     if split == 'all':
         return models, folders, model_types
-    elif split == 'first':
-        return models[0:3], folders[0:3], model_types[0:3]
-    elif split == 'second':
-        return models[3:6], folders[3:6], model_types[3:6]
-    elif split == 'thrid':
+    elif split == '1':
+        return models[0:2], folders[0:2], model_types[0:2]
+    elif split == '2':
+        return models[2:4], folders[2:4], model_types[2:4]
+    elif split == '3':
+        return models[4:6], folders[4:6], model_types[4:6]
+    elif split == '4':
         return models[6:], folders[6:], model_types[6:]
 
 
@@ -71,7 +73,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script the first research question')
-    parser.add_argument('--split', help='split of models.', choices=['first', 'second', 'thrid', 'all'],
+    parser.add_argument('--split', help='split of models.', choices=['1', '2', '3', '4', 'all'],
                         default='all')
     parser.add_argument('--cuda_device', help='Cuda device', default=0)
     args = parser.parse_args()

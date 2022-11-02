@@ -47,7 +47,7 @@ torchaudio==0.10.2+cu113
 torchvision==0.11.3+cu113
 tqdm==4.62.3
 transformers==4.16.2
-tree-sitter==0.20.0
+tree-sitter==0.20.1
 typing_extensions==4.0.1
 urllib3==1.26.8
 wcwidth==0.2.5

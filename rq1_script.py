@@ -61,14 +61,15 @@ def main(args):
                 layers = list(range(1, 13))
             for layer in layers:
                 run_name = '_'.join([folder, lang, str(layer), '128'])
-                os.system(f"CUDA_VISIBLE_DEVICES={args.cuda_device} python src/main.py "
-                          f"--do_train "
-                          f"--run_name {run_name} "
-                          f"--pretrained_model_name_or_path {model} "
-                          f"--model_type {model_type} "
-                          f"--lang {lang} "
-                          f"--layer {layer} "
-                          f"--rank 128")
+                if not os.path.exists(os.path.join('./runs', run_name, 'metrics.log')):
+                    os.system(f"CUDA_VISIBLE_DEVICES={args.cuda_device} python src/main.py "
+                              f"--do_train "
+                              f"--run_name {run_name} "
+                              f"--pretrained_model_name_or_path {model} "
+                              f"--model_type {model_type} "
+                              f"--lang {lang} "
+                              f"--layer {layer} "
+                              f"--rank 128")
 
 
 if __name__ == '__main__':

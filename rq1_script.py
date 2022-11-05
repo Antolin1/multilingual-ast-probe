@@ -52,8 +52,8 @@ def main(args):
     models_split, folders_split, model_types_split = get_model_folder_type(args.split)
     assert len(models_split) == len(folders_split)
     assert len(folders_split) == len(model_types_split)
-    for lang in LANGUAGES:
-        for model, folder, model_type in zip(models_split, folders_split, model_types_split):
+    for model, folder, model_type in zip(models_split, folders_split, model_types_split):
+        for lang in LANGUAGES:
             if (model == 'huggingface/CodeBERTa-small-v1' or model == 'distilroberta-base'
                     or model == 'distilbert-base-uncased'):
                 layers = list(range(1, 7))

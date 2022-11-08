@@ -34,7 +34,7 @@ def read_results(args):
 
 def main(args):
     results = read_results(args)
-    for lang in ['python', 'java', 'ruby', 'javascript']:
+    for lang in ['python', 'java', 'ruby', 'javascript', 'go']:
         layer_vs_f1 = (
                 ggplot(results[(results['lang'] == lang)])
                 + aes(x="layer", y="f1", color='model')

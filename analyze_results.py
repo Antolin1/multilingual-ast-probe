@@ -49,7 +49,17 @@ def plot_results_layer_vs_f1(results):
 
 
 def best_layer_for_each_model(results):
-    print(results.groupby(['model', 'layer'])['f1'].mean())
+    group_by_model = results.groupby(['model', 'layer'])['f1'].mean()
+    print(group_by_model)
+    layer_vs_f1 = (
+            ggplot(group_by_model)
+            + aes(x="layer", y="f1", color='model')
+            + geom_line()
+            + scale_x_continuous(breaks=range(0, 13, 1))
+            + labs(x="Layer", y="F1", color="Model")
+            + theme(text=element_text(size=16))
+    )
+    layer_vs_f1.save(f"layer_vs_f1_global.pdf", dpi=600)
 
 
 def main(args):

@@ -49,8 +49,8 @@ def plot_results_layer_vs_f1(results):
 
 
 def best_layer_for_each_model(results):
-    group_by_model = results.groupby(['model', 'layer'])['f1'].mean()
-    print(group_by_model)
+    group_by_model = results.groupby(['model', 'layer'])['f1'].mean().to_frame()
+    print(group_by_model.head(20))
     layer_vs_f1 = (
             ggplot(group_by_model)
             + aes(x="layer", y="f1", color='model')

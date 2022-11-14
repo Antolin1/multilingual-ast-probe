@@ -61,6 +61,13 @@ def best_layer_for_each_model(results):
     )
     layer_vs_f1.save(f"layer_vs_f1_global.pdf", dpi=600)
 
+    print(
+        layer_vs_f1
+        .groupby(['model'])
+        .apply(lambda group: group.loc[group['f1'] == group['f1'].max()])
+        .reset_index(level=-1, drop=True)
+    )
+
 
 def main(args):
     results = read_results(args)

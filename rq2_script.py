@@ -36,7 +36,7 @@ def main(args):
         hfn = huggingface_names[model]
         model_type = model_types[model]
 
-        run_name = '_'.join(['multilingual', 'model'])
+        run_name = '_'.join(['multilingual', model])
         if not os.path.exists(os.path.join('./runs', run_name, 'metrics.log')):
             os.system(f"CUDA_VISIBLE_DEVICES={args.cuda_device} python src/main.py "
                       f"--do_train_all_languages "

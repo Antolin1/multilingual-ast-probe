@@ -601,7 +601,7 @@ def run_probing_all_languages(args):
                                                                               ids_to_labels_u_global,
                                                                               match_function),
                                   generator=torch.Generator().manual_seed(args.seed),
-                                  num_workers=0)
+                                  num_workers=5)
     valid_dataloader = DataLoader(dataset=valid_set,
                                   batch_size=args.batch_size,
                                   shuffle=False,
@@ -609,7 +609,7 @@ def run_probing_all_languages(args):
                                                                               ids_to_labels_c_global,
                                                                               ids_to_labels_u_global,
                                                                               match_function),
-                                  num_workers=0)
+                                  num_workers=5)
 
     lmodel = get_lmodel(args)
     probe_model = ParserProbe(

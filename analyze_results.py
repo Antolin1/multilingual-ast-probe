@@ -61,24 +61,29 @@ def best_layer_for_each_model(results):
     )
     layer_vs_f1.save(f"layer_vs_f1_global.pdf", dpi=600)
 
-    print(
+    best_layer_per_model = (
         group_by_model
         .groupby(['model'])
         .apply(lambda group: group.loc[group['f1'] == group['f1'].max()])
-        .reset_index(level=-1, drop=True)
+        .reset_index()
     )
+    return best_layer_per_model
 
 
 def main(args):
     results = read_results(args)
     plot_results_layer_vs_f1(results)
-    best_layer_for_each_model(results)
+    best_layer_per_model = best_layer_for_each_model(results)
     results.to_csv(args.out_csv_rq1, index=False)
+    best_layer_per_model = best_layer_per_model.drop(columns=['f1'])
+    best_layer_per_model.to_json(args.out_best_layer_per_model_rq1, orient="records")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for analyzing the results')
     parser.add_argument('--run_dir', default='./runs', help='Path of the run logs')
-    parser.add_argument('--out_csv_rq1', default='rq1.csv', help='Csv name for the first rq1')
+    parser.add_argument('--out_csv_rq1', default='rq1_all_data.csv', help='Csv name for the first rq1')
+    parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.csv',
+                        help='Csv for the best layer per model')
     args = parser.parse_args()
     main(args)

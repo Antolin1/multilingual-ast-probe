@@ -50,7 +50,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script the second research question')
     parser.add_argument('--cuda_device', help='Cuda device', default=0)
-    parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.csv',
+    parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.json',
                         help='Csv for the best layer per model')
     args = parser.parse_args()
     main(args)

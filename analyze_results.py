@@ -65,7 +65,7 @@ def best_layer_for_each_model(results):
         group_by_model
         .groupby(['model'])
         .apply(lambda group: group.loc[group['f1'] == group['f1'].max()])
-        .reset_index()
+        .reset_index(level=-1, drop=True)
     )
     return best_layer_per_model
 
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for analyzing the results')
     parser.add_argument('--run_dir', default='./runs', help='Path of the run logs')
     parser.add_argument('--out_csv_rq1', default='rq1_all_data.csv', help='Csv name for the first rq1')
-    parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.csv',
+    parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.json',
                         help='Csv for the best layer per model')
     args = parser.parse_args()
     main(args)

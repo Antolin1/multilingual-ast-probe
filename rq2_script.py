@@ -1,3 +1,4 @@
+
 import argparse
 import json
 import os
@@ -10,7 +11,8 @@ huggingface_names = {
     'RoBERTa': 'roberta-base',
     'BERT': 'bert-base-uncased',
     'DistilBERT': 'distilbert-base-uncased',
-    'DistilRoBERTa': 'distilroberta-base'
+    'DistilRoBERTa': 'distilroberta-base',
+    'CodeBERTrand': 'microsoft/codebert-base'
 }
 
 model_types = {
@@ -21,7 +23,8 @@ model_types = {
     'RoBERTa': 'roberta',
     'BERT': 'bert',
     'DistilBERT': 'distilbert',
-    'DistilRoBERTa': 'roberta'
+    'DistilRoBERTa': 'roberta',
+    'CodeBERTrand': 'roberta'
 }
 
 
@@ -30,13 +33,11 @@ def main(args):
         model_layer = json.load(json_file)
     for m_l in model_layer:
         model = m_l['model']
-        if model == 'CodeBERTrand':
-            continue
         layer = m_l['layer']
         hfn = huggingface_names[model]
         model_type = model_types[model]
 
-        run_name = '_'.join(['multilingual', model])
+        run_name = '_'.join(['multilingual', model + ('-baseline' if model == 'CodeBERTrand' else '')])
         if not os.path.exists(os.path.join('./runs', run_name, 'metrics.log')):
             os.system(f"CUDA_VISIBLE_DEVICES={args.cuda_device} python src/main.py "
                       f"--do_train_all_languages "

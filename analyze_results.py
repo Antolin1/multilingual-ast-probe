@@ -28,13 +28,15 @@ def read_results(args):
                              'codeberta': 'CodeBERTa',
                              'codet5': 'CodeT5',
                              'graphcodebert': 'GraphCodeBERT',
-                             'roberta': 'RoBERTa'})
+                             'roberta': 'RoBERTa',
+                             'distilbert': 'DistilBERT',
+                             'bert': 'BERT',
+                             'distilroberta': 'DistilRoBERTa'})
     return df_renamed
 
 
-def main(args):
-    results = read_results(args)
-    for lang in ['python', 'java', 'ruby', 'javascript', 'go']:
+def plot_results_layer_vs_f1(results):
+    for lang in ['python', 'java', 'ruby', 'javascript', 'go', 'c', 'csharp', 'php']:
         layer_vs_f1 = (
                 ggplot(results[(results['lang'] == lang)])
                 + aes(x="layer", y="f1", color='model')
@@ -46,8 +48,42 @@ def main(args):
         layer_vs_f1.save(f"layer_vs_f1_{lang}.pdf", dpi=600)
 
 
+def best_layer_for_each_model(results):
+    group_by_model = results.groupby(['model', 'layer'])['f1'].mean().reset_index()
+    print(group_by_model.head(20))
+    layer_vs_f1 = (
+            ggplot(group_by_model)
+            + aes(x="layer", y="f1", color='model')
+            + geom_line()
+            + scale_x_continuous(breaks=range(0, 13, 1))
+            + labs(x="Layer", y="F1", color="Model")
+            + theme(text=element_text(size=16))
+    )
+    layer_vs_f1.save(f"layer_vs_f1_global.pdf", dpi=600)
+
+    best_layer_per_model = (
+        group_by_model
+        .groupby(['model'])
+        .apply(lambda group: group.loc[group['f1'] == group['f1'].max()])
+        .reset_index(level=-1, drop=True)
+    )
+    return best_layer_per_model
+
+
+def main(args):
+    results = read_results(args)
+    plot_results_layer_vs_f1(results)
+    best_layer_per_model = best_layer_for_each_model(results)
+    results.to_csv(args.out_csv_rq1, index=False)
+    best_layer_per_model = best_layer_per_model.drop(columns=['f1'])
+    best_layer_per_model.to_json(args.out_best_layer_per_model_rq1, orient="records")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for analyzing the results')
     parser.add_argument('--run_dir', default='./runs', help='Path of the run logs')
+    parser.add_argument('--out_csv_rq1', default='rq1_all_data.csv', help='Csv name for the first rq1')
+    parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.json',
+                        help='Csv for the best layer per model')
     args = parser.parse_args()
     main(args)

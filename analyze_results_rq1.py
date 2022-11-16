@@ -12,6 +12,8 @@ def read_results(args):
             'precision': [], 'recall': [], 'f1': []}
     for file in glob.glob(args.run_dir + "/*/metrics.log"):
         parent = os.path.dirname(file).split('/')[-1]
+        if 'multilingual' in parent:
+            continue
         model, lang, layer, rank = parent.split('_')
         with open(file, 'rb') as f:
             results = pickle.load(f)
@@ -70,6 +72,15 @@ def best_layer_for_each_model(results):
     return best_layer_per_model
 
 
+def get_table(results, best_layer_per_model):
+    best_layer_per_model_dict = best_layer_per_model.to_dict('records')
+    results_dict = results.to_dict('records')
+    results_dict_filtered = [r for r in results_dict
+                             if {'model': r['model'], 'layer': r['layer']} in best_layer_per_model_dict]
+    results_filtered = pd.DataFrame.from_records(results_dict_filtered)
+    print(results_filtered.to_latex())
+
+
 def main(args):
     results = read_results(args)
     plot_results_layer_vs_f1(results)
@@ -77,6 +88,7 @@ def main(args):
     results.to_csv(args.out_csv_rq1, index=False)
     best_layer_per_model = best_layer_per_model.drop(columns=['f1'])
     best_layer_per_model.to_json(args.out_best_layer_per_model_rq1, orient="records")
+    get_table(results, best_layer_per_model)
 
 
 if __name__ == '__main__':

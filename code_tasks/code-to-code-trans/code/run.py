@@ -364,7 +364,7 @@ def main():
         model.train()
         dev_dataset = {}
         nb_tr_examples, nb_tr_steps, tr_loss, global_step, best_bleu, best_loss = 0, 0, 0, 0, 0, 1e6
-        bar = range(num_train_optimization_steps)
+        bar = tqdm(range(num_train_optimization_steps))
         train_dataloader = cycle(train_dataloader)
         eval_flag = True
         for step in bar:
@@ -380,8 +380,7 @@ def main():
                 loss = loss / args.gradient_accumulation_steps
             tr_loss += loss.item()
             train_loss = round(tr_loss * args.gradient_accumulation_steps / (nb_tr_steps + 1), 4)
-            if (global_step + 1) % 100 == 0:
-                logger.info("  step {} loss {}".format(global_step + 1, train_loss))
+            bar.set_description("step {} loss {}".format(global_step + 1, train_loss))
             nb_tr_examples += source_ids.size(0)
             nb_tr_steps += 1
             loss.backward()
@@ -440,12 +439,14 @@ def main():
                 logger.info("  " + "*" * 20)
 
                 # save last checkpoint
+                """
                 last_output_dir = os.path.join(args.output_dir, 'checkpoint-last')
                 if not os.path.exists(last_output_dir):
                     os.makedirs(last_output_dir)
                 model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
                 output_model_file = os.path.join(last_output_dir, "pytorch_model.bin")
                 torch.save(model_to_save.state_dict(), output_model_file)
+                """
                 if eval_loss < best_loss:
                     logger.info("  Best ppl:%s", round(np.exp(eval_loss), 5))
                     logger.info("  " + "*" * 20)

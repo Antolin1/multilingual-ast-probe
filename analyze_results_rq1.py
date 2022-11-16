@@ -78,7 +78,7 @@ def get_table(results, best_layer_per_model):
     results_dict_filtered = [r for r in results_dict
                              if {'model': r['model'], 'layer': r['layer']} in best_layer_per_model_dict]
     results_filtered = pd.DataFrame.from_records(results_dict_filtered)
-    print(results_filtered.to_latex())
+    print(results_filtered.to_latex(index=False, columns=['model', 'layer', 'lang', 'f1']))
 
 
 def main(args):

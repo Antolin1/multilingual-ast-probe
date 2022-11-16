@@ -47,6 +47,8 @@ tokenized_refs = [[x.split() for x in reference] for reference in references]
 
 ngram_match_score = bleu.corpus_bleu(tokenized_refs,tokenized_hyps)
 
+print(ngram_match_score)
+
 # calculate weighted ngram match
 keywords = [x.strip() for x in open('keywords/'+args.lang+'.txt', 'r', encoding='utf-8').readlines()]
 def make_weights(reference_tokens, key_word_list):

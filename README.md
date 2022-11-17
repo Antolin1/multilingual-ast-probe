@@ -48,4 +48,5 @@ RQs:
 python rq1_script.py
 python analyze_results_rq1.py
 python rq2_script.py
+python analyze_results_rq2.py
 ```

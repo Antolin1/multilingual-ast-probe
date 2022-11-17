@@ -30,10 +30,12 @@ def read_results(args):
 def main(args):
     results = read_results(args)
     print(results.to_latex(index=False, columns=['model', 'lang', 'f1']))
+    results.to_csv(args.out_csv_rq2, index=False)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for analyzing the results')
     parser.add_argument('--run_dir', default='./runs', help='Path of the run logs')
+    parser.add_argument('--out_csv_rq2', default='rq2_all_data.csv', help='Csv name for the first rq2')
     args = parser.parse_args()
     main(args)

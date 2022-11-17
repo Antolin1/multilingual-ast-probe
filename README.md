@@ -42,3 +42,10 @@ python src/main.py --do_train --run_name folder_run_name
                    --layer layer_num
                    --rank rank_of_the_probing
 ```
+
+RQs:
+```sh
+python rq1_script.py
+python analyze_results_rq1.py
+python rq2_script.py
+```

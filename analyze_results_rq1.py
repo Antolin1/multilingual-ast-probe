@@ -96,6 +96,6 @@ if __name__ == '__main__':
     parser.add_argument('--run_dir', default='./runs', help='Path of the run logs')
     parser.add_argument('--out_csv_rq1', default='rq1_all_data.csv', help='Csv name for the first rq1')
     parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.json',
-                        help='Csv for the best layer per model')
+                        help='Json for the best layer per model')
     args = parser.parse_args()
     main(args)

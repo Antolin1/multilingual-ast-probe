@@ -11,7 +11,10 @@ models = ['microsoft/codebert-base',
           'microsoft/codebert-base',
           'bert-base-uncased',
           'distilbert-base-uncased',
-          'distilroberta-base']
+          'distilroberta-base',
+          'microsoft/unixcoder-base-unimodal',
+          'microsoft/unixcoder-base',
+          'microsoft/unixcoder-base-nine']
 folders = ['codebert',
            'graphcodebert',
            'codet5',
@@ -20,7 +23,10 @@ folders = ['codebert',
            'codebert-baseline',
            'bert',
            'distilbert',
-           'distilroberta']
+           'distilroberta',
+           'unixcoder-base-unimodal',
+           'unixcoder-base',
+           'unixcoder-base-nine']
 model_types = ['roberta',
                'roberta',
                't5',
@@ -29,6 +35,9 @@ model_types = ['roberta',
                'roberta',
                'bert',
                'distilbert',
+               'roberta',
+               'roberta',
+               'roberta',
                'roberta']
 
 assert len(model_types) == len(folders)
@@ -39,13 +48,13 @@ def get_model_folder_type(split):
     if split == 'all':
         return models, folders, model_types
     elif split == '1':
-        return models[0:2], folders[0:2], model_types[0:2]
+        return models[0:4], folders[0:4], model_types[0:4]
     elif split == '2':
-        return models[2:4], folders[2:4], model_types[2:4]
+        return models[4:8], folders[4:8], model_types[4:8]
     elif split == '3':
-        return models[4:6], folders[4:6], model_types[4:6]
+        return models[8:10], folders[8:10], model_types[8:10]
     elif split == '4':
-        return models[6:], folders[6:], model_types[6:]
+        return models[10:], folders[10:], model_types[10:]
 
 
 def main(args):

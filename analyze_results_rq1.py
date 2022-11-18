@@ -33,7 +33,11 @@ def read_results(args):
                              'roberta': 'RoBERTa',
                              'distilbert': 'DistilBERT',
                              'bert': 'BERT',
-                             'distilroberta': 'DistilRoBERTa'})
+                             'distilroberta': 'DistilRoBERTa',
+                             'unixcoder-base-unimodal': 'UniXcoder-unimodal',
+                             'unixcoder-base': 'UniXcoder',
+                             'unixcoder-base-nine': 'UniXcoder-9'
+                             })
     return df_renamed
 
 

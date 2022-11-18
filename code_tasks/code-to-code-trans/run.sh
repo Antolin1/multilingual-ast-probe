@@ -2,16 +2,16 @@
 
 # list of tuples (model_name_or_path, model_type, model_name)
 declare -a models=(
-  # "microsoft/codebert-base roberta codebert"
-  # "microsoft/graphcodebert-base roberta graphcodebert"
-  # "Salesforce/codet5-base t5 codet5"
-  # "huggingface/CodeBERTa-small-v1 roberta codeberta"
   "microsoft/unixcoder-base roberta unixcoder"
   "microsoft/unixcoder-base-nine roberta unixcoder-nine"
-  # "roberta-base roberta roberta"
-  # "bert-base-uncased bert bert"
-  # "distilbert-base-uncased distilbert distilbert"
-  # "distilroberta-base roberta distilroberta"
+  "microsoft/codebert-base roberta codebert"
+  "microsoft/graphcodebert-base roberta graphcodebert"
+  "Salesforce/codet5-base t5 codet5"
+  "huggingface/CodeBERTa-small-v1 roberta codeberta"
+  "roberta-base roberta roberta"
+  "bert-base-uncased bert bert"
+  "distilbert-base-uncased distilbert distilbert"
+  "distilroberta-base roberta distilroberta"
 )
 
 for model in "${models[@]}"; do
@@ -19,7 +19,7 @@ for model in "${models[@]}"; do
   echo "${strarr[0]}" "${strarr[1]}" "${strarr[2]}"
 
   # java to C# training
-  CUDA_VISIBLE_DEVICES=2,3 python code/run.py \
+  CUDA_VISIBLE_DEVICES=0,1 python code/run.py \
     --output_dir="./saved_models/java-to-cs/${strarr[2]}" \
     --model_type="${strarr[1]}" \
     --model_name_or_path="${strarr[0]}" \
@@ -39,7 +39,7 @@ for model in "${models[@]}"; do
     --seed 123456  2>&1 | tee "${strarr[2]}_train.log"
 
   # inference
-  CUDA_VISIBLE_DEVICES=2 python code/run.py \
+  CUDA_VISIBLE_DEVICES=0 python code/run.py \
     --output_dir="./saved_models/java-to-cs/${strarr[2]}" \
     --model_type="${strarr[1]}" \
     --model_name_or_path="${strarr[0]}" \

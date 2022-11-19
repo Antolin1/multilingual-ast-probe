@@ -1,0 +1,5 @@
+{
+  "input_lang": ["csharp"],
+  "model": ["BERT", "DistilBERT", "RoBERTa", "DistilRoBERTa", "CodeT5", "CodeBERTa", "CodeBERT", "GraphCodeBERT"],
+  "performance": [21.39, 21.53, 59.94, 64.26, 54.90, 66.25, 63.51, 67.18]
+}

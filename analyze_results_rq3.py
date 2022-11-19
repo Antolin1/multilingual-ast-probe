@@ -12,7 +12,8 @@ def compute_correlation_multilingual(rq2_dataframe, results_finetuning):
     if len(input_lang) == 1:
         rq2_dataframe_lang = rq2_dataframe[rq2_dataframe["lang"] == input_lang[0]]
     else:
-        pass
+        rq2_dataframe_lang = rq2_dataframe[rq2_dataframe["lang"].isin(input_lang)]\
+            .groupby(['model'])['f1'].mean().reset_index()
 
     df_cd = pd.merge(results_finetuning_pd, rq2_dataframe_lang, how='inner', on='model')
     f1s = list(df_cd["f1"])

@@ -5,15 +5,9 @@ import pandas as pd
 from scipy import stats
 
 
-def get_table_monolingual(rq1_dataframe):
-    group_by_model = rq1_dataframe.groupby(['model', 'layer'])['f1'].mean().reset_index()
-    best_layer_per_model = (
-        group_by_model
-        .groupby(['model'])
-        .apply(lambda group: group.loc[group['f1'] == group['f1'].max()])
-        .reset_index(level=-1, drop=True)
-    )
-    return best_layer_per_model
+def get_table_monolingual(rq1_dataframe, best_layer_per_model):
+    list_tuples = [(r["model"], r["layer"]) for r in best_layer_per_model]
+    return rq1_dataframe[rq1_dataframe[['model', 'layer']].apply(tuple, axis=1).isin(list_tuples)]
 
 
 def compute_correlation_multilingual(rq_dataframe, results_finetuning, mono_or_multi):
@@ -36,7 +30,9 @@ def compute_correlation_multilingual(rq_dataframe, results_finetuning, mono_or_m
 
 def main(args):
     rq1_dataframe = pd.read_csv(args.out_csv_rq1)
-    rq1_dataframe = get_table_monolingual(rq1_dataframe)
+    with open(args.out_best_layer_per_model_rq1) as json_file:
+        best_layer_per_model = json.load(json_file)
+    rq1_dataframe = get_table_monolingual(rq1_dataframe, best_layer_per_model)
     rq2_dataframe = pd.read_csv(args.out_csv_rq2)
     with open(args.results_finetuning) as json_file:
         results_finetuning = json.load(json_file)
@@ -48,6 +44,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for analyzing the results')
     parser.add_argument('--out_csv_rq1', default='rq1_all_data.csv', help='Csv name for the first rq1')
     parser.add_argument('--out_csv_rq2', default='rq2_all_data.csv', help='Csv name for the first rq2')
+    parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.json',
+                        help='Json for the best layer per model')
     parser.add_argument('--results_finetuning', help='Json for results of finetuning')
     args = parser.parse_args()
     main(args)

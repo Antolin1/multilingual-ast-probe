@@ -17,6 +17,8 @@ def compute_correlation_multilingual(rq2_dataframe, results_finetuning):
     df_cd = pd.merge(results_finetuning_pd, rq2_dataframe_lang, how='inner', on='model')
     f1s = list(df_cd["f1"])
     performances = list(df_cd["performance"])
+    print(f1s)
+    print(performances)
     print(f'Multilingual: {stats.spearmanr(f1s, performances)}')
 
 
@@ -36,6 +38,6 @@ if __name__ == '__main__':
     parser.add_argument('--out_csv_rq2', default='rq2_all_data.csv', help='Csv name for the first rq2')
     parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.json',
                         help='Json for the best layer per model')
-    parser.add_argument('--results_finetuning', help='Json for results of finetuning', optional=False)
+    parser.add_argument('--results_finetuning', help='Json for results of finetuning')
     args = parser.parse_args()
     main(args)

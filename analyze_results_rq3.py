@@ -10,7 +10,7 @@ def get_table_monolingual(rq1_dataframe, best_layer_per_model):
     return rq1_dataframe[rq1_dataframe[['model', 'layer']].apply(tuple, axis=1).isin(list_tuples)]
 
 
-def compute_correlation_multilingual(rq_dataframe, results_finetuning, mono_or_multi):
+def compute_correlation(rq_dataframe, results_finetuning, mono_or_multi):
     input_lang = results_finetuning["input_lang"]
     results_finetuning_pd = pd.DataFrame.from_dict({"model": results_finetuning["model"],
                                                     "performance": results_finetuning["performance"]})
@@ -23,8 +23,11 @@ def compute_correlation_multilingual(rq_dataframe, results_finetuning, mono_or_m
     df_cd = pd.merge(results_finetuning_pd, rq2_dataframe_lang, how='inner', on='model')
     f1s = list(df_cd["f1"])
     performances = list(df_cd["performance"])
-    print(f1s)
-    print(performances)
+    models = list(df_cd["model"])
+    print('-'*50)
+    print(f'Models: {models}')
+    print(f'F1s: {f1s}')
+    print(f'Performances: {performances}')
     print(f'{mono_or_multi}: {stats.spearmanr(f1s, performances)}')
 
 
@@ -36,8 +39,8 @@ def main(args):
     rq2_dataframe = pd.read_csv(args.out_csv_rq2)
     with open(args.results_finetuning) as json_file:
         results_finetuning = json.load(json_file)
-    compute_correlation_multilingual(rq1_dataframe, results_finetuning, 'Monolingual')
-    compute_correlation_multilingual(rq2_dataframe, results_finetuning, 'Multilingual')
+    compute_correlation(rq1_dataframe, results_finetuning, 'Monolingual')
+    compute_correlation(rq2_dataframe, results_finetuning, 'Multilingual')
 
 
 if __name__ == '__main__':

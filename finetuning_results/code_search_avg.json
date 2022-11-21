@@ -1,0 +1,5 @@
+{
+  "input_lang": ["python", "php", "java", "ruby", "go", "javascript"],
+  "model": ["BERT", "DistilBERT", "RoBERTa", "DistilRoBERTa", "CodeT5", "CodeBERTa", "CodeBERT", "GraphCodeBERT"],
+  "performance": [0.610, 0.596, 0.643, 0.623, 0.683, 0.614, 0.702, 0.729]
+}

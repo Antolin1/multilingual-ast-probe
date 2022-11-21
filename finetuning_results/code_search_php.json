@@ -1,0 +1,5 @@
+{
+  "input_lang": ["php"],
+  "model": ["BERT", "DistilBERT", "RoBERTa", "DistilRoBERTa", "CodeT5", "CodeBERTa", "CodeBERT", "GraphCodeBERT"],
+  "performance": [0.506, 0.488, 0.562, 0.541, 0.596, 0.532, 0.623, 0.650]
+}

@@ -42,7 +42,7 @@ def compute_distances(vectors, ids_to_labels):
     vectors_per_lang = defaultdict(list)
     for idx in range(len(ids_to_labels)):
         lang = ids_to_labels[idx].split('--')[1]
-        vectors_per_lang[lang].append(vectors_per_lang[idx])
+        vectors_per_lang[lang].append(vectors[idx])
     vectors_per_lang = {x: np.mean(y, axis=0) for x, y in vectors_per_lang.items()}
     for x in LANGUAGES_CSN:
         for y in LANGUAGES_CSN:
@@ -88,6 +88,7 @@ def main(args):
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
     run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
     compute_clustering_quality(vectors_c, ids_to_labels_c)
+    compute_distances(vectors_c, ids_to_labels_c)
 
 
 if __name__ == '__main__':

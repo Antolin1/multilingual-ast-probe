@@ -1,13 +1,15 @@
 import argparse
 import os
 import pickle
+from collections import defaultdict
 
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
-from sklearn.manifold import TSNE
 from sklearn import metrics
+from sklearn.manifold import TSNE
 
+from src.data import LANGUAGES_CSN
 from src.probe import ParserProbe
 
 
@@ -34,6 +36,17 @@ def load_vectors(args, labels_to_ids_c, labels_to_ids_u):
     vectors_c = final_probe_model.vectors_c.detach().cpu().numpy().T
     vectors_u = final_probe_model.vectors_u.detach().cpu().numpy().T
     return vectors_c, vectors_u
+
+
+def compute_distances(vectors, ids_to_labels):
+    vectors_per_lang = defaultdict(list)
+    for idx in range(len(ids_to_labels)):
+        lang = ids_to_labels[idx].split('--')[1]
+        vectors_per_lang[lang].append(vectors_per_lang[idx])
+    vectors_per_lang = {x: np.mean(y, axis=0) for x, y in vectors_per_lang.items()}
+    for x in LANGUAGES_CSN:
+        for y in LANGUAGES_CSN:
+            print(f'Distance between {x} and {y}: {np.linalg.norm(vectors_per_lang[x] - vectors_per_lang[y])}')
 
 
 COLORS = {'java': 'r',

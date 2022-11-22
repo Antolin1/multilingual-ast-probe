@@ -62,6 +62,7 @@ def main(args):
     labels_to_ids_c, ids_to_labels_c, labels_to_ids_u, ids_to_labels_u = load_labels(args)
     vectors_c, vectors_u = load_vectors(args, labels_to_ids_c, labels_to_ids_u)
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
+    run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=30, type_labels='unary')
 
 
 if __name__ == '__main__':

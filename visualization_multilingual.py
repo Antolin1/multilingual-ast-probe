@@ -72,8 +72,8 @@ def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
 
 def compute_analogies(vectors, ids_to_labels, source_lang='csharp', target_lang='c'):
     l2id = {y: x for x, y in ids_to_labels.items()}
-    vectors_unit = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
-    kd_tree = KDTree(vectors_unit)
+    # vectors_unit = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    kd_tree = KDTree(vectors)
     list_nonterminals_source = [l.split('--')[0] for l in l2id.keys()
                                 if SEPARATOR not in l and
                                 l.endswith(f'--{source_lang}')]
@@ -96,17 +96,19 @@ def main(args):
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
     run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
     compute_clustering_quality(vectors_c, ids_to_labels_c, metric=args.clustering_quality_metric)
-    compute_analogies(vectors_c, ids_to_labels_c, args.source_lang, args.target_lang)
+    if args.compute_analogies:
+        compute_analogies(vectors_c, ids_to_labels_c, args.source_lang, args.target_lang)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for visualizing multilingual probes')
-    parser.add_argument('--run_folder', help='Run folder of the multilingual probe')
-    parser.add_argument('--model', help='Model name')
+    parser.add_argument('--run_folder', help='Run folder of the multilingual probe', required=True)
+    parser.add_argument('--model', help='Model name', required=True)
     parser.add_argument('--clustering_quality_metric', help='CLustering quality metric',
                         choices=['silhouette', 'calinski', 'davies'], default='silhouette')
     parser.add_argument('--seed', default=123)
     parser.add_argument('--source_lang', default='csharp')
     parser.add_argument('--target_lang', default='c')
+    parser.add_argument('--compute_analogies', action='store_true')
     args = parser.parse_args()
     main(args)

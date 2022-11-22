@@ -36,9 +36,8 @@ def main(args):
         for y in LANGUAGES_CSN:
             subspace_sim_ang = np.rad2deg(np.mean(subspace_angles(subspaces[x], subspaces[y])))
             row_ang.append(round(subspace_sim_ang, 4))
-            if x != y:
-                angles.append(subspace_sim_ang)
-                bleus.append(DEVANBU_RESULTS[x][y])
+            angles.append(subspace_sim_ang)
+            bleus.append(DEVANBU_RESULTS[x][y])
         table_sim_ang.add_row(row_ang)
         print(f'Testing {x}, correlation: {spearmanr(bleus, angles)}')
     print(table_sim_ang)

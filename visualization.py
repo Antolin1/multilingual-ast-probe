@@ -74,6 +74,7 @@ def main(args):
     vectors_c, vectors_u = load_vectors(args, labels_to_ids_c, labels_to_ids_u)
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
     run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
+    compute_clustering_quality(vectors_c, ids_to_labels_c)
 
 
 if __name__ == '__main__':

@@ -51,3 +51,9 @@ python rq2_script.py
 python analyze_results_rq2.py
 python analyze_results_rq3.py --results_finetuning finetuning_results/code_search_avg.json
 ```
+
+Visualization:
+```sh
+python visualization_multilingual.py --run_folder runs/multilingual_CodeBERTrand-baseline/ --model baseline
+python visualization_multilingual.py --run_folder runs/multilingual_CodeBERT/ --model codebert
+```

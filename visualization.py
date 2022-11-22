@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
+from sklearn import metrics
 
 from src.probe import ParserProbe
 
@@ -58,11 +59,21 @@ def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constitu
     plt.savefig(f'vectors_{type_labels}_{model}.png')
 
 
+def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
+    vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    labels = []
+    for idx in range(len(ids_to_labels)):
+        lang = ids_to_labels[idx].split('--')[1]
+        labels.append(lang)
+    if metric == 'silhouette':
+        print(f'silhouette: {metrics.silhouette_score(vectors, labels)}')
+
+
 def main(args):
     labels_to_ids_c, ids_to_labels_c, labels_to_ids_u, ids_to_labels_u = load_labels(args)
     vectors_c, vectors_u = load_vectors(args, labels_to_ids_c, labels_to_ids_u)
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
-    run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=30, type_labels='unary')
+    run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
 
 
 if __name__ == '__main__':

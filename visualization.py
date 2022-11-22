@@ -104,7 +104,7 @@ def compute_distances(vectors, ids_to_labels):
             if x != y:
                 distances.append(np.linalg.norm(vectors_per_lang[x] - vectors_per_lang[y]))
                 bleus.append(DEVANBU_RESULTS[x][y])
-        print(f'Testing {x}, correlation: {spearmanr(x, y)}')
+        print(f'Testing {x}, correlation: {spearmanr(bleus, distances)}')
 
 
 COLORS = {'java': 'r',

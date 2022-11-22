@@ -138,6 +138,10 @@ def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
         labels.append(lang)
     if metric == 'silhouette':
         print(f'silhouette: {metrics.silhouette_score(vectors, labels)}')
+    elif metric == 'calinski':
+        print(f'calinski: {metrics.calinski_harabasz_score(vectors, labels)}')
+    elif metric == 'davies':
+        print(f'davies: {metrics.davies_bouldin_score(vectors, labels)}')
 
 
 def main(args):
@@ -145,14 +149,16 @@ def main(args):
     vectors_c, vectors_u = load_vectors(args, labels_to_ids_c, labels_to_ids_u)
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
     run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
-    compute_clustering_quality(vectors_c, ids_to_labels_c)
-    compute_distances(vectors_c, ids_to_labels_c)
+    compute_clustering_quality(vectors_c, ids_to_labels_c, metric='calinski')
+    # compute_distances(vectors_c, ids_to_labels_c)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for analyzing the results')
     parser.add_argument('--run_folder', help='Run folder of the multilingual probe')
     parser.add_argument('--model', help='Model name')
+    parser.add_argument('--clustering_quality_metric', help='CLustering quality metric',
+                        choices=['silhouette', 'calinski', 'davies'], default='silhouette')
     parser.add_argument('--rank', default=128)
     parser.add_argument('--hidden', default=768)
     parser.add_argument('--seed', default=123)

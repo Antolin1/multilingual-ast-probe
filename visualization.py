@@ -47,7 +47,7 @@ COLORS = {'java': 'r',
 
 
 def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constituency'):
-    vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    # vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
     v_2d = TSNE(n_components=2, learning_rate='auto', perplexity=perplexity,
                 init='random', random_state=args.seed).fit_transform(vectors)
     figure, axis = plt.subplots(1, figsize=(20, 20))
@@ -60,7 +60,7 @@ def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constitu
 
 
 def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
-    vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    # vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
     labels = []
     for idx in range(len(ids_to_labels)):
         lang = ids_to_labels[idx].split('--')[1]

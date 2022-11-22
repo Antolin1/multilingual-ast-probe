@@ -27,7 +27,7 @@ def main(args):
         subspaces[lang] = proj
 
     table_sim_ang = PrettyTable()
-    table_sim_ang.field_names = ["----"] + LANGUAGES_CSN
+    table_sim_ang.field_names = ["----"] + list(LANGUAGES_CSN)
 
     for x in LANGUAGES_CSN:
         row_ang = [x]
@@ -39,7 +39,7 @@ def main(args):
             if x != y:
                 angles.append(subspace_sim_ang)
                 bleus.append(DEVANBU_RESULTS[x][y])
-            table_sim_ang.add_row(row_ang)
+        table_sim_ang.add_row(row_ang)
         print(f'Testing {x}, correlation: {spearmanr(bleus, angles)}')
     print(table_sim_ang)
 

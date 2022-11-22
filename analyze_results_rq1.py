@@ -54,6 +54,16 @@ def plot_results_layer_vs_f1(results):
                 + theme(text=element_text(size=16))
         )
         layer_vs_f1.save(f"layer_vs_f1_{lang}.pdf", dpi=600)
+    for model in ELEGANT_NAMES.keys():
+        layer_vs_f1 = (
+                ggplot(results[(results['model'] == model)])
+                + aes(x="layer", y="f1", color='lang')
+                + geom_line()
+                + scale_x_continuous(breaks=range(0, 13, 1))
+                + labs(x="Layer", y="F1", color="Lang")
+                + theme(text=element_text(size=16))
+        )
+        layer_vs_f1.save(f"layer_vs_f1_{model}.pdf", dpi=600)
 
 
 def best_layer_for_each_model(results):

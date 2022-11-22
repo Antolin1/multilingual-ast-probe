@@ -27,8 +27,8 @@ def load_vectors(args, labels_to_ids_c, labels_to_ids_u):
         probe_rank=args.rank,
         hidden_dim=args.hidden,
         number_labels_c=len(labels_to_ids_c),
-        number_labels_u=len(labels_to_ids_u)).to(args.device)
-    final_probe_model.load_state_dict(torch.load(os.path.join(args.model_checkpoint, f'pytorch_model.bin'),
+        number_labels_u=len(labels_to_ids_u)).to('cpu')
+    final_probe_model.load_state_dict(torch.load(os.path.join(args.run_folder, f'pytorch_model.bin'),
                                                  map_location=torch.device('cpu')))
     vectors_c = final_probe_model.vectors_c.detach().cpu().numpy().T
     vectors_u = final_probe_model.vectors_u.detach().cpu().numpy().T

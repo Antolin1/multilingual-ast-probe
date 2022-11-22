@@ -49,4 +49,5 @@ python rq1_script.py
 python analyze_results_rq1.py
 python rq2_script.py
 python analyze_results_rq2.py
+python analyze_results_rq3.py --results_finetuning finetuning_results/code_search_avg.json
 ```

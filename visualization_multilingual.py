@@ -26,17 +26,13 @@ def load_labels(args):
     return labels_to_ids_c, ids_to_labels_c, labels_to_ids_u, ids_to_labels_u
 
 
-def load_vectors(args, labels_to_ids_c, labels_to_ids_u):
-    final_probe_model = ParserProbe(
-        probe_rank=args.rank,
-        hidden_dim=args.hidden,
-        number_labels_c=len(labels_to_ids_c),
-        number_labels_u=len(labels_to_ids_u)).to('cpu')
-    final_probe_model.load_state_dict(torch.load(os.path.join(args.run_folder, f'pytorch_model.bin'),
-                                                 map_location=torch.device('cpu')))
-    vectors_c = final_probe_model.vectors_c.detach().cpu().numpy().T
-    vectors_u = final_probe_model.vectors_u.detach().cpu().numpy().T
-    return vectors_c, vectors_u
+def load_vectors(run_folder):
+    loaded_model = torch.load(os.path.join(run_folder, f'pytorch_model.bin'),
+                              map_location=torch.device('cpu'))
+    vectors_c = loaded_model['vectors_c'].cpu().detach().numpy().T
+    vectors_u = loaded_model['vectors_u'].cpu().detach().numpy().T
+    proj = loaded_model['proj'].cpu().detach().numpy()
+    return vectors_c, vectors_u, proj
 
 
 DEVANBU_RESULTS = {
@@ -146,7 +142,7 @@ def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
 
 def main(args):
     labels_to_ids_c, ids_to_labels_c, labels_to_ids_u, ids_to_labels_u = load_labels(args)
-    vectors_c, vectors_u = load_vectors(args, labels_to_ids_c, labels_to_ids_u)
+    vectors_c, vectors_u, _ = load_vectors(args.run_folder)
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
     run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
     compute_clustering_quality(vectors_c, ids_to_labels_c, metric=args.clustering_quality_metric)
@@ -154,13 +150,11 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Script for analyzing the results')
+    parser = argparse.ArgumentParser(description='Script for visualizing multilingual probes')
     parser.add_argument('--run_folder', help='Run folder of the multilingual probe')
     parser.add_argument('--model', help='Model name')
     parser.add_argument('--clustering_quality_metric', help='CLustering quality metric',
                         choices=['silhouette', 'calinski', 'davies'], default='silhouette')
-    parser.add_argument('--rank', default=128)
-    parser.add_argument('--hidden', default=768)
     parser.add_argument('--seed', default=123)
     args = parser.parse_args()
     main(args)

@@ -6,6 +6,20 @@ import pickle
 import pandas as pd
 from plotnine import ggplot, aes, geom_line, scale_x_continuous, labs, theme, element_text
 
+ELEGANT_NAMES = {'codebert': 'CodeBERT',
+                 'codebert-baseline': 'CodeBERTrand',
+                 'codeberta': 'CodeBERTa',
+                 'codet5': 'CodeT5',
+                 'graphcodebert': 'GraphCodeBERT',
+                 'roberta': 'RoBERTa',
+                 'distilbert': 'DistilBERT',
+                 'bert': 'BERT',
+                 'distilroberta': 'DistilRoBERTa',
+                 'unixcoder-base-unimodal': 'UniXcoder-unimodal',
+                 'unixcoder-base': 'UniXcoder',
+                 'unixcoder-base-nine': 'UniXcoder-9'
+                 }
+
 
 def read_results(args):
     data = {'model': [], 'lang': [], 'layer': [], 'rank': [],
@@ -25,19 +39,7 @@ def read_results(args):
         data['recall'].append(results['test_recall'])
         data['f1'].append(results['test_f1'])
     df = pd.DataFrame(data)
-    df_renamed = df.replace({'codebert': 'CodeBERT',
-                             'codebert-baseline': 'CodeBERTrand',
-                             'codeberta': 'CodeBERTa',
-                             'codet5': 'CodeT5',
-                             'graphcodebert': 'GraphCodeBERT',
-                             'roberta': 'RoBERTa',
-                             'distilbert': 'DistilBERT',
-                             'bert': 'BERT',
-                             'distilroberta': 'DistilRoBERTa',
-                             'unixcoder-base-unimodal': 'UniXcoder-unimodal',
-                             'unixcoder-base': 'UniXcoder',
-                             'unixcoder-base-nine': 'UniXcoder-9'
-                             })
+    df_renamed = df.replace(ELEGANT_NAMES)
     return df_renamed
 
 

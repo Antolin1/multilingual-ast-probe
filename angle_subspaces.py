@@ -46,7 +46,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for computing angle between subspaces')
     parser.add_argument('--run_dir', default='./runs', help='Path of the run logs')
-    parser.add_argument('--model', help='Model name', choices=['codebert'], default='codebert')
+    parser.add_argument('--model', help='Model name', choices=list(ELEGANT_NAMES.keys()), default='codebert')
     parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.json',
                         help='Json for the best layer per model')
     args = parser.parse_args()

@@ -6,6 +6,7 @@ from collections import defaultdict
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
+from scipy.stats import spearmanr
 from sklearn import metrics
 from sklearn.manifold import TSNE
 
@@ -38,6 +39,58 @@ def load_vectors(args, labels_to_ids_c, labels_to_ids_u):
     return vectors_c, vectors_u
 
 
+DEVANBU_RESULTS = {
+    'ruby': {
+        'ruby': 12.53,
+        'javascript': 11.84,
+        'java': 13.42,
+        'go': 12.32,
+        'php': 13.84,
+        'python': 14.09
+    },
+    'javascript': {
+        'ruby': 11.98,
+        'javascript': 13.86,
+        'java': 14.16,
+        'go': 12.55,
+        'php': 13.90,
+        'python': 14.09
+    },
+    'java': {
+        'ruby': 13.38,
+        'javascript': 14.57,
+        'java': 18.72,
+        'go': 14.20,
+        'php': 16.27,
+        'python': 16.20
+    },
+    'go': {
+        'ruby': 11.68,
+        'javascript': 11.24,
+        'java': 13.61,
+        'go': 18.15,
+        'php': 12.70,
+        'python': 13.53
+    },
+    'php': {
+        'ruby': 17.52,
+        'javascript': 19.95,
+        'java': 22.11,
+        'go': 18.67,
+        'php': 25.48,
+        'python': 21.65
+    },
+    'python': {
+        'ruby': 14.10,
+        'javascript': 14.44,
+        'java': 16.77,
+        'go': 14.92,
+        'php': 16.41,
+        'python': 18.25
+    }
+}
+
+
 def compute_distances(vectors, ids_to_labels):
     vectors_per_lang = defaultdict(list)
     for idx in range(len(ids_to_labels)):
@@ -45,8 +98,13 @@ def compute_distances(vectors, ids_to_labels):
         vectors_per_lang[lang].append(vectors[idx])
     vectors_per_lang = {x: np.mean(y, axis=0) for x, y in vectors_per_lang.items()}
     for x in LANGUAGES_CSN:
+        distances = []
+        bleus = []
         for y in LANGUAGES_CSN:
-            print(f'Distance between {x} and {y}: {np.linalg.norm(vectors_per_lang[x] - vectors_per_lang[y])}')
+            if x != y:
+                distances.append(np.linalg.norm(vectors_per_lang[x] - vectors_per_lang[y]))
+                bleus.append(DEVANBU_RESULTS[x][y])
+        print(f'Testing {x}, correlation: {spearmanr(x, y)}')
 
 
 COLORS = {'java': 'r',

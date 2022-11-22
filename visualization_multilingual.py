@@ -82,7 +82,7 @@ def compute_analogies(vectors, ids_to_labels, source_lang='csharp', target_lang=
         y_target_mean = np.mean(np.stack([vectors[l2id[x]] for x in l2id if x.endswith(f'--{target_lang}')]), axis=0)
         y_diff_langs = y_target_mean - y_source_mean
         y = y_diff_langs + vectors[l2id[f'{nonterminal}--{source_lang}']]
-        y = y / np.linalg.norm(y)
+        # y = y / np.linalg.norm(y)
         _, i = kd_tree.query([y], k=3)
         i = i[0]
         for j, idx in enumerate(i):

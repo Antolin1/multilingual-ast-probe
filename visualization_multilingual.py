@@ -1,17 +1,15 @@
 import argparse
 import os
 import pickle
-from collections import defaultdict
 
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
-from scipy.stats import spearmanr
 from sklearn import metrics
 from sklearn.manifold import TSNE
+from sklearn.neighbors import KDTree
 
-from src.data import LANGUAGES_CSN
-from src.probe import ParserProbe
+from src.data.binary_tree import SEPARATOR
 
 
 def load_labels(args):
@@ -33,74 +31,6 @@ def load_vectors(run_folder):
     vectors_u = loaded_model['vectors_u'].cpu().detach().numpy().T
     proj = loaded_model['proj'].cpu().detach().numpy()
     return vectors_c, vectors_u, proj
-
-
-DEVANBU_RESULTS = {
-    'ruby': {
-        'ruby': 12.53,
-        'javascript': 11.84,
-        'java': 13.42,
-        'go': 12.32,
-        'php': 13.84,
-        'python': 14.09
-    },
-    'javascript': {
-        'ruby': 11.98,
-        'javascript': 13.86,
-        'java': 14.16,
-        'go': 12.55,
-        'php': 13.90,
-        'python': 14.09
-    },
-    'java': {
-        'ruby': 13.38,
-        'javascript': 14.57,
-        'java': 18.72,
-        'go': 14.20,
-        'php': 16.27,
-        'python': 16.20
-    },
-    'go': {
-        'ruby': 11.68,
-        'javascript': 11.24,
-        'java': 13.61,
-        'go': 18.15,
-        'php': 12.70,
-        'python': 13.53
-    },
-    'php': {
-        'ruby': 17.52,
-        'javascript': 19.95,
-        'java': 22.11,
-        'go': 18.67,
-        'php': 25.48,
-        'python': 21.65
-    },
-    'python': {
-        'ruby': 14.10,
-        'javascript': 14.44,
-        'java': 16.77,
-        'go': 14.92,
-        'php': 16.41,
-        'python': 18.25
-    }
-}
-
-
-def compute_distances(vectors, ids_to_labels):
-    vectors_per_lang = defaultdict(list)
-    for idx in range(len(ids_to_labels)):
-        lang = ids_to_labels[idx].split('--')[1]
-        vectors_per_lang[lang].append(vectors[idx])
-    vectors_per_lang = {x: np.mean(y, axis=0) for x, y in vectors_per_lang.items()}
-    for x in LANGUAGES_CSN:
-        distances = []
-        bleus = []
-        for y in LANGUAGES_CSN:
-            if x != y:
-                distances.append(np.linalg.norm(vectors_per_lang[x] - vectors_per_lang[y]))
-                bleus.append(DEVANBU_RESULTS[x][y])
-        print(f'Testing {x}, correlation: {spearmanr(bleus, distances)}')
 
 
 COLORS = {'java': 'r',
@@ -140,13 +70,33 @@ def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
         print(f'davies: {metrics.davies_bouldin_score(vectors, labels)}')
 
 
+def compute_analogies(vectors, ids_to_labels, source_lang='csharp', target_lang='c'):
+    l2id = {y: x for x, y in ids_to_labels.items()}
+    vectors_unit = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    kd_tree = KDTree(vectors_unit)
+    list_nonterminals_source = [l.split('--')[0] for l in l2id.keys()
+                                if SEPARATOR not in l and
+                                l.endswith(f'--{source_lang}')]
+    for nonterminal in list_nonterminals_source:
+        y_source_mean = np.mean(np.stack([vectors[l2id[x]] for x in l2id if x.endswith(f'--{source_lang}')]), axis=0)
+        y_target_mean = np.mean(np.stack([vectors[l2id[x]] for x in l2id if x.endswith(f'--{target_lang}')]), axis=0)
+        y_diff_langs = y_target_mean - y_source_mean
+        y = y_diff_langs + vectors[l2id[f'{nonterminal}--{source_lang}']]
+        y = y / np.linalg.norm(y)
+        _, i = kd_tree.query([y], k=3)
+        i = i[0]
+        for j, idx in enumerate(i):
+            if ids_to_labels[idx].endswith(f'--{target_lang}'):
+                print(f'Neig k={j} for analogy {nonterminal}--{source_lang} is {ids_to_labels[idx]}')
+
+
 def main(args):
     labels_to_ids_c, ids_to_labels_c, labels_to_ids_u, ids_to_labels_u = load_labels(args)
     vectors_c, vectors_u, _ = load_vectors(args.run_folder)
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
     run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
     compute_clustering_quality(vectors_c, ids_to_labels_c, metric=args.clustering_quality_metric)
-    # compute_distances(vectors_c, ids_to_labels_c)
+    compute_analogies(vectors_c, ids_to_labels_c, args.source_lang, args.target_lang)
 
 
 if __name__ == '__main__':
@@ -156,5 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--clustering_quality_metric', help='CLustering quality metric',
                         choices=['silhouette', 'calinski', 'davies'], default='silhouette')
     parser.add_argument('--seed', default=123)
+    parser.add_argument('--source_lang', default='csharp')
+    parser.add_argument('--target_lang', default='c')
     args = parser.parse_args()
     main(args)

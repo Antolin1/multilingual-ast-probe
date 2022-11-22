@@ -9,7 +9,7 @@ from scipy.stats import spearmanr
 
 from analyze_results_rq1 import ELEGANT_NAMES
 from src.data import LANGUAGES_CSN
-from visualization_multilingual import load_vectors, DEVANBU_RESULTS
+from visualization_multilingual import load_vectors
 
 
 def main(args):
@@ -52,3 +52,55 @@ if __name__ == '__main__':
                         help='Json for the best layer per model')
     args = parser.parse_args()
     main(args)
+
+
+DEVANBU_RESULTS = {
+    'ruby': {
+        'ruby': 12.53,
+        'javascript': 11.84,
+        'java': 13.42,
+        'go': 12.32,
+        'php': 13.84,
+        'python': 14.09
+    },
+    'javascript': {
+        'ruby': 11.98,
+        'javascript': 13.86,
+        'java': 14.16,
+        'go': 12.55,
+        'php': 13.90,
+        'python': 14.09
+    },
+    'java': {
+        'ruby': 13.38,
+        'javascript': 14.57,
+        'java': 18.72,
+        'go': 14.20,
+        'php': 16.27,
+        'python': 16.20
+    },
+    'go': {
+        'ruby': 11.68,
+        'javascript': 11.24,
+        'java': 13.61,
+        'go': 18.15,
+        'php': 12.70,
+        'python': 13.53
+    },
+    'php': {
+        'ruby': 17.52,
+        'javascript': 19.95,
+        'java': 22.11,
+        'go': 18.67,
+        'php': 25.48,
+        'python': 21.65
+    },
+    'python': {
+        'ruby': 14.10,
+        'javascript': 14.44,
+        'java': 16.77,
+        'go': 14.92,
+        'php': 16.41,
+        'python': 18.25
+    }
+}

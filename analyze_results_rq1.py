@@ -54,7 +54,7 @@ def plot_results_layer_vs_f1(results):
                 + theme(text=element_text(size=16))
         )
         layer_vs_f1.save(f"layer_vs_f1_{lang}.pdf", dpi=600)
-    for model in ELEGANT_NAMES.keys():
+    for model in ELEGANT_NAMES.values():
         layer_vs_f1 = (
                 ggplot(results[(results['model'] == model)])
                 + aes(x="layer", y="f1", color='lang')

@@ -8,9 +8,8 @@ from scipy.linalg import subspace_angles
 from scipy.stats import spearmanr
 
 from analyze_results_rq1 import ELEGANT_NAMES
-from src.data import LANGUAGES_CSN
+from src.data import LANGUAGES_CSN, LANGUAGES
 from visualization_multilingual import load_vectors
-
 
 DEVANBU_RESULTS = {
     'ruby': {
@@ -63,6 +62,7 @@ DEVANBU_RESULTS = {
     }
 }
 
+
 def main(args):
     with open(args.out_best_layer_per_model_rq1) as json_file:
         best_layer_per_model = json.load(json_file)
@@ -71,23 +71,23 @@ def main(args):
         if dict_model['model'] == ELEGANT_NAMES[args.model]:
             layer = dict_model['layer']
     subspaces = {}
-    for lang in LANGUAGES_CSN:
+    for lang in LANGUAGES:
         name_folder = '_'.join([args.model, lang, str(layer), '128'])
         run_folder = os.path.join(args.run_dir, name_folder)
         _, _, proj = load_vectors(run_folder)
         subspaces[lang] = proj
 
     table_sim_ang = PrettyTable()
-    table_sim_ang.field_names = ["----"] + list(LANGUAGES_CSN)
+    table_sim_ang.field_names = ["----"] + list(LANGUAGES)
 
-    for x in LANGUAGES_CSN:
+    for x in LANGUAGES:
         row_ang = [x]
         angles = []
         bleus = []
-        for y in LANGUAGES_CSN:
+        for y in LANGUAGES:
             subspace_sim_ang = np.rad2deg(np.mean(subspace_angles(subspaces[x], subspaces[y])))
             row_ang.append(round(subspace_sim_ang, 4))
-            if x != y:
+            if x != y and x in LANGUAGES_CSN and y in LANGUAGES_CSN:
                 angles.append(subspace_sim_ang)
                 bleus.append(DEVANBU_RESULTS[x][y])
         table_sim_ang.add_row(row_ang)
@@ -102,4 +102,4 @@ if __name__ == '__main__':
     parser.add_argument('--out_best_layer_per_model_rq1', default='best_layer_per_model.json',
                         help='Json for the best layer per model')
     args = parser.parse_args()
-    main(args) 
+    main(args)

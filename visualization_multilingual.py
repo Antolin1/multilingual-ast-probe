@@ -3,6 +3,7 @@ import os
 import pickle
 
 import numpy as np
+import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 from sklearn import metrics
@@ -56,6 +57,22 @@ def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constitu
     plt.savefig(f'vectors_{type_labels}_{model}.png')
 
 
+def to_tsv(vectors, ids_to_labels, type_labels='constituency'):
+    np.savetxt(f"vectors_{type_labels}.tsv", vectors, delimiter="\t")
+    langs = []
+    consts = []
+    for i in range(len(ids_to_labels)):
+        label = ids_to_labels[i]
+        lang = label.split('--')[1]
+        const = label.split('--')[0]
+        langs.append(lang)
+        consts.append(const)
+
+    df = pd.DataFrame(list(zip(langs, consts)),
+                      columns=['Language', 'Constituency'])
+    df.to_csv(f'labels_{type_labels}.tsv', index=False, sep='\t')
+
+
 def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
     # vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
     labels = []
@@ -96,6 +113,7 @@ def main(args):
     run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
     run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
     compute_clustering_quality(vectors_c, ids_to_labels_c, metric=args.clustering_quality_metric)
+    to_tsv(vectors_c, ids_to_labels_c, type_labels='constituency')
     if args.compute_analogies:
         compute_analogies(vectors_c, ids_to_labels_c, args.source_lang, args.target_lang)
 

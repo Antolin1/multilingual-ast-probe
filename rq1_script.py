@@ -13,8 +13,7 @@ models = ['microsoft/codebert-base',
           'distilbert-base-uncased',
           'distilroberta-base',
           'microsoft/unixcoder-base',
-          'microsoft/unixcoder-base-nine',
-          'microsoft/unixcoder-base-unimodal']
+          'microsoft/unixcoder-base-nine']
 folders = ['codebert',
            'graphcodebert',
            'codet5',
@@ -25,8 +24,7 @@ folders = ['codebert',
            'distilbert',
            'distilroberta',
            'unixcoder-base',
-           'unixcoder-base-nine',
-           'unixcoder-base-unimodal']
+           'unixcoder-base-nine']
 model_types = ['roberta',
                'roberta',
                't5',
@@ -35,7 +33,6 @@ model_types = ['roberta',
                'roberta',
                'bert',
                'distilbert',
-               'roberta',
                'roberta',
                'roberta',
                'roberta']

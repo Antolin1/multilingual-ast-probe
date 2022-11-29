@@ -13,7 +13,6 @@ huggingface_names = {
     'DistilBERT': 'distilbert-base-uncased',
     'DistilRoBERTa': 'distilroberta-base',
     'CodeBERTrand': 'microsoft/codebert-base',
-    'UniXcoder-unimodal': 'microsoft/unixcoder-base-unimodal',
     'UniXcoder': 'microsoft/unixcoder-base',
     'UniXcoder-9': 'microsoft/unixcoder-base-nine'
 }
@@ -28,7 +27,6 @@ model_types = {
     'DistilBERT': 'distilbert',
     'DistilRoBERTa': 'roberta',
     'CodeBERTrand': 'roberta',
-    'UniXcoder-unimodal': 'roberta',
     'UniXcoder': 'roberta',
     'UniXcoder-9': 'roberta'
 }

@@ -15,7 +15,6 @@ ELEGANT_NAMES = {'codebert': 'CodeBERT',
                  'distilbert': 'DistilBERT',
                  'bert': 'BERT',
                  'distilroberta': 'DistilRoBERTa',
-                 'unixcoder-base-unimodal': 'UniXcoder-unimodal',
                  'unixcoder-base': 'UniXcoder',
                  'unixcoder-base-nine': 'UniXcoder-9'
                  }

@@ -4,7 +4,10 @@ import os
 import pickle
 
 import pandas as pd
-from plotnine import ggplot, aes, geom_line, scale_x_continuous, labs, theme, element_text
+from plotnine import ggplot, aes, geom_line, scale_x_continuous, labs, theme, element_text, theme_light
+from scipy.stats import stats
+
+from src.data import LANGUAGES
 
 ELEGANT_NAMES = {'codebert': 'CodeBERT',
                  'codebert-baseline': 'CodeBERTrand',
@@ -14,9 +17,7 @@ ELEGANT_NAMES = {'codebert': 'CodeBERT',
                  'roberta': 'RoBERTa',
                  'distilbert': 'DistilBERT',
                  'bert': 'BERT',
-                 'distilroberta': 'DistilRoBERTa',
-                 'unixcoder-base': 'UniXcoder',
-                 'unixcoder-base-nine': 'UniXcoder-9'
+                 'distilroberta': 'DistilRoBERTa'
                  }
 
 
@@ -51,6 +52,7 @@ def plot_results_layer_vs_f1(results):
                 + scale_x_continuous(breaks=range(0, 13, 1))
                 + labs(x="Layer", y="F1", color="Model")
                 + theme(text=element_text(size=16))
+                + theme_light()
         )
         layer_vs_f1.save(f"layer_vs_f1_{lang}.pdf", dpi=600)
     for model in ELEGANT_NAMES.values():
@@ -61,6 +63,7 @@ def plot_results_layer_vs_f1(results):
                 + scale_x_continuous(breaks=range(0, 13, 1))
                 + labs(x="Layer", y="F1", color="Lang")
                 + theme(text=element_text(size=16))
+                + theme_light()
         )
         layer_vs_f1.save(f"layer_vs_f1_{model}.pdf", dpi=600)
 
@@ -96,6 +99,28 @@ def get_table(results, best_layer_per_model):
     print(results_filtered.to_latex(index=False, columns=['model', 'layer', 'lang', 'f1']))
 
 
+def statistical_test(results, best_layer_per_model):
+    best_layer_per_model_dict = best_layer_per_model.to_dict('records')
+    list_f1_langs = []
+    for m_dict in best_layer_per_model_dict:
+        model = m_dict['model']
+        if model == 'UniXcoder' or model == 'UniXcoder-9':
+            continue
+        layer = m_dict['layer']
+        f1_langs = [results[(results['model'] == model) &
+                            (results['layer'] == layer) &
+                            (results['lang'] == l)]['f1'].values[0]
+                    for l in LANGUAGES]
+        print(f'for {model} is {f1_langs}')
+        list_f1_langs.append(f1_langs)
+    print(f'Friedman test: {stats.friedmanchisquare(*list_f1_langs)}')
+    # p_adjust = 'holm'
+    # print(f'\n{posthoc_wilcoxon(list_f1_langs, p_adjust=p_adjust)}')
+    # print(f'\n{posthoc_ttest(list_f1_langs, p_adjust=p_adjust)}')
+    # print(f'\n{posthoc_tukey(list_f1_langs)}')
+    print('Not enough samples to get significance! Future work more languages?')
+
+
 def main(args):
     results = read_results(args)
     plot_results_layer_vs_f1(results)
@@ -104,6 +129,7 @@ def main(args):
     best_layer_per_model = best_layer_per_model.drop(columns=['f1'])
     best_layer_per_model.to_json(args.out_best_layer_per_model_rq1, orient="records")
     get_table(results, best_layer_per_model)
+    statistical_test(results, best_layer_per_model)
 
 
 if __name__ == '__main__':

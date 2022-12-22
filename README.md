@@ -6,6 +6,7 @@ Generate venv and install dependencies:
 python3 -m venv <env_ast_probe>
 source env_ast_probe/bin/activate
 pip install -r requirements.txt
+# and install torch and torch scatter
 ```
 
 

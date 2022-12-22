@@ -9,7 +9,9 @@ from matplotlib import pyplot as plt
 from sklearn import metrics
 from sklearn.manifold import TSNE
 from sklearn.neighbors import KDTree
+from plotnine import *
 
+from analyze_results_rq1 import ELEGANT_NAMES
 from src.data.binary_tree import SEPARATOR
 
 
@@ -48,13 +50,71 @@ def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constitu
     # vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
     v_2d = TSNE(n_components=2, learning_rate='auto', perplexity=perplexity,
                 init='random', random_state=args.seed).fit_transform(vectors)
-    figure, axis = plt.subplots(1, figsize=(20, 20))
-    axis.set_title(f"Vectors {type_labels}")
+    df = pd.DataFrame(v_2d, columns=['tsne1', 'tsne2'])
+    langs = []
+    const = []
     for ix, label in ids_to_labels.items():
         l = label.split('--')[1]
-        axis.scatter(v_2d[ix, 0], v_2d[ix, 1], color=COLORS[l], label=l)
-    plt.show()
-    plt.savefig(f'vectors_{type_labels}_{model}.png')
+        langs.append(l)
+        const.append(label.split('--')[0])
+    df['language'] = langs
+    df['constituency'] = const
+    scatter_tsne = (
+            ggplot(df, aes(x='tsne1', y='tsne2', color='language')) + geom_point()
+            + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+    )
+    scatter_tsne.save(f"scatter_{model}_{type_labels}.pdf", dpi=600)
+    scatter_tsne.save(f"scatter_{model}_{type_labels}.png", dpi=600)
+
+    if type_labels == 'constituency':
+        zoom_1 = (
+                ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
+                + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+                + ylim((-10, 0)) + xlim((-10, 0)) + geom_text()
+        )
+        zoom_1.save(f"zoom_1_{model}_{type_labels}.pdf", dpi=600)
+
+        zoom_2 = (
+                ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
+                + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+                + ylim((-5, 0)) + xlim((0, 10)) + geom_text()
+        )
+        zoom_2.save(f"zoom_2_{model}_{type_labels}.pdf", dpi=600)
+
+        zoom_3 = (
+                ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
+                + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+                + ylim((5, 10)) + xlim((-10, 0)) + geom_text()
+        )
+        zoom_3.save(f"zoom_3_{model}_{type_labels}.pdf", dpi=600)
+
+        zoom_4 = (
+                ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
+                + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+                + ylim((20, 30)) + xlim((-5, 0)) + geom_text()
+        )
+        zoom_4.save(f"zoom_4_{model}_{type_labels}.pdf", dpi=600)
+
+        zoom_5 = (
+                ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
+                + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+                + ylim((10, 20)) + xlim((5, 10)) + geom_text()
+        )
+        zoom_5.save(f"zoom_5_{model}_{type_labels}.pdf", dpi=600)
+
+        zoom_6 = (
+                ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
+                + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+                + ylim((0, 5)) + xlim((-20, -15)) + geom_text()
+        )
+        zoom_6.save(f"zoom_6_{model}_{type_labels}.pdf", dpi=600)
+
+        zoom_7 = (
+                ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
+                + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+                + ylim((-10, -20)) + xlim((-10, -0)) + geom_text()
+        )
+        zoom_7.save(f"zoom_7_{model}_{type_labels}.pdf", dpi=600)
 
 
 def to_tsv(vectors, ids_to_labels, type_labels='constituency'):
@@ -80,7 +140,7 @@ def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
         lang = ids_to_labels[idx].split('--')[1]
         labels.append(lang)
     if metric == 'silhouette':
-        print(f'silhouette: {metrics.silhouette_score(vectors, labels)}')
+        print(f'silhouette: {round(metrics.silhouette_score(vectors, labels), 4)}')
     elif metric == 'calinski':
         print(f'calinski: {metrics.calinski_harabasz_score(vectors, labels)}')
     elif metric == 'davies':
@@ -110,10 +170,11 @@ def compute_analogies(vectors, ids_to_labels, source_lang='csharp', target_lang=
 def main(args):
     labels_to_ids_c, ids_to_labels_c, labels_to_ids_u, ids_to_labels_u = load_labels(args)
     vectors_c, vectors_u, _ = load_vectors(args.run_folder)
-    run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
-    run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
     compute_clustering_quality(vectors_c, ids_to_labels_c, metric=args.clustering_quality_metric)
-    to_tsv(vectors_c, ids_to_labels_c, type_labels='constituency')
+    if args.model == 'codebert' or args.model == 'codebert-baseline':
+        run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
+        run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
+        to_tsv(vectors_c, ids_to_labels_c, type_labels='constituency')
     if args.compute_analogies:
         compute_analogies(vectors_c, ids_to_labels_c, args.source_lang, args.target_lang)
 

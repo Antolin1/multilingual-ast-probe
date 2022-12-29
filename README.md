@@ -55,7 +55,7 @@ python analyze_results_rq3.py --results_finetuning finetuning_results/code_searc
 
 Visualization:
 ```sh
-python visualization_multilingual.py --run_folder runs/multilingual_CodeBERTrand-baseline/ --model baseline
+python visualization_multilingual.py --run_folder runs/multilingual_CodeBERTrand-baseline/ --model codebert-baseline
 python visualization_multilingual.py --run_folder runs/multilingual_CodeBERT/ --model codebert
 python angle_subspaces.py --model codebert
 ```

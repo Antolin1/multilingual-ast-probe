@@ -141,10 +141,11 @@ def compare_rankings(args):
             + theme_minimal()
             + scale_x_discrete(limits=[e for e in ELEGANT_NAMES if e not in representatives])
             + scale_y_discrete(limits=representatives)
-            + labs(title="", x="", y="")
+            + labs(title="", x="", y="", fill="correlation\n")
             + theme(axis_text_x=element_text(rotation=45, hjust=1, size=12),
                     axis_text_y=element_text(size=12),
-                    legend_text=element_text(size=10))
+                    legend_title=element_text(size=12),
+                    legend_title_align='center')
     )
     corr_encoders.save(f"corr_encoders.pdf", dpi=600)
 
@@ -161,10 +162,11 @@ def main(args):
             + theme_minimal()
             + scale_x_discrete(limits=LANGUAGES)
             + scale_y_discrete(limits=LANGUAGES)
-            + labs(title="", x="", y="")
+            + labs(title="", x="", y="", fill="angle\n")
             + theme(axis_text_x=element_text(rotation=45, hjust=1, size=12),
                     axis_text_y=element_text(size=12),
-                    legend_text=element_text(size=10))
+                    legend_title=element_text(size=12),
+                    legend_title_align='center')
     )
     angles_p9.save(f"angle_{args.model}.pdf", dpi=600)
 

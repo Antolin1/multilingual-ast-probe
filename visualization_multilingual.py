@@ -53,7 +53,8 @@ def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constitu
     df = pd.DataFrame(v_2d, columns=['tsne1', 'tsne2'])
     langs = []
     const = []
-    for ix, label in ids_to_labels.items():
+    for ix, _ in enumerate(ids_to_labels):
+        label = ids_to_labels[ix]
         l = label.split('--')[1]
         langs.append(l)
         const.append(label.split('--')[0])
@@ -61,7 +62,7 @@ def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constitu
     df['constituency'] = const
     scatter_tsne = (
             ggplot(df, aes(x='tsne1', y='tsne2', color='language')) + geom_point()
-            + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+            + labs(title="", x="", y="", color="Languages")
     )
     scatter_tsne.save(f"scatter_{model}_{type_labels}.pdf", dpi=600)
     scatter_tsne.save(f"scatter_{model}_{type_labels}.png", dpi=600)
@@ -115,6 +116,13 @@ def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constitu
                 + ylim((-10, -20)) + xlim((-10, -0)) + geom_text()
         )
         zoom_7.save(f"zoom_7_{model}_{type_labels}.pdf", dpi=600)
+
+        zoom_8 = (
+                ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
+                + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
+                + ylim((0, 5)) + xlim((-13, -8)) + geom_text()
+        )
+        zoom_8.save(f"zoom_8_{model}_{type_labels}.pdf", dpi=600)
 
 
 def to_tsv(vectors, ids_to_labels, type_labels='constituency'):

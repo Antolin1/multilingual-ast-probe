@@ -127,8 +127,8 @@ def compare_rankings(args):
         for m2, corrs in correlations.items():
             if m2 not in representatives:
                 print(f'{m1} vs {m2}: {np.mean(corrs)}')
-                data['m1'].append(m1)
-                data['m2'].append(m2)
+                data['m1'].append(ELEGANT_NAMES[m1] if m1 in ELEGANT_NAMES else 'CodeBERTrand')
+                data['m2'].append(ELEGANT_NAMES[m2] if m2 in ELEGANT_NAMES else 'CodeBERTrand')
                 data['correlation'].append(np.mean(corrs))
                 data['text'].append(str(round(np.mean(corrs), 2)))
 
@@ -139,8 +139,9 @@ def compare_rankings(args):
             + geom_tile() + geom_label(aes(label="text"), fill="white", size=10)
             + scale_fill_distiller(palette="YlOrRd", direction=1)
             + theme_minimal()
-            + scale_x_discrete(limits=[e for e in ELEGANT_NAMES if e not in representatives])
-            + scale_y_discrete(limits=representatives)
+            + scale_x_discrete(limits=[ELEGANT_NAMES[e] for e in ELEGANT_NAMES if e not in representatives])
+            + scale_y_discrete(limits=[ELEGANT_NAMES[e] if e in ELEGANT_NAMES else 'CodeBERTrand'
+                                       for e in representatives])
             + labs(title="", x="", y="", fill="correlation\n")
             + theme(axis_text_x=element_text(rotation=45, hjust=1, size=12),
                     axis_text_y=element_text(size=12),

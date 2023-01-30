@@ -136,17 +136,17 @@ def compare_rankings(args):
     corr_encoders = (
             ggplot(mapping=aes("m2", "m1", fill="correlation"),
                    data=to_plot)
-            + geom_tile() + geom_label(aes(label="text"), fill="white", size=10)
+            + geom_tile() + geom_label(aes(label="text"), fill="white", size=14)
             + scale_fill_distiller(palette="YlOrRd", direction=1)
             + theme_minimal()
             + scale_x_discrete(limits=[ELEGANT_NAMES[e] for e in ELEGANT_NAMES if e not in representatives])
             + scale_y_discrete(limits=[ELEGANT_NAMES[e] if e in ELEGANT_NAMES else 'CodeBERTrand'
                                        for e in representatives])
             + labs(title="", x="", y="", fill="correlation\n")
-            + theme(axis_text_x=element_text(rotation=45, hjust=1, size=12),
-                    axis_text_y=element_text(size=12),
-                    legend_title=element_text(size=12),
-                    legend_title_align='center')
+            + theme(axis_text_x=element_text(rotation=45, hjust=1, size=16),
+                    axis_text_y=element_text(size=16),
+                    legend_title=element_text(size=16),
+                    legend_text=element_text(size=12))
     )
     corr_encoders.save(f"corr_encoders.pdf", dpi=600)
 

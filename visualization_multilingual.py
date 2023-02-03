@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 from sklearn import metrics
+from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.neighbors import KDTree
 from plotnine import *
@@ -46,7 +47,7 @@ COLORS = {'java': 'r',
           'php': 'tab:pink'}
 
 
-def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constituency'):
+def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constituency', zoom=False):
     # vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
     v_2d = TSNE(n_components=2, learning_rate='auto', perplexity=perplexity,
                 init='random', random_state=args.seed).fit_transform(vectors)
@@ -67,7 +68,7 @@ def run_tsne(vectors, ids_to_labels, model, perplexity=30, type_labels='constitu
     scatter_tsne.save(f"scatter_{model}_{type_labels}.pdf", dpi=600)
     scatter_tsne.save(f"scatter_{model}_{type_labels}.png", dpi=600)
 
-    if type_labels == 'constituency':
+    if type_labels == 'constituency' and zoom:
         zoom_1 = (
                 ggplot(df, aes(x='tsne1', y='tsne2', color='language', label='constituency')) + geom_point()
                 + labs(title=f"Non-terminals {ELEGANT_NAMES[model]}", x="", y="")
@@ -141,8 +142,12 @@ def to_tsv(vectors, ids_to_labels, type_labels='constituency'):
     df.to_csv(f'labels_{type_labels}.tsv', index=False, sep='\t')
 
 
-def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette'):
+def compute_clustering_quality(vectors, ids_to_labels, metric='silhouette', pca=False):
     # vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    if pca:
+        pca_model = PCA(n_components=16)
+        vectors = pca_model.fit_transform(vectors)
+        print(f'Ratio explained {np.sum(pca_model.explained_variance_ratio_)}')
     labels = []
     for idx in range(len(ids_to_labels)):
         lang = ids_to_labels[idx].split('--')[1]
@@ -178,10 +183,10 @@ def compute_analogies(vectors, ids_to_labels, source_lang='csharp', target_lang=
 def main(args):
     labels_to_ids_c, ids_to_labels_c, labels_to_ids_u, ids_to_labels_u = load_labels(args)
     vectors_c, vectors_u, _ = load_vectors(args.run_folder)
-    compute_clustering_quality(vectors_c, ids_to_labels_c, metric=args.clustering_quality_metric)
+    compute_clustering_quality(vectors_c, ids_to_labels_c, metric=args.clustering_quality_metric, pca=args.pca)
     if args.model == 'codebert' or args.model == 'codebert-baseline':
-        run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency')
-        run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary')
+        run_tsne(vectors_c, ids_to_labels_c, args.model, perplexity=30, type_labels='constituency', zoom=args.zoom)
+        run_tsne(vectors_u, ids_to_labels_u, args.model, perplexity=5, type_labels='unary', zoom=args.zoom)
         to_tsv(vectors_c, ids_to_labels_c, type_labels='constituency')
     if args.compute_analogies:
         compute_analogies(vectors_c, ids_to_labels_c, args.source_lang, args.target_lang)
@@ -197,5 +202,7 @@ if __name__ == '__main__':
     parser.add_argument('--source_lang', default='csharp')
     parser.add_argument('--target_lang', default='c')
     parser.add_argument('--compute_analogies', action='store_true')
+    parser.add_argument('--pca', action='store_true')
+    parser.add_argument('--zoom', action='store_true')
     args = parser.parse_args()
     main(args)

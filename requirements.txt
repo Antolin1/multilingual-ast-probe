@@ -36,10 +36,8 @@ requests==2.27.1
 sacremoses==0.0.47
 scipy==1.7.3
 six==1.16.0
-tokenizers==0.11.4
 tqdm==4.62.3
-transformers==4.16.2
-tree-sitter==0.20.1
+tree-sitter==0.20.0
 typing_extensions==4.0.1
 urllib3==1.26.8
 wcwidth==0.2.5
@@ -53,10 +51,3 @@ palettable==3.3.0
 patsy==0.5.2
 plotnine==0.8.0
 statsmodels==0.13.2
-yellowbrick
-gdown
-umap-learn
-opentsne
-plotly
-gdown==4.5.1
-tensorboardX

@@ -119,5 +119,8 @@ MODEL_TYPES_MATCH = {
     't5': match_tokenized_to_untokenized_roberta,
     'bert': match_tokenized_to_untokenized_bert,
     'distilbert': match_tokenized_to_untokenized_bert,
-    'gpt2': match_tokenized_to_untokenized_roberta
+    'gpt': match_tokenized_to_untokenized_roberta,
+    'gpt2': match_tokenized_to_untokenized_roberta,
+    'gpt-neo': match_tokenized_to_untokenized_roberta,
+    'gpt-j': match_tokenized_to_untokenized_roberta
 }

@@ -6,10 +6,12 @@ from collections import defaultdict
 
 import numpy as np
 import torch
+from accelerate import init_empty_weights, load_checkpoint_and_dispatch
 from datasets import load_dataset, concatenate_datasets
+from huggingface_hub import hf_hub_download
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer, RobertaModel, T5EncoderModel
+from transformers import AutoModel, AutoTokenizer, AutoConfig, RobertaModel, T5EncoderModel, AutoModelForCausalLM
 
 from data import convert_sample_to_features, collator_fn, \
     PY_PARSER, GO_PARSER, JS_PARSER, PHP_PARSER, JAVA_PARSER, \
@@ -50,16 +52,41 @@ def generate_baseline(model, type_baseline='not_full'):
 
 
 def get_lmodel(args):
-    logger.info('Loading models.')
+    logger.info('Loading model.')
+
     if args.model_type == 't5':
-        lmodel = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+        model_cls = T5EncoderModel
+    elif args.model_type in ['gpt-neo', 'gpt', 'gpt-j']:
+        model_cls = AutoModelForCausalLM
     else:
-        lmodel = AutoModel.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+        model_cls = AutoModel
+
+    if args.dispatch_model_weights:
+        logger.info('Dispatching model weights on GPUs.')
+        weights_location = hf_hub_download(args.pretrained_model_name_or_path, 'pytorch_model.bin')
+        config = AutoConfig.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
+
+        with init_empty_weights():
+            lmodel = model_cls.from_config(config)
+        lmodel.tie_weights()
+        if args.model_type == 'gpt-neo':
+            no_split_module = ['GPTNeoBlock']
+        elif args.model_type == 'gpt-j':
+            no_split_module = ['GPTJBlock']
+        elif args.model_type == 'gpt':
+            no_split_module = ['GPTBlock']
+        elif args.model_type == 'gpt2':
+            no_split_module = ['GPT2Block']
+        lmodel = load_checkpoint_and_dispatch(
+            lmodel, weights_location, device_map='auto', no_split_module_classes=no_split_module
+        )
+    else:
+        lmodel = model_cls.from_pretrained(args.pretrained_model_name_or_path, output_hidden_states=True)
         if '-baseline' in args.run_name:
             lmodel = generate_baseline(lmodel)
         elif '-baseline-full' in args.run_name:
             lmodel = generate_baseline(lmodel, 'full')
-    lmodel = lmodel.to(args.device)
+        lmodel = lmodel.to(args.device)
     return lmodel
 
 

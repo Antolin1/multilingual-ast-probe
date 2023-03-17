@@ -19,6 +19,16 @@ class ProgramArguments:
         metadata={'help': 'Path to the pretrained language model or its name on Huggingface hub.'}
     )
 
+    dispatch_model_weights: Optional[bool] = field(
+        default=False,
+        metadata={'help': 'Whether to dispatch the model weights on multiple GPUs.'}
+    )
+
+    model_weights_path: Optional[str] = field(
+        default=None,
+        metadata={'help': 'Path to the model weights if `dispatch_model_weights` set to True.'}
+    )
+
     model_type: Optional[str] = field(
         default='roberta',
         metadata={'help': 'Architecture of the transformer model. Currently just supported t5 and roberta.'}
@@ -28,6 +38,7 @@ class ProgramArguments:
         default=None,
         metadata={'help': 'Model checkpoint directory.'}
     )
+
     model_source_checkpoint: Optional[str] = field(
         default=None,
         metadata={'help': 'Model source checkpoint directory for direct transfer.'}

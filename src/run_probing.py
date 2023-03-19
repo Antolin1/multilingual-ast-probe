@@ -56,7 +56,7 @@ def get_lmodel(args):
 
     if args.model_type == 't5':
         model_cls = T5EncoderModel
-    elif args.model_type in ['gpt-neo', 'gpt', 'gpt-j']:
+    elif args.model_type in ['gpt-neo', 'gpt', 'gpt-j', 'gpt2']:
         model_cls = AutoModelForCausalLM
     else:
         model_cls = AutoModel

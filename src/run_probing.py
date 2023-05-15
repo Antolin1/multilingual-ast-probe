@@ -559,7 +559,9 @@ def run_probing_all_languages(args):
 
     data_sets = {x: load_dataset('json', data_files=y) for x, y in data_files.items()}
     data_sets = {
-        x: y.map(lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
+        x: y['train'].select(range(0, 1750)).map(lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
+                                                      x.split('_')[1]))
+        if 'train_' in x else y['train'].map(lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
                                                       x.split('_')[1]))
         for x, y in data_sets.items()}
 
@@ -568,9 +570,9 @@ def run_probing_all_languages(args):
 
     for lang in LANGUAGES:
         labels_file_path = os.path.join(args.dataset_name_or_path, lang, 'labels.pkl')
-        train_set = data_sets[f'train_{lang}']['train']
-        valid_set = data_sets[f'valid_{lang}']['train']
-        test_set = data_sets[f'test_{lang}']['train']
+        train_set = data_sets[f'train_{lang}']
+        valid_set = data_sets[f'valid_{lang}']
+        test_set = data_sets[f'test_{lang}']
         if not os.path.exists(labels_file_path):
             # convert each non-terminal labels to its id
             labels_to_ids_c = get_non_terminals_labels(train_set['c'], valid_set['c'], test_set['c'])
@@ -610,13 +612,17 @@ def run_probing_all_languages(args):
     data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['u'], 'u', labels_to_ids_u_global, x.split('_')[1]))
                  for x, y in data_sets.items()}
 
-    train_datasets = [y['train'] for x, y in data_sets.items() if 'train_' in x]
-    valid_datasets = [y['train'] for x, y in data_sets.items() if 'valid_' in x]
-    test_datasets = [y['train'] for x, y in data_sets.items() if 'test_' in x]
+    train_datasets = [y for x, y in data_sets.items() if 'train_' in x]
+    valid_datasets = [y for x, y in data_sets.items() if 'valid_' in x]
+    test_datasets = [y for x, y in data_sets.items() if 'test_' in x]
 
     train_set = concatenate_datasets(train_datasets)
     valid_set = concatenate_datasets(valid_datasets)
     test_set = concatenate_datasets(test_datasets)
+
+    logger.info(f'Number of train samples: {len(train_set)}')
+    logger.info(f'Number of valid samples: {len(valid_set)}')
+    logger.info(f'Number of test samples: {len(test_set)}')
 
     match_function = MODEL_TYPES_MATCH[args.model_type]
 

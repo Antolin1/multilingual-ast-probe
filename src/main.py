@@ -8,7 +8,7 @@ from transformers import HfArgumentParser
 
 from args import ProgramArguments
 from run_probing import run_probing_train, run_probing_test, run_probing_all_languages
-from utils import setup_logger
+from utils import setup_logger, set_seed
 
 
 def main(args):

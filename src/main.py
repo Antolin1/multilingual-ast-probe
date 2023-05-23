@@ -13,6 +13,7 @@ from utils import setup_logger, set_seed
 
 def main(args):
     if args.do_train:
+        # TODO: possible bug in BERT models, where the align function is not chosen correctly
         args.dataset_name_or_path = os.path.join(args.dataset_name_or_path, args.lang)
         run_probing_train(args=args)
     elif args.do_test:

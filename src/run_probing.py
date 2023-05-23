@@ -363,11 +363,11 @@ def compute_hits_d(input, target, mask):
 
 def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
     # todo: filter categories using the language
-    masking = args.do_train_all_languages or args.do_hold_one_out_training
+    masking = args.do_train_all_languages or args.do_hold_one_out_training or args.do_test_all_languages
     probe_model.eval()
-    precisions = [] if (not args.do_train_all_languages) and (not args.do_hold_one_out_training) else defaultdict(list)
-    recalls = [] if (not args.do_train_all_languages) and (not args.do_hold_one_out_training) else defaultdict(list)
-    f1_scores = [] if (not args.do_train_all_languages) and (not args.do_hold_one_out_training) else defaultdict(list)
+    precisions = [] if not masking else defaultdict(list)
+    recalls = [] if not masking else defaultdict(list)
+    f1_scores = [] if not masking else defaultdict(list)
     with torch.no_grad():
         for step, batch in enumerate(tqdm(test_dataloader,
                                           desc='[test batch]',
@@ -481,22 +481,22 @@ def run_probing_eval_recall_non_terminal(test_dataloader, probe_model, lmodel, i
 
 
 def run_probing_test(args):
-    logger.info('-' * 100)
-    logger.info('Running probing test.')
-    logger.info('-' * 100)
-
     # select the parser
     parser = PARSER_OBJECT_BY_NAME[args.lang]
 
     logger.info('Loading tokenizer')
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
 
     logger.info('Loading dataset from local file.')
     data_files = {'test': os.path.join(args.dataset_name_or_path, 'test.jsonl')}
+    test_set = load_dataset('json', data_files=data_files, split='test')
+
+    # get d and c for each sample
+    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
 
     # get class labels-ids mapping for c and u
     labels_file_path = os.path.join(args.dataset_name_or_path, 'labels.pkl')
+
     with open(labels_file_path, 'rb') as f:
         data = pickle.load(f)
         labels_to_ids_c = data['labels_to_ids_c']
@@ -504,18 +504,8 @@ def run_probing_test(args):
         labels_to_ids_u = data['labels_to_ids_u']
         ids_to_labels_u = data['ids_to_labels_u']
 
-    test_set = load_dataset('json', data_files=data_files, split='test')
-
-    # get d and c for each sample
-    test_set = test_set.map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang))
     test_set = test_set.map(lambda e: convert_to_ids(e['c'], 'c', labels_to_ids_c))
     test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
-
-    test_dataloader = DataLoader(dataset=test_set,
-                                 batch_size=args.batch_size,
-                                 shuffle=False,
-                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
-                                 num_workers=8)
 
     lmodel = get_lmodel(args)
     probe_model = ParserProbe(
@@ -523,23 +513,33 @@ def run_probing_test(args):
         hidden_dim=args.hidden,
         number_labels_c=len(labels_to_ids_c),
         number_labels_u=len(labels_to_ids_u)).to(args.device)
-    criterion = ParserLoss(loss='rank')
+    metrics = {'test_precision': None, 'test_recall': None, 'test_f1': None}
 
-    if args.model_checkpoint:
-        logger.info('Restoring model checkpoint.')
-        checkpoint = torch.load(os.path.join(args.model_checkpoint, 'pytorch_model.bin'))
-        probe_model.load_state_dict(checkpoint)
+    logger.info('Loading test set.')
+    test_dataloader = DataLoader(dataset=test_set,
+                                 batch_size=args.batch_size,
+                                 shuffle=False,
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 num_workers=8)
 
-    probe_model.eval()
-    lmodel.eval()
-    eval_loss, acc_c, acc_u, acc_d = run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args)
-    logger.info(f'test loss: {eval_loss} | acc_c: {acc_c} | acc_u: {acc_u} | acc_d: {acc_d}')
+    logger.info('Loading best model.')
+    checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
+    probe_model.load_state_dict(checkpoint)
 
-    recall_dict = run_probing_eval_recall_non_terminal(test_dataloader, probe_model, lmodel,
-                                                       ids_to_labels_c, ids_to_labels_u, args)
+    if not args.just_proj:
+        logger.info('Evaluating probing on test set.')
+        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                         ids_to_labels_c, ids_to_labels_u, args)
+        metrics['test_precision'] = round(eval_precision, 4)
+        metrics['test_recall'] = round(eval_recall, 4)
+        metrics['test_f1'] = round(eval_f1_score, 4)
+        logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
+                    f'| test F1 score: {round(eval_f1_score, 4)}')
 
-    for v, k in sorted(((v, k) for k, v in recall_dict.items()), reverse=True):
-        logger.info(f'Non-terminal {k} | recall {v}')
+    logger.info('-' * 100)
+    logger.info('Saving metrics.')
+    with open(os.path.join(args.output_path, 'metrics_just_test.log'), 'wb') as f:
+        pickle.dump(metrics, f)
 
 
 def run_probing_all_languages(args):

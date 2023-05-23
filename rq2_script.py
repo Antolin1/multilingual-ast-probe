@@ -49,7 +49,7 @@ def main(args):
                       f"--pretrained_model_name_or_path {hfn} "
                       f"--model_type {model_type} "
                       f"--layer {layer} "
-                      f"--rank 128 --epochs 10")
+                      f"--rank 128 --epochs 20")
 
 
 if __name__ == '__main__':

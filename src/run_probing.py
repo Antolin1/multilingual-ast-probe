@@ -361,13 +361,15 @@ def compute_hits_d(input, target, mask):
     return hits, mask.sum().item()
 
 
-def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args):
+def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args,
+                        compute_recall_nonterminals=False):
     # todo: filter categories using the language
     masking = args.do_train_all_languages or args.do_hold_one_out_training or args.do_test_all_languages
     probe_model.eval()
     precisions = [] if not masking else defaultdict(list)
     recalls = [] if not masking else defaultdict(list)
     f1_scores = [] if not masking else defaultdict(list)
+    all_recall_nonterminals = defaultdict(list)
     with torch.no_grad():
         for step, batch in enumerate(tqdm(test_dataloader,
                                           desc='[test batch]',
@@ -417,6 +419,12 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
                 p, r, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
+
+                if compute_recall_nonterminals:
+                    recall_non_terminal = get_recall_non_terminal(ground_truth_tree, pred_tree)
+                    for k, v in recall_non_terminal.items():
+                        all_recall_nonterminals[k].append(v)
+
                 if masking:
                     lang = us_labels[0].split('--')[1]
                     f1_scores[lang].append(f1_score)
@@ -427,10 +435,17 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                     precisions.append(p)
                     recalls.append(r)
     if masking:
-        return ({x: np.mean(y) for x, y in precisions.items()},
-                {x: np.mean(y) for x, y in recalls.items()},
-                {x: np.mean(y) for x, y in f1_scores.items()})
+        if compute_recall_nonterminals:
+            return ({x: np.mean(y) for x, y in precisions.items()},
+                    {x: np.mean(y) for x, y in recalls.items()},
+                    {x: np.mean(y) for x, y in f1_scores.items()}, all_recall_nonterminals)
+        else:
+            return ({x: np.mean(y) for x, y in precisions.items()},
+                    {x: np.mean(y) for x, y in recalls.items()},
+                    {x: np.mean(y) for x, y in f1_scores.items()})
     else:
+        if compute_recall_nonterminals:
+            return np.mean(precisions), np.mean(recalls), np.mean(f1_scores), all_recall_nonterminals
         return np.mean(precisions), np.mean(recalls), np.mean(f1_scores)
 
 
@@ -526,15 +541,18 @@ def run_probing_test(args):
     checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
     probe_model.load_state_dict(checkpoint)
 
-    if not args.just_proj:
-        logger.info('Evaluating probing on test set.')
-        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                         ids_to_labels_c, ids_to_labels_u, args)
-        metrics['test_precision'] = round(eval_precision, 4)
-        metrics['test_recall'] = round(eval_recall, 4)
-        metrics['test_f1'] = round(eval_f1_score, 4)
-        logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
-                    f'| test F1 score: {round(eval_f1_score, 4)}')
+    logger.info('Evaluating probing on test set.')
+    eval_precision, eval_recall, eval_f1_score, recall_nonterminals = run_probing_eval_f1(test_dataloader, probe_model,
+                                                                                          lmodel,
+                                                                                          ids_to_labels_c,
+                                                                                          ids_to_labels_u, args,
+                                                                                          compute_recall_nonterminals=True)
+    metrics['test_precision'] = round(eval_precision, 4)
+    metrics['test_recall'] = round(eval_recall, 4)
+    metrics['test_f1'] = round(eval_f1_score, 4)
+    metrics['recall_nonterminals'] = recall_nonterminals
+    logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
+                f'| test F1 score: {round(eval_f1_score, 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')

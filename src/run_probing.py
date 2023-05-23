@@ -767,9 +767,13 @@ def run_probing_all_languages_test(args):
 
     logger.info('Evaluating probing on test set.')
     if not args.just_proj:
-        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                         ids_to_labels_c_global, ids_to_labels_u_global,
-                                                                         args)
+        eval_precision, eval_recall, eval_f1_score, recall_nonterminals = run_probing_eval_f1(test_dataloader,
+                                                                                              probe_model, lmodel,
+                                                                                              ids_to_labels_c_global,
+                                                                                              ids_to_labels_u_global,
+                                                                                              args,
+                                                                                              return_recall_nonterminals=True)
+        metrics['recall_nonterminals'] = recall_nonterminals
         for lang in eval_precision.keys():
             metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
             metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)

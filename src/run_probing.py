@@ -417,7 +417,7 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 pred_tree = extend_complex_nodes(add_unary(remove_empty_nodes(pred_tree)))
 
                 p, r, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
-                if args.do_train_all_languages or args.do_hold_one_out_training:
+                if masking:
                     lang = us_labels[0].split('--')[1]
                     f1_scores[lang].append(f1_score)
                     precisions[lang].append(p)
@@ -426,7 +426,7 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                     f1_scores.append(f1_score)
                     precisions.append(p)
                     recalls.append(r)
-    if args.do_train_all_languages or args.do_hold_one_out_training:
+    if masking:
         return ({x: np.mean(y) for x, y in precisions.items()},
                 {x: np.mean(y) for x, y in recalls.items()},
                 {x: np.mean(y) for x, y in f1_scores.items()})

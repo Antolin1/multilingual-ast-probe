@@ -559,10 +559,12 @@ def run_probing_all_languages(args):
 
     data_sets = {x: load_dataset('json', data_files=y) for x, y in data_files.items()}
     data_sets = {
-        x: y['train'].select(range(0, 1750)).map(lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
-                                                      x.split('_')[1]))
-        if 'train_' in x else y['train'].map(lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
-                                                      x.split('_')[1]))
+        x: y['train'].select(range(0, 1750)).map(
+            lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
+                                                 x.split('_')[1]))
+        if 'train_' in x else y['train'].map(
+            lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
+                                                 x.split('_')[1]))
         for x, y in data_sets.items()}
 
     labels_c = []
@@ -684,4 +686,81 @@ def run_probing_all_languages(args):
     logger.info('-' * 100)
     logger.info('Saving metrics.')
     with open(os.path.join(args.output_path, 'metrics.log'), 'wb') as f:
+        pickle.dump(metrics, f)
+
+
+def run_probing_all_languages_test(args):
+    logger.info('-' * 100)
+    logger.info('Running testing on all languages.')
+    logger.info('-' * 100)
+
+    logger.info('Loading tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+
+    logger.info('Loading dataset from local file.')
+    data_files = {}
+    for lang in LANGUAGES:
+        data_files[f'test_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'test.jsonl')
+
+    data_sets = {x: load_dataset('json', data_files=y) for x, y in data_files.items()}
+    data_sets = {
+        x: y['train'].map(
+            lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
+                                                 x.split('_')[1]))
+        for x, y in data_sets.items()}
+
+    with open(os.path.join(args.output_path, 'global_labels_c.pkl'), 'rb') as f:
+        labels_to_ids_c_global = pickle.load(f)
+        ids_to_labels_c_global = {v: k for k, v in labels_to_ids_c_global.items()}
+    with open(os.path.join(args.output_path, 'global_labels_u.pkl'), 'rb') as f:
+        labels_to_ids_u_global = pickle.load(f)
+        ids_to_labels_u_global = {v: k for k, v in labels_to_ids_u_global.items()}
+
+    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['c'], 'c', labels_to_ids_c_global, x.split('_')[1]))
+                 for x, y in data_sets.items()}
+    data_sets = {x: y.map(lambda e: convert_to_ids_multilingual(e['u'], 'u', labels_to_ids_u_global, x.split('_')[1]))
+                 for x, y in data_sets.items()}
+
+    test_datasets = [y for x, y in data_sets.items() if 'test_' in x]
+    test_set = concatenate_datasets(test_datasets)
+    logger.info(f'Number of test samples: {len(test_set)}')
+
+    lmodel = get_lmodel(args)
+    probe_model = ParserProbe(
+        probe_rank=args.rank,
+        hidden_dim=args.hidden,
+        number_labels_c=len(labels_to_ids_c_global),
+        number_labels_u=len(labels_to_ids_u_global)).to(args.device)
+
+    metrics = {'test_precision': None, 'test_recall': None, 'test_f1': None}
+
+    logger.info('Loading test set.')
+    test_dataloader = DataLoader(dataset=test_set,
+                                 batch_size=args.batch_size,
+                                 shuffle=False,
+                                 collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
+                                                                             ids_to_labels_c_global,
+                                                                             ids_to_labels_u_global),
+                                 num_workers=8)
+
+    logger.info('Loading best model.')
+    checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
+    probe_model.load_state_dict(checkpoint)
+
+    logger.info('Evaluating probing on test set.')
+    if not args.just_proj:
+        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                         ids_to_labels_c_global, ids_to_labels_u_global,
+                                                                         args)
+        for lang in eval_precision.keys():
+            metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
+            metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
+            metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
+            logger.info(
+                f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
+                f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
+
+    logger.info('-' * 100)
+    logger.info('Saving metrics.')
+    with open(os.path.join(args.output_path, 'metrics_just_test.log'), 'wb') as f:
         pickle.dump(metrics, f)

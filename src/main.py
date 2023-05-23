@@ -7,7 +7,7 @@ from prettytable import PrettyTable
 from transformers import HfArgumentParser
 
 from args import ProgramArguments
-from run_probing import run_probing_train, run_probing_test, run_probing_all_languages
+from run_probing import run_probing_train, run_probing_test, run_probing_all_languages, run_probing_all_languages_test
 from utils import setup_logger, set_seed
 
 
@@ -20,6 +20,8 @@ def main(args):
         run_probing_test(args=args)
     elif args.do_train_all_languages:
         run_probing_all_languages(args=args)
+    elif args.do_test_all_languages:
+        run_probing_all_languages_test(args=args)
     else:
         raise ValueError('--do_train, --do_test, or do_train_all_languages should be provided.')
 

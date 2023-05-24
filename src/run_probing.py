@@ -406,7 +406,8 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 us_current = us[i, 0:len_tokens].tolist()
 
                 if masking:
-                    lang = us_labels[0].split('--')[1]
+                    c = cs_current[0]
+                    lang = ids_to_labels_c[c].split('--')[1]
                 cs_labels = [ids_to_labels_c[c].split('--')[0] if masking else ids_to_labels_c[c] for c in cs_current]
                 us_labels = [ids_to_labels_u[c].split('--')[0] if masking else ids_to_labels_u[c] for c in us_current]
                 scores_c_labels = [ids_to_labels_c[s].split('--')[0] if masking else ids_to_labels_c[s] for s in score_c_current]

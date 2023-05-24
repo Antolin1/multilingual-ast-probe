@@ -405,10 +405,13 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 cs_current = cs[i, 0:len_tokens - 1].tolist()
                 us_current = us[i, 0:len_tokens].tolist()
 
+                if masking:
+                    lang = us_labels[0].split('--')[1]
                 cs_labels = [ids_to_labels_c[c].split('--')[0] if masking else ids_to_labels_c[c] for c in cs_current]
                 us_labels = [ids_to_labels_u[c].split('--')[0] if masking else ids_to_labels_u[c] for c in us_current]
                 scores_c_labels = [ids_to_labels_c[s].split('--')[0] if masking else ids_to_labels_c[s] for s in score_c_current]
                 scores_u_labels = [ids_to_labels_u[s].split('--')[0] if masking else ids_to_labels_u[s] for s in score_u_current]
+
 
                 ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels,
                                                      [str(i) for i in range(len_tokens)])
@@ -426,7 +429,6 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                         all_recall_nonterminals[k].append(v)
 
                 if masking:
-                    lang = us_labels[0].split('--')[1]
                     f1_scores[lang].append(f1_score)
                     precisions[lang].append(p)
                     recalls[lang].append(r)

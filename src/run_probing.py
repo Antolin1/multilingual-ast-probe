@@ -772,7 +772,7 @@ def run_probing_all_languages_test(args):
                                                                                               ids_to_labels_c_global,
                                                                                               ids_to_labels_u_global,
                                                                                               args,
-                                                                                              return_recall_nonterminals=True)
+                                                                                              compute_recall_nonterminals=True)
         metrics['recall_nonterminals'] = recall_nonterminals
         for lang in eval_precision.keys():
             metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)

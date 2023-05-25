@@ -234,6 +234,7 @@ def run_probing_train(args: argparse.Namespace):
                                   num_workers=0)
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
@@ -526,6 +527,7 @@ def run_probing_test(args):
     test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
@@ -668,6 +670,7 @@ def run_probing_all_languages(args):
                                   num_workers=5)
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
@@ -747,6 +750,7 @@ def run_probing_all_languages_test(args):
     logger.info(f'Number of test samples: {len(test_set)}')
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,

@@ -41,6 +41,7 @@ def build_model(args):
     probe_model.vectors_u.data = torch.from_numpy(new_vectors_u_target.T)
     probe_model.proj.data = torch.from_numpy(proj_source)
     probe_model.to(args.device)
+    probe_model.eval()
     return probe_model
 
 
@@ -73,6 +74,7 @@ def run_probe(args, probe_model):
     test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     metrics = {'test_precision': None, 'test_recall': None, 'test_f1': None}
 
     test_dataloader = DataLoader(dataset=test_set,
@@ -94,7 +96,8 @@ def run_probe(args, probe_model):
     print(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
           f'| test F1 score: {round(eval_f1_score, 4)}')
 
-    with open(os.path.join('_'.join([args.source_lang, args.target_lang])), 'wb') as f:
+    os.makedirs(args.out_dir, exist_ok=True)
+    with open(os.path.join(args.out_dir, '_'.join([args.source_lang, args.target_lang])) + '.log', 'wb') as f:
         pickle.dump(metrics, f)
 
 
@@ -108,11 +111,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--pretrained_model_name_or_path', type=str, default='microsoft/codebert-base')
     parser.add_argument('--layer', type=int, default=5)
-    parser.add_argument('--source_model', type=str, default='runs/codebert_java_5_128/pytorch_model.bin')
-    parser.add_argument('--target_model', type=str, default='runs/codebert_javascript_5_128/pytorch_model.bin')
-    parser.add_argument('--source_lang', type=str, default='java')
-    parser.add_argument('--target_lang', type=str, default='javascript')
+    parser.add_argument('--source_model', type=str, default='runs/codebert_ruby_5_128/pytorch_model.bin')
+    parser.add_argument('--target_model', type=str, default='runs/codebert_php_5_128/pytorch_model.bin')
+    parser.add_argument('--source_lang', type=str, default='ruby')
+    parser.add_argument('--target_lang', type=str, default='php')
     parser.add_argument('--model_type', type=str, default='roberta')
+    parser.add_argument('--out_dir', help='output directory', default='./transfer')
     args = parser.parse_args()
     args.dispatch_model_weights = False
     args.run_name = ''

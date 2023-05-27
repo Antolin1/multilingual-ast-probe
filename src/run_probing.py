@@ -91,7 +91,7 @@ def get_lmodel(args):
 
 
 def run_train_general(probe_model, lmodel, train_dataloader, valid_dataloader, metrics, pretrained, args):
-    masking = args.do_train_all_languages or args.do_hold_one_out_training
+    masking = args.do_train_all_languages
     if pretrained:
         optimizer = torch.optim.Adam([probe_model.vectors_c, probe_model.vectors_u], lr=args.lr)
     else:
@@ -234,6 +234,7 @@ def run_probing_train(args: argparse.Namespace):
                                   num_workers=0)
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
@@ -272,7 +273,7 @@ def run_probing_train(args: argparse.Namespace):
 
 def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
     probe_model.eval()
-    masking = args.do_train_all_languages or args.do_hold_one_out_training
+    masking = args.do_train_all_languages
     eval_loss = 0.0
     total_hits_c = 0
     total_c = 0
@@ -364,7 +365,7 @@ def compute_hits_d(input, target, mask):
 def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args,
                         compute_recall_nonterminals=False):
     # todo: filter categories using the language
-    masking = args.do_train_all_languages or args.do_hold_one_out_training or args.do_test_all_languages
+    masking = args.do_train_all_languages or args.do_test_all_languages
     probe_model.eval()
     precisions = [] if not masking else defaultdict(list)
     recalls = [] if not masking else defaultdict(list)
@@ -428,7 +429,7 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                     # consider the case of non-terminals! bug
                     recall_non_terminal = get_recall_non_terminal(ground_truth_tree, pred_tree)
                     for k, v in recall_non_terminal.items():
-                        all_recall_nonterminals[k].append(v)
+                        all_recall_nonterminals[k if not masking else f'{k}--{lang}'].append(v)
 
                 if masking:
                     f1_scores[lang].append(f1_score)
@@ -527,6 +528,7 @@ def run_probing_test(args):
     test_set = test_set.map(lambda e: convert_to_ids(e['u'], 'u', labels_to_ids_u))
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
@@ -669,6 +671,7 @@ def run_probing_all_languages(args):
                                   num_workers=5)
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
@@ -748,6 +751,7 @@ def run_probing_all_languages_test(args):
     logger.info(f'Number of test samples: {len(test_set)}')
 
     lmodel = get_lmodel(args)
+    lmodel.eval()
     probe_model = ParserProbe(
         probe_rank=args.rank,
         hidden_dim=args.hidden,
@@ -776,7 +780,7 @@ def run_probing_all_languages_test(args):
                                                                                               ids_to_labels_c_global,
                                                                                               ids_to_labels_u_global,
                                                                                               args,
-                                                                                              return_recall_nonterminals=True)
+                                                                                              compute_recall_nonterminals=True)
         metrics['recall_nonterminals'] = recall_nonterminals
         for lang in eval_precision.keys():
             metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)

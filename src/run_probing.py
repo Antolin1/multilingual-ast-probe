@@ -425,6 +425,7 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 p, r, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
 
                 if compute_recall_nonterminals:
+                    # consider the case of non-terminals! bug
                     recall_non_terminal = get_recall_non_terminal(ground_truth_tree, pred_tree)
                     for k, v in recall_non_terminal.items():
                         all_recall_nonterminals[k].append(v)

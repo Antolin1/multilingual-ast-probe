@@ -428,7 +428,7 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 if compute_recall_nonterminals:
                     recall_non_terminal = get_recall_non_terminal(ground_truth_tree, pred_tree)
                     for k, v in recall_non_terminal.items():
-                        all_recall_nonterminals[k].append(v)
+                        all_recall_nonterminals[k if not masking else f'{k}--{lang}'].append(v)
 
                 if masking:
                     f1_scores[lang].append(f1_score)
@@ -779,7 +779,7 @@ def run_probing_all_languages_test(args):
                                                                                               ids_to_labels_c_global,
                                                                                               ids_to_labels_u_global,
                                                                                               args,
-                                                                                              return_recall_nonterminals=True)
+                                                                                              compute_recall_nonterminals=True)
         metrics['recall_nonterminals'] = recall_nonterminals
         for lang in eval_precision.keys():
             metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)

@@ -23,8 +23,10 @@ def main(args):
         run_probing_all_languages(args=args)
     elif args.do_test_all_languages:
         run_probing_all_languages_test(args=args)
+    elif args.do_holdout_training:
+        run_probing_all_languages(args=args, exclude=[args.lang])
     else:
-        raise ValueError('--do_train, --do_test, or do_train_all_languages should be provided.')
+        raise ValueError('No valid command given.')
 
 
 if __name__ == '__main__':

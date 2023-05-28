@@ -39,11 +39,6 @@ class ProgramArguments:
         metadata={'help': 'Model checkpoint directory.'}
     )
 
-    model_source_checkpoint: Optional[str] = field(
-        default=None,
-        metadata={'help': 'Model source checkpoint directory for direct transfer.'}
-    )
-
     dataset_name_or_path: Optional[str] = field(
         default='./dataset',
         metadata={'help': 'Path to the folder that contains the dataset.'}
@@ -80,7 +75,7 @@ class ProgramArguments:
     )
 
     rank: Optional[int] = field(
-        default=64,
+        default=128,
         metadata={'help': 'Maximum rank of the probe.'}
     )
 
@@ -99,9 +94,8 @@ class ProgramArguments:
         metadata={'help': 'Seed for experiments replication.'}
     )
 
-    just_proj: bool = field(default=False, metadata={'help': 'To train just d.'})
     do_train: bool = field(default=False, metadata={'help': 'Run probe training.'})
     do_test: bool = field(default=False, metadata={'help': 'Run probe training.'})
-    do_train_from_given_projection: bool = field(default=False, metadata={'help': 'Run probe training using a pretrained projection.'})
     do_train_all_languages: bool = field(default=False, metadata={'help': 'Run multingual probe training with all langs.'})
     do_test_all_languages: bool = field(default=False, metadata={'help': 'Test multilingual probe with all langs.'})
+    do_holdout_training: bool = field(default=False, metadata={'help': 'Run holdout training.'})

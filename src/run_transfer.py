@@ -113,7 +113,7 @@ if __name__ == '__main__':
     parser.add_argument('--layer', type=int, default=5)
     parser.add_argument('--source_model', type=str, default='runs/codebert_ruby_5_128/pytorch_model.bin')
     parser.add_argument('--target_model', type=str, default='runs/codebert_php_5_128/pytorch_model.bin')
-    parser.add_argument('--source_lang', type=str, default='ruby')
+    parser.add_argument('--source_lang', type=str, default='ruby')  # can be a lang or holdout, this is just for naming
     parser.add_argument('--target_lang', type=str, default='php')
     parser.add_argument('--model_type', type=str, default='roberta')
     parser.add_argument('--out_dir', help='output directory', default='./transfer')
@@ -122,5 +122,5 @@ if __name__ == '__main__':
     args.run_name = ''
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     args.batch_size = 32
-    args.do_train_all_languages, args.do_test_all_languages = False, False
+    args.do_train_all_languages, args.do_test_all_languages, args.do_holdout_training = False, False, False
     main(args)

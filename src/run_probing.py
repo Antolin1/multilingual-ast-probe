@@ -91,13 +91,13 @@ def get_lmodel(args):
 
 
 def run_train_general(probe_model, lmodel, train_dataloader, valid_dataloader, metrics, pretrained, args):
-    masking = args.do_train_all_languages
+    masking = args.do_train_all_languages or args.do_holdout_training
     if pretrained:
         optimizer = torch.optim.Adam([probe_model.vectors_c, probe_model.vectors_u], lr=args.lr)
     else:
         optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=0)
-    criterion = ParserLoss(loss='rank', pretrained=pretrained, just_proj=args.just_proj)
+    criterion = ParserLoss(loss='rank', pretrained=pretrained)
 
     probe_model.train()
     lmodel.eval()
@@ -255,15 +255,14 @@ def run_probing_train(args: argparse.Namespace):
     checkpoint = torch.load(os.path.join(args.output_path, 'pytorch_model.bin'))
     probe_model.load_state_dict(checkpoint)
 
-    if not args.just_proj:
-        logger.info('Evaluating probing on test set.')
-        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                         ids_to_labels_c, ids_to_labels_u, args)
-        metrics['test_precision'] = round(eval_precision, 4)
-        metrics['test_recall'] = round(eval_recall, 4)
-        metrics['test_f1'] = round(eval_f1_score, 4)
-        logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
-                    f'| test F1 score: {round(eval_f1_score, 4)}')
+    logger.info('Evaluating probing on test set.')
+    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                     ids_to_labels_c, ids_to_labels_u, args)
+    metrics['test_precision'] = round(eval_precision, 4)
+    metrics['test_recall'] = round(eval_recall, 4)
+    metrics['test_f1'] = round(eval_f1_score, 4)
+    logger.info(f'test precision: {round(eval_precision, 4)} | test recall: {round(eval_recall, 4)} '
+                f'| test F1 score: {round(eval_f1_score, 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
@@ -273,7 +272,7 @@ def run_probing_train(args: argparse.Namespace):
 
 def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
     probe_model.eval()
-    masking = args.do_train_all_languages
+    masking = args.do_train_all_languages or args.do_holdout_training
     eval_loss = 0.0
     total_hits_c = 0
     total_c = 0
@@ -365,7 +364,7 @@ def compute_hits_d(input, target, mask):
 def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, ids_to_labels_u, args,
                         compute_recall_nonterminals=False):
     # todo: filter categories using the language
-    masking = args.do_train_all_languages or args.do_test_all_languages
+    masking = args.do_train_all_languages or args.do_test_all_languages or args.do_holdout_training
     probe_model.eval()
     precisions = [] if not masking else defaultdict(list)
     recalls = [] if not masking else defaultdict(list)
@@ -411,9 +410,10 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                     lang = ids_to_labels_c[c].split('--')[1]
                 cs_labels = [ids_to_labels_c[c].split('--')[0] if masking else ids_to_labels_c[c] for c in cs_current]
                 us_labels = [ids_to_labels_u[c].split('--')[0] if masking else ids_to_labels_u[c] for c in us_current]
-                scores_c_labels = [ids_to_labels_c[s].split('--')[0] if masking else ids_to_labels_c[s] for s in score_c_current]
-                scores_u_labels = [ids_to_labels_u[s].split('--')[0] if masking else ids_to_labels_u[s] for s in score_u_current]
-
+                scores_c_labels = [ids_to_labels_c[s].split('--')[0] if masking else ids_to_labels_c[s] for s in
+                                   score_c_current]
+                scores_u_labels = [ids_to_labels_u[s].split('--')[0] if masking else ids_to_labels_u[s] for s in
+                                   score_u_current]
 
                 ground_truth_tree = distance_to_tree(ds_current, cs_labels, us_labels,
                                                      [str(i) for i in range(len_tokens)])
@@ -426,9 +426,10 @@ def run_probing_eval_f1(test_dataloader, probe_model, lmodel, ids_to_labels_c, i
                 p, r, f1_score = get_precision_recall_f1(ground_truth_tree, pred_tree)
 
                 if compute_recall_nonterminals:
+                    # consider the case of non-terminals! bug
                     recall_non_terminal = get_recall_non_terminal(ground_truth_tree, pred_tree)
                     for k, v in recall_non_terminal.items():
-                        all_recall_nonterminals[k].append(v)
+                        all_recall_nonterminals[k if not masking else f'{k}--{lang}'].append(v)
 
                 if masking:
                     f1_scores[lang].append(f1_score)
@@ -565,7 +566,9 @@ def run_probing_test(args):
         pickle.dump(metrics, f)
 
 
-def run_probing_all_languages(args):
+def run_probing_all_languages(args, exclude=None):
+    if exclude is None:
+        exclude = []
     logger.info('-' * 100)
     logger.info('Running probing on all languages.')
     logger.info('-' * 100)
@@ -575,14 +578,20 @@ def run_probing_all_languages(args):
 
     logger.info('Loading dataset from local file.')
     data_files = {}
-    for lang in LANGUAGES:
+
+    if exclude is not None:
+        final_languages = [lang for lang in LANGUAGES if lang not in exclude]
+    else:
+        final_languages = LANGUAGES
+
+    for lang in final_languages:
         data_files[f'train_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'train.jsonl')
         data_files[f'valid_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'valid.jsonl')
         data_files[f'test_{lang}'] = os.path.join(args.dataset_name_or_path, lang, 'test.jsonl')
 
     data_sets = {x: load_dataset('json', data_files=y) for x, y in data_files.items()}
     data_sets = {
-        x: y['train'].select(range(0, 1750)).map(
+        x: y['train'].map(
             lambda e: convert_sample_to_features(e['original_string'], PARSER_OBJECT_BY_NAME[x.split('_')[1]],
                                                  x.split('_')[1]))
         if 'train_' in x else y['train'].map(
@@ -593,7 +602,7 @@ def run_probing_all_languages(args):
     labels_c = []
     labels_u = []
 
-    for lang in LANGUAGES:
+    for lang in final_languages:
         labels_file_path = os.path.join(args.dataset_name_or_path, lang, 'labels.pkl')
         train_set = data_sets[f'train_{lang}']
         valid_set = data_sets[f'valid_{lang}']
@@ -695,17 +704,17 @@ def run_probing_all_languages(args):
     probe_model.load_state_dict(checkpoint)
 
     logger.info('Evaluating probing on test set.')
-    if not args.just_proj:
-        eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
-                                                                         ids_to_labels_c_global, ids_to_labels_u_global,
-                                                                         args)
-        for lang in eval_precision.keys():
-            metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
-            metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
-            metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
-            logger.info(
-                f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
-                f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
+
+    eval_precision, eval_recall, eval_f1_score = run_probing_eval_f1(test_dataloader, probe_model, lmodel,
+                                                                     ids_to_labels_c_global, ids_to_labels_u_global,
+                                                                     args)
+    for lang in eval_precision.keys():
+        metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
+        metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
+        metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
+        logger.info(
+            f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
+            f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
@@ -773,23 +782,24 @@ def run_probing_all_languages_test(args):
     probe_model.load_state_dict(checkpoint)
 
     logger.info('Evaluating probing on test set.')
-    if not args.just_proj:
-        eval_precision, eval_recall, eval_f1_score, recall_nonterminals = run_probing_eval_f1(test_dataloader,
-                                                                                              probe_model, lmodel,
-                                                                                              ids_to_labels_c_global,
-                                                                                              ids_to_labels_u_global,
-                                                                                              args,
-                                                                                              compute_recall_nonterminals=True)
-        metrics['recall_nonterminals'] = recall_nonterminals
-        for lang in eval_precision.keys():
-            metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
-            metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
-            metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
-            logger.info(
-                f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
-                f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
+
+    eval_precision, eval_recall, eval_f1_score, recall_nonterminals = run_probing_eval_f1(test_dataloader,
+                                                                                          probe_model, lmodel,
+                                                                                          ids_to_labels_c_global,
+                                                                                          ids_to_labels_u_global,
+                                                                                          args,
+                                                                                          compute_recall_nonterminals=True)
+    metrics['recall_nonterminals'] = recall_nonterminals
+    for lang in eval_precision.keys():
+        metrics[f'test_precision_{lang}'] = round(eval_precision[lang], 4)
+        metrics[f'test_recall_{lang}'] = round(eval_recall[lang], 4)
+        metrics[f'test_f1_{lang}'] = round(eval_f1_score[lang], 4)
+        logger.info(
+            f'test precision_{lang}: {round(eval_precision[lang], 4)} | test recall_{lang}: {round(eval_recall[lang], 4)} '
+            f'| test F1 score_{lang}: {round(eval_f1_score[lang], 4)}')
 
     logger.info('-' * 100)
     logger.info('Saving metrics.')
     with open(os.path.join(args.output_path, 'metrics_just_test.log'), 'wb') as f:
         pickle.dump(metrics, f)
+

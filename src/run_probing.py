@@ -272,7 +272,7 @@ def run_probing_train(args: argparse.Namespace):
 
 def run_probing_eval(test_dataloader, probe_model, lmodel, criterion, args):
     probe_model.eval()
-    masking = args.do_train_all_languages
+    masking = args.do_train_all_languages or args.do_holdout_training
     eval_loss = 0.0
     total_hits_c = 0
     total_c = 0

@@ -248,7 +248,8 @@ def run_probing_train(args: argparse.Namespace):
     test_dataloader = DataLoader(dataset=test_set,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer,
+                                                                      match_tokenized_to_untokenized=match_function),
                                  num_workers=8)
 
     logger.info('Loading best model.')
@@ -537,10 +538,11 @@ def run_probing_test(args):
     metrics = {'test_precision': None, 'test_recall': None, 'test_f1': None}
 
     logger.info('Loading test set.')
+    match_function = MODEL_TYPES_MATCH[args.model_type]
     test_dataloader = DataLoader(dataset=test_set,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 collate_fn=lambda batch: collator_fn(batch, tokenizer),
+                                 collate_fn=lambda batch: collator_fn(batch, tokenizer, match_tokenized_to_untokenized=match_function),
                                  num_workers=8)
 
     logger.info('Loading best model.')
@@ -696,7 +698,8 @@ def run_probing_all_languages(args, exclude=None):
                                  shuffle=False,
                                  collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
                                                                              ids_to_labels_c_global,
-                                                                             ids_to_labels_u_global),
+                                                                             ids_to_labels_u_global,
+                                                                             match_tokenized_to_untokenized=match_function),
                                  num_workers=8)
 
     logger.info('Loading best model.')
@@ -768,13 +771,15 @@ def run_probing_all_languages_test(args):
 
     metrics = {'test_precision': None, 'test_recall': None, 'test_f1': None}
 
+    match_function = MODEL_TYPES_MATCH[args.model_type]
     logger.info('Loading test set.')
     test_dataloader = DataLoader(dataset=test_set,
                                  batch_size=args.batch_size,
                                  shuffle=False,
                                  collate_fn=lambda batch: collator_with_mask(batch, tokenizer,
                                                                              ids_to_labels_c_global,
-                                                                             ids_to_labels_u_global),
+                                                                             ids_to_labels_u_global,
+                                                                             match_tokenized_to_untokenized=match_function),
                                  num_workers=8)
 
     logger.info('Loading best model.')

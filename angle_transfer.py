@@ -1,9 +1,11 @@
 import argparse
+import math
 import os
 import pickle
 
 import numpy as np
 import pandas as pd
+from scipy.stats import spearmanr
 from prettytable import PrettyTable
 from scipy.linalg import subspace_angles
 
@@ -17,6 +19,16 @@ def load_f1(transfer_dir, source, target):
     with open(path, 'rb') as f:
         data = pickle.load(f)
     return data['test_f1']
+
+
+def distance_angles(angles, distance='grassmann'):
+    if distance == 'grassmann':
+        return np.linalg.norm(angles)
+    elif distance == 'chordal':
+        return math.sqrt(np.sum(np.sin(angles) ** 2))
+    elif distance == 'spectral':
+        return 2 * math.sin(np.max(angles)/2)
+
 
 def compute_angle_model_tranfer(args, model, layer, transfer_dir):
     subspaces = {}
@@ -37,11 +49,11 @@ def compute_angle_model_tranfer(args, model, layer, transfer_dir):
         row_ang = [x]
         row_transfer = [x]
         for j, y in enumerate(LANGUAGES):
-            subspace_sim_ang = np.rad2deg(np.mean(subspace_angles(subspaces[x], subspaces[y])))
+            subspace_sim_ang = distance_angles(subspace_angles(subspaces[x], subspaces[y]), 'chordal')
             row_ang.append(round(subspace_sim_ang, 2))
             try:
                 transfer_f1 = load_f1(transfer_dir, x, y)
-                row_transfer.append(round(transfer_f1, 2))
+                row_transfer.append(round(transfer_f1, 4))
             except:
                 transfer_f1 = -1
                 row_transfer.append('---')
@@ -58,14 +70,15 @@ def compute_angle_model_tranfer(args, model, layer, transfer_dir):
     df = pd.DataFrame.from_dict(data)
     return df, table_sim_ang, table_transfer
 
+
 def compute_spearman(df):
     langs = ['python', 'java', 'ruby', 'javascript', 'go', 'c', 'csharp', 'php']
     df = df[df['lang1'].isin(langs) & df['lang2'].isin(langs)]
     corrs_coef = []
     for target in langs:
         filtered = df[df['lang2'] == target]
-        spear = abs(filtered["angle"].corr(filtered["transfer"], method="spearman"))
-        print(f'{target}: {spear}')
+        spear = filtered["angle"].corr(filtered["transfer"], method="spearman")
+        print(f'{target}: {spear}, p-value: {spearmanr(filtered["angle"], filtered["transfer"]).pvalue}')
         corrs_coef.append(spear)
     print(f'Mean: {np.mean(corrs_coef)}')
 

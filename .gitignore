@@ -166,3 +166,5 @@ runs
 /vectors_constituency.tsv
 /labels_constituency.tsv
 /random.txt
+
+.uuid

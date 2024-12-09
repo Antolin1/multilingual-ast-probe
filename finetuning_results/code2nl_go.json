@@ -1,5 +1,0 @@
-{
-  "input_lang": ["go"],
-  "model": ["BERT", "DistilBERT", "RoBERTa", "DistilRoBERTa", "CodeT5", "CodeBERTa", "CodeBERT", "GraphCodeBERT"],
-  "performance": [9.85, 9.70, 9.36, 17.23, 18.05, 16.65, 18.09, 17.99]
-}

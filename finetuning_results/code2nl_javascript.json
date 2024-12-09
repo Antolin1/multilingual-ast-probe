@@ -1,5 +1,0 @@
-{
-  "input_lang": ["javascript"],
-  "model": ["BERT", "DistilBERT", "RoBERTa", "DistilRoBERTa", "CodeT5", "CodeBERTa", "CodeBERT", "GraphCodeBERT"],
-  "performance": [7.11, 7.33, 9.08, 14.39, 14.93, 14.09, 14.84, 15.06]
-}

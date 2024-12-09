@@ -1,5 +1,0 @@
-{
-  "input_lang": ["java"],
-  "model": ["BERT", "DistilBERT", "RoBERTa", "DistilRoBERTa", "CodeT5", "CodeBERTa", "CodeBERT", "GraphCodeBERT"],
-  "performance": [10.65, 10.64, 11.13, 17.29, 18.56, 17.54, 18.56, 19.23]
-}

@@ -1,5 +1,0 @@
-{
-  "input_lang": ["ruby"],
-  "model": ["BERT", "DistilBERT", "RoBERTa", "DistilRoBERTa", "CodeT5", "CodeBERTa", "CodeBERT", "GraphCodeBERT"],
-  "performance": [0.639, 0.639, 0.661, 0.633, 0.715, 0.637, 0.721, 0.759]
-}

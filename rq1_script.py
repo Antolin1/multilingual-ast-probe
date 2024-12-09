@@ -11,9 +11,7 @@ models = ['microsoft/codebert-base',
           'microsoft/codebert-base',
           'bert-base-uncased',
           'distilbert-base-uncased',
-          'distilroberta-base',
-          'microsoft/unixcoder-base',
-          'microsoft/unixcoder-base-nine']
+          'distilroberta-base']
 folders = ['codebert',
            'graphcodebert',
            'codet5',
@@ -22,9 +20,7 @@ folders = ['codebert',
            'codebert-baseline',
            'bert',
            'distilbert',
-           'distilroberta',
-           'unixcoder-base',
-           'unixcoder-base-nine']
+           'distilroberta']
 model_types = ['roberta',
                'roberta',
                't5',
@@ -33,8 +29,6 @@ model_types = ['roberta',
                'roberta',
                'bert',
                'distilbert',
-               'roberta',
-               'roberta',
                'roberta']
 
 assert len(model_types) == len(folders)

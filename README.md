@@ -1,11 +1,11 @@
-# Multilingual AST-Probe - Codebase and data
+# Syntactic multilingual probing of pre-trained language models of code - Codebase and data
 
 ## Installation
 
 1. Clone the repository.
 ```sh
-git clone https://github.com/xxxx/ASTProbing
-cd ASTProbing
+git clone https://github.com/PELAB-LiU/multilingual-ast-probe
+cd multilingual-ast-probe
 ```
 
 2. Create a python3 virtual environment and install `requirements.txt`.
@@ -28,7 +28,7 @@ computer.
 4. Add project directory to Python path:
 
 ```sh
-export PYTHONPATH="${PYTHONPATH}:~/AstProbing/"
+export PYTHONPATH="${PYTHONPATH}:~/multilingual-ast-probe/"
 ```
 
 5. [Optional] Execute tests:
@@ -97,7 +97,32 @@ After running this command, the folder `runs/codebert_python_5_128` is created.
 
 ## Running multilingual AST-Probe 🚀
 
-To run the multilingual AST-Probe, just execute the following:
+### Direct transfer
+
+To run the direct transfer probe, just execute the following:
+```sh
+python src/run_transfer.py \
+    --source_model <source_model> \
+    --target_model <target_model> \
+    --source_lang <source_lang> \
+    --target_lang <target_lang>
+```
+
+Example:
+
+```sh
+python src/run_transfer.py \
+    --source_model runs/codebert_javascript_5_128/pytorch_model.bin \
+    --target_model runs/codebert_java_5_128/pytorch_model.bin \
+    --source_lang javascript \
+    --target_lang java
+```
+
+This command will use the javascript syntactic subspace to predict the Java ASTs.
+
+### The shared syntactic subspace
+
+To compute the shared syntactic subspace, just execute the following:
 ```sh
 python src/main.py \
   --do_train_all_languages \
@@ -128,12 +153,3 @@ python src/main.py \
 ```
 This command trains a 128-dimensional multilingual probe over the output embeddings of the 5th layer of CodeBERT 
 using the all the training datasets. After running this command, the folder `runs/multilingual_CodeBERT` is created.
-
-## Visualization and our results
-
-We have also added a notebook (`notebook/AST_Probe_data_analysis.ipynb`) in the repository. This notebook downloads the results that we used in the paper and allow
-you to explore them. It also includes the visualization techniques presented in the paper.
-
-## Fine-tuning procedures
-
-The folder `code_tasks` contains the fine-tuning procedures for code search, code2code, code2text, and defect prediction.

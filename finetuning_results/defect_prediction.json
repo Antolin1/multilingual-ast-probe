@@ -1,5 +1,0 @@
-{
-  "input_lang": ["c"],
-  "model": ["BERT", "RoBERTa", "DistilBERT", "DistilRoBERTa", "CodeT5", "CodeBERTa", "CodeBERT", "GraphCodeBERT"],
-  "performance": [61.60, 54.06, 62.12, 63.18, 63.36, 63.43, 61.60, 64.35]
-}

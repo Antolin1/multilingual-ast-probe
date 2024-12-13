@@ -10,13 +10,15 @@ cd multilingual-ast-probe
 
 2. Create a python3 virtual environment and install `requirements.txt`.
 ```sh
-python3 -m venv <env_ast_probe>
-source env_ast_probe/bin/activate
+conda create -n multilingual-ast-probe python=3.8
+conda activate multilingual-ast-probe
+conda install conda-forge::gcc
+conda install -c conda-forge cxx-compiler
 pip install -r requirements.txt
-# and install torch and torch scatter
+# and install torch, torch scatter, accelerate, and transformers
 ```
-The requirements do not include PyTorch and Torch Scatter. You should install the version that better fits your 
-computer.
+The requirements do not include pytorch, torch scatter, accelerate, and transformers. 
+You should install the version that better fits your computer.
 
 
 3. Install tree-sitter grammars and build them:

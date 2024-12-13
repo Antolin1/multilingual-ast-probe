@@ -18,7 +18,7 @@ from .utils import download_url, unzip_file
 logger = logging.getLogger(__name__)
 
 CSN_DATASET_SPLIT_PATH = 'https://github.com/guoday/CodeBERT/raw/master/GraphCodeBERT/codesearch/dataset.zip'
-CSN_DATASET_BASE_PATH = 'https://s3.amazonaws.com/code-search-net/CodeSearchNet/v2/'
+CSN_DATASET_BASE_PATH = 'https://zenodo.org/records/7908468/files/' # 'https://s3.amazonaws.com/code-search-net/CodeSearchNet/v2/'
 
 LANGUAGES = (
     'python',

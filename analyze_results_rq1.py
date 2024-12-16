@@ -28,6 +28,7 @@ def read_results(args):
         parent = os.path.dirname(file).split('/')[-1]
         if 'multilingual' in parent:
             continue
+        print(parent)
         model, lang, layer, rank = parent.split('_')
         with open(file, 'rb') as f:
             results = pickle.load(f)

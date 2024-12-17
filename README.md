@@ -155,3 +155,10 @@ python src/main.py \
 ```
 This command trains a 128-dimensional multilingual probe over the output embeddings of the 5th layer of CodeBERT 
 using the all the training datasets. After running this command, the folder `runs/multilingual_CodeBERT` is created.
+
+## Paper results
+
+To get the results presented in the paper, we ran the scripts `monolingual_script.py`, `shared_script.py`, and 
+`transfer_script.py`. The figures reported in the paper can be obtained using the notebook `analysis-jss/analysis.ipynb`.
+
+

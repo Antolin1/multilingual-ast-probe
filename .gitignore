@@ -169,3 +169,6 @@ runs
 
 final_results.zip
 .uuid
+/analysis-jss/dataset/
+/analysis-jss/transfer/
+/analysis-jss/runs/

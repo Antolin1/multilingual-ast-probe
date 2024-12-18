@@ -158,7 +158,7 @@ using the all the training datasets. After running this command, the folder `run
 
 ## Paper results
 
-To get the results presented in the paper, we ran the scripts `monolingual_script.py`, `shared_script.py`, and 
+To get the results presented in the paper, we ran the scripts `monolingual_script.py`, `shared_script.sh`, and 
 `transfer_script.py`. The figures reported in the paper can be obtained using the notebook `analysis-jss/analysis.ipynb`.
 
 

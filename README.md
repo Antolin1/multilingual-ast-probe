@@ -4,7 +4,7 @@
 
 1. Clone the repository.
 ```sh
-git clone https://github.com/PELAB-LiU/multilingual-ast-probe
+git clone https://github.com/Antolin1/multilingual-ast-probe
 cd multilingual-ast-probe
 ```
 
